@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Зависшие задачи разработчика — 21.08.2026</title>
+  <style>
+    :root {
+      --bg: #f6f5f2;
+      --ink: #1c1b18;
+      --muted: #5c5a54;
+      --line: #ddd9d0;
+      --card: #fff;
+      --warn: #9a6b12;
+      --danger: #9b2c2c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 15px/1.45 "Segoe UI", system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+    h1 { font-size: 28px; font-weight: 650; margin: 0 0 8px; }
+    h2 { font-size: 18px; font-weight: 650; margin: 32px 0 12px; }
+    p.lead { color: var(--muted); margin: 0 0 24px; max-width: 72ch; }
+    .meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 20px 0 24px;
+    }
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 14px 16px;
+    }
+    .stat b { display: block; font-size: 28px; font-weight: 650; }
+    .stat span { color: var(--muted); font-size: 13px; }
+    .stat.warn b { color: var(--warn); }
+    .stat.danger b { color: var(--danger); }
+    .note {
+      background: #fff8e8;
+      border: 1px solid #ead7a4;
+      padding: 12px 16px;
+      margin: 0 0 24px;
+    }
+    .bars { display: grid; gap: 8px; max-width: 640px; }
+    .bar-row { display: grid; grid-template-columns: 180px 1fr 32px; gap: 10px; align-items: center; }
+    .bar-row span { font-size: 13px; }
+    .track { height: 10px; background: #ece8df; }
+    .fill { height: 10px; background: #c4922a; }
+    table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 13px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { font-size: 12px; color: var(--muted); font-weight: 600; background: #faf9f6; }
+    td.num, th.num { text-align: right; white-space: nowrap; }
+    tr.danger td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
+    tr.warn td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
+    caption { text-align: left; color: var(--muted); font-size: 12px; padding: 8px 0; caption-side: bottom; }
+    @media print {
+      body { background: #fff; }
+      main { padding: 0; }
+      .stat, .note, table { break-inside: avoid; }
+    }
+    @media (max-width: 800px) {
+      .stats { grid-template-columns: 1fr 1fr; }
+      .bar-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Зависшие задачи разработчика</h1>
+  <p class="lead">
+    База 1С Аллсан Интеграция, документ «Задача разработчика».
+    В работе, без архива, паузы и отмены. Простой — нет смены стадии и комментария 60 и более дней.
+  </p>
+  <p class="meta">Снимок на 21.08.2026 · OData trade.alsn.ru</p>
+
+  <div class="stats">
+    <div class="stat"><b>251</b><span>Открыты в работе</span></div>
+    <div class="stat warn"><b>29</b><span>Без движения 60+ дней</span></div>
+    <div class="stat danger"><b>7</b><span>Без движения 180+ дней</span></div>
+    <div class="stat"><b>9</b><span>Пакет X-COM у Никешина</span></div>
+  </div>
+
+  <div class="note">
+    Статусы в работе: анализ, экспресс-оценка, спринт, внедрение/приёмка, получить оплату, выполнение работ.
+    Исключены пауза, архив, сделано, отменено, удалена.
+    Дата движения — максимум из комментария и дат входа в стадию.
+    В статусе «Получить оплату» зависших нет.
+  </div>
+
+  <h2>Простой по статусу</h2>
+  <div class="bars">
+    <div class="bar-row"><span>Анализ</span><div class="track"><div class="fill" style="width:100%"></div></div><span>13</span></div>
+    <div class="bar-row"><span>Внедрение/приемка</span><div class="track"><div class="fill" style="width:69%"></div></div><span>9</span></div>
+    <div class="bar-row"><span>Экспресс оценка</span><div class="track"><div class="fill" style="width:23%"></div></div><span>3</span></div>
+    <div class="bar-row"><span>Спринт</span><div class="track"><div class="fill" style="width:23%"></div></div><span>3</span></div>
+    <div class="bar-row"><span>Выполнение работ</span><div class="track"><div class="fill" style="width:8%"></div></div><span>1</span></div>
+  </div>
+
+  <h2>Кто держит зависшие</h2>
+  <table>
+    <thead>
+      <tr><th>Исполнитель</th><th class="num">Задач</th><th>Типичный статус</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Никешин Сергей</td><td class="num">9</td><td>Внедрение/приемка, X-COM МП</td></tr>
+      <tr><td>Без исполнителя</td><td class="num">6</td><td>Анализ / экспресс-оценка</td></tr>
+      <tr><td>Ральченко Кирилл</td><td class="num">5</td><td>Анализ, внутренние МП</td></tr>
+      <tr><td>Комаров Александр</td><td class="num">3</td><td>Спринт и внедрение</td></tr>
+      <tr><td>Клишев Александр</td><td class="num">3</td><td>Анализ, УУАЗ</td></tr>
+      <tr><td>Агеев / Шарипянов / Шаронова</td><td class="num">1+1+1</td><td>Спринт, анализ, конкурс</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Список: в работе, но давно без движения</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>№</th>
+        <th>Задача</th>
+        <th>Статус</th>
+        <th>Исполнитель</th>
+        <th>Клиент</th>
+        <th>Последнее движение</th>
+        <th class="num">Простой, дн.</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="danger"><td>17030</td><td>Заявка на конкурс — Лучший кейс 1С:Реальная автоматизация с ООО Соглашение</td><td>Выполнение работ по разработке</td><td>Шаронова Арина</td><td>Аллсан</td><td>17.10.2025</td><td class="num">307</td></tr>
+      <tr class="danger"><td>17164</td><td>№6299 Автосоздание эквайринговой операции по СБП при оплате QR-кодом у курьера</td><td>Экспресс оценка</td><td>—</td><td>X-COM</td><td>07.11.2025</td><td class="num">287</td></tr>
+      <tr class="danger"><td>17297</td><td>Загрузка номенклатуры из Excel в сопоставлении, проверка на дубли</td><td>Анализ</td><td>Шарипянов Марат</td><td>Аллсан</td><td>27.11.2025</td><td class="num">266</td></tr>
+      <tr class="danger"><td>15995</td><td>Расчёт по кластерам в маркетплейсе Wildberries</td><td>Анализ</td><td>Ральченко Кирилл Андреевич</td><td>Аллсан</td><td>02.12.2025</td><td class="num">262</td></tr>
+      <tr class="danger"><td>15996</td><td>Доля рекламных расходов в маркетплейсе Wildberries</td><td>Анализ</td><td>Ральченко Кирилл Андреевич</td><td>Аллсан</td><td>02.12.2025</td><td class="num">262</td></tr>
+      <tr class="danger"><td>17187</td><td>Создание ШК коробов в поставке</td><td>Внедрение/приемка</td><td>Комаров Александр Евгеньевич</td><td>ИП Семашкина Анна Александровна</td><td>08.12.2025</td><td class="num">256</td></tr>
+      <tr class="danger"><td>17686</td><td>Добавление знания в нейронную сеть в виде текстового файла</td><td>Спринт</td><td>Комаров Александр Евгеньевич</td><td>Аллсан</td><td>28.01.2026</td><td class="num">204</td></tr>
+      <tr class="warn"><td>16885</td><td>Отдельный документ по загрузке выкупов с маркетплейсов</td><td>Анализ</td><td>Ральченко Кирилл Андреевич</td><td>Аллсан</td><td>25.02.2026</td><td class="num">177</td></tr>
+      <tr class="warn"><td>18002</td><td>№TP1C-10 Закрытие месяца — исправление ошибок, разбор ситуаций</td><td>Анализ</td><td>—</td><td>АО «Улан-Удэнский авиационный завод»</td><td>20.03.2026</td><td class="num">154</td></tr>
+      <tr class="warn"><td>18138</td><td>№7225 Создание соглашения с отсрочкой</td><td>Экспресс оценка</td><td>—</td><td>X-COM</td><td>08.04.2026</td><td class="num">134</td></tr>
+      <tr class="warn"><td>18183</td><td>Анализ перехода с УТ 10.3 на УТ 11.5</td><td>Анализ</td><td>—</td><td>ФСТ ОБОРУДОВАНИЕ</td><td>16.04.2026</td><td class="num">127</td></tr>
+      <tr class="warn"><td>18227</td><td>№7186 Закупочные цены на комплекты — проверка и исправление по ПТУ</td><td>Экспресс оценка</td><td>—</td><td>X-COM</td><td>24.04.2026</td><td class="num">119</td></tr>
+      <tr class="warn"><td>18232</td><td>№7412 Отправка клиентам QR-кода по СБП</td><td>Спринт</td><td>Агеев Павел Александрович</td><td>X-COM</td><td>28.04.2026</td><td class="num">115</td></tr>
+      <tr class="warn"><td>18362</td><td>ТП по модулям интеграции Ozon с 1С (Онлайн Трейд)</td><td>Анализ</td><td>Ральченко Кирилл Андреевич</td><td>Онлайн Трейд</td><td>19.05.2026</td><td class="num">94</td></tr>
+      <tr class="warn"><td>18387</td><td>Разделение РТУ на товары с маркировкой и без</td><td>Анализ</td><td>Никешин Сергей</td><td>Симон Электрик</td><td>22.05.2026</td><td class="num">90</td></tr>
+      <tr><td>18366</td><td>№18879 МП. Ошибка с этикетками</td><td>Внедрение/приемка</td><td>Никешин Сергей</td><td>X-COM</td><td>29.05.2026</td><td class="num">84</td></tr>
+      <tr><td>18446</td><td>№TP1C-23 Переход на релиз 2.5.27 — бюджетирование БДДС, УУАЗ</td><td>Анализ</td><td>Клишев Александр</td><td>АО «Улан-Удэнский авиационный завод»</td><td>04.06.2026</td><td class="num">78</td></tr>
+      <tr><td>18447</td><td>№TP1C-24 Списание ТМЦ с тех. аптеки (гарантийный фонд)</td><td>Анализ</td><td>Клишев Александр</td><td>АО «Улан-Удэнский авиационный завод»</td><td>04.06.2026</td><td class="num">78</td></tr>
+      <tr><td>18364</td><td>№18826 МП. Ошибка с отгрузкой заказов WB</td><td>Внедрение/приемка</td><td>Никешин Сергей</td><td>X-COM</td><td>08.06.2026</td><td class="num">74</td></tr>
+      <tr><td>18479</td><td>№7718 Взаиморасчёты при передачах товара между организациями</td><td>Анализ</td><td>—</td><td>X-COM</td><td>08.06.2026</td><td class="num">73</td></tr>
+      <tr><td>18496</td><td>№TP1C-29 В СФ налогового агента не формируется третья проводка</td><td>Анализ</td><td>Клишев Александр</td><td>АО «Улан-Удэнский авиационный завод»</td><td>10.06.2026</td><td class="num">72</td></tr>
+      <tr><td>18313</td><td>№18759 МП. Ошибка с загрузкой заказов Ozon</td><td>Внедрение/приемка</td><td>Никешин Сергей</td><td>X-COM</td><td>11.06.2026</td><td class="num">71</td></tr>
+      <tr><td>18365</td><td>№18846 МП. Ошибка с загрузкой синхрозона</td><td>Внедрение/приемка</td><td>Никешин Сергей</td><td>X-COM</td><td>11.06.2026</td><td class="num">71</td></tr>
+      <tr><td>18368</td><td>№18931 МП. Ошибка с заказами в поставках WB</td><td>Внедрение/приемка</td><td>Никешин Сергей</td><td>X-COM</td><td>11.06.2026</td><td class="num">71</td></tr>
+      <tr><td>18381</td><td>№18969 МП. Ошибка с заказами Яндекс</td><td>Внедрение/приемка</td><td>Никешин Сергей</td><td>X-COM</td><td>11.06.2026</td><td class="num">71</td></tr>
+      <tr><td>18469</td><td>№181257 МП. Ошибка с отгрузкой Ozon</td><td>Внедрение/приемка</td><td>Никешин Сергей</td><td>X-COM</td><td>11.06.2026</td><td class="num">71</td></tr>
+      <tr><td>18470</td><td>№181261 МП. Ошибка с изменением количества в заказе</td><td>Внедрение/приемка</td><td>Никешин Сергей</td><td>X-COM</td><td>11.06.2026</td><td class="num">71</td></tr>
+      <tr><td>18509</td><td>Новый вид рекламы Ozon</td><td>Спринт</td><td>Комаров Александр Евгеньевич</td><td>Аллсан</td><td>15.06.2026</td><td class="num">67</td></tr>
+      <tr><td>18526</td><td>WB. Объединение модулей УТ и УНФ</td><td>Анализ</td><td>Ральченко Кирилл Андреевич</td><td>Аллсан</td><td>17.06.2026</td><td class="num">65</td></tr>
+    </tbody>
+    <caption>Красная полоска слева — 180+ дней простоя, жёлтая — 90–179 дней. Семь задач X-COM по МП зависли на внедрении с 11.06.2026.</caption>
+  </table>
+</main>
+</body>
+</html>
