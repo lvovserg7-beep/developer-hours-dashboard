@@ -2,21 +2,9 @@
 
 Приложение для компании Аллсан Интеграция. Берёт данные из 1С по OData (`trade.alsn.ru`) и показывает пять графиков часов.
 
-## Запуск
+Стабильная версия: [v1.0.0](https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.0.0)
 
-Нужен Node.js. Учётные данные 1С читаются из `%USERPROFILE%\.cursor\mcp.json` (сервер `1c-odata`), в репозиторий они не входят.
-
-```
-dashboard\start.cmd
-```
-
-или
-
-```
-node dashboard/server.mjs
-```
-
-Открыть: http://localhost:8787/
+Репозиторий: [https://github.com/lvovserg7-beep/developer-hours-dashboard](https://github.com/lvovserg7-beep/developer-hours-dashboard)
 
 Страница обновляется раз в 10 минут.
 
@@ -25,4 +13,97 @@ node dashboard/server.mjs
 - Статусы — по реквизиту **Порядок**, не по названию.
 - В работе: номера 1–6. Выполненные: 7 и выше.
 - Отложенные часы в работу не входят.
+- «Часов в работе по статусам» — реквизит **Часы**.
 - «Часов в работе по разработчикам» — реквизит **Часы разработки**, не общие «Часы» задачи.
+
+## Запуск на управляемом компьютере с Windows
+
+На той машине это обычная программа на Node.js: код с GitHub, доступ в 1С и запуск `start.cmd`. Cursor ставить не нужно.
+
+### Что должно быть на компьютере
+
+1. **Windows 10/11** с интернетом до `https://trade.alsn.ru` (DNS и порт 443).
+2. **Node.js LTS** с [https://nodejs.org](https://nodejs.org) — при установке оставьте галочку «Add to PATH». Проверка в командной строке: `node -v`.
+3. **Git** с [https://git-scm.com](https://git-scm.com) (удобно для копии с GitHub). Можно вместо этого скачать ZIP релиза.
+
+IIS не обязателен. Дашборд сам слушает порт **8787**.
+
+### Что положить на диск
+
+Стабильная версия:
+
+https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.0.0
+
+В PowerShell:
+
+```powershell
+cd C:\Apps
+git clone --branch v1.0.0 https://github.com/lvovserg7-beep/developer-hours-dashboard.git
+```
+
+Или скачайте Source code (zip) у релиза и распакуйте, например в `C:\Apps\developer-hours-dashboard`.
+
+Паролей в репозитории нет. Их задаёте на этой машине сами.
+
+### Доступ к 1С (обязательно)
+
+Проще всего — переменные среды Windows (для этого пользователя или для всей системы):
+
+| Имя | Значение |
+|---|---|
+| `ODATA_DB_TRADE_BASE_URL` | `https://trade.alsn.ru/trade/odata/standard.odata/` |
+| `ODATA_DB_TRADE_USERNAME` | логин OData из 1С |
+| `ODATA_DB_TRADE_PASSWORD` | пароль OData из 1С |
+
+Путь: Параметры Windows → Система → О программе → Дополнительные параметры системы → Переменные среды.
+
+Если на компьютере уже стоит Cursor и есть `%USERPROFILE%\.cursor\mcp.json` с сервером `1c-odata`, программа возьмёт данные оттуда. На «чистой» машине надёжнее переменные среды.
+
+Логин и пароль — те же, что у публикации OData 1С. Их должен выдать тот, кто администрирует базу.
+
+### Запуск
+
+1. Закройте и снова откройте командную строку (чтобы подхватились переменные среды).
+2. Запустите:
+
+```
+C:\Apps\developer-hours-dashboard\dashboard\start.cmd
+```
+
+или:
+
+```
+cd C:\Apps\developer-hours-dashboard\dashboard
+node server.mjs
+```
+
+3. Окно не закрывайте — это и есть сервер.
+4. В браузере: http://localhost:8787/
+
+Если в консоли `Connecting via DNS trade.alsn.ru` и затем `Dashboard http://localhost:8787/` — всё хорошо. Если ошибка про `mcp.json` — не заданы переменные среды. Если `401` или таймаут — нет доступа к 1С (логин, пароль или сеть).
+
+### Чтобы открывалось с других компьютеров в сети
+
+1. В брандмауэре Windows разрешите входящий TCP **8787**.
+2. Открывайте `http://ИМЯ-ПК:8787/` или `http://IP:8787/`.
+
+Сервер уже слушает все интерфейсы (`0.0.0.0`), не только localhost.
+
+### Чтобы поднималось после перезагрузки
+
+Планировщик заданий Windows:
+
+- Триггер: «При входе в систему» или «При запуске компьютера».
+- Действие: запуск `C:\Apps\developer-hours-dashboard\dashboard\start.cmd`.
+- Галочка «Выполнять независимо от регистрации пользователя», если нужно без входа.
+- Рабочая папка: `...\dashboard`.
+
+Либо ярлык `start.cmd` в автозагрузке пользователя.
+
+### Что ставить не нужно
+
+- Cursor
+- npm-пакеты (`npm install` нет)
+- SQL, Python, IIS — для этой версии не требуются
+
+Коротко: Node.js → клон **v1.0.0** → три переменные OData → `dashboard\start.cmd` → браузер на порт 8787.
