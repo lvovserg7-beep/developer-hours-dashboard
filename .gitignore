@@ -1,7 +1,8 @@
 node_modules/
 .env
-.env.*
+dashboard/.env
 *.log
 dashboard/published/
+dashboard/odata.env
 .DS_Store
 Thumbs.db

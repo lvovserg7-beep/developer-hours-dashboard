@@ -1,25 +1,64 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const localEnvPath = join(dirname(fileURLToPath(import.meta.url)), "..", "odata.env");
+
+function normalize(url, user, pass) {
+  if (!url || !user || !pass) return null;
+  return {
+    base: url.endsWith("/") ? url : `${url}/`,
+    user,
+    pass,
+  };
+}
+
+function fromProcessEnv() {
+  return normalize(
+    process.env.ODATA_DB_TRADE_BASE_URL || process.env.ODATA_BASE_URL,
+    process.env.ODATA_DB_TRADE_USERNAME || process.env.ODATA_USERNAME,
+    process.env.ODATA_DB_TRADE_PASSWORD || process.env.ODATA_PASSWORD
+  );
+}
+
+function fromLocalEnvFile() {
+  if (!existsSync(localEnvPath)) return null;
+  const values = {};
+  for (const line of readFileSync(localEnvPath, "utf8").split(/\r?\n/)) {
+    const text = line.trim();
+    if (!text || text.startsWith("#")) continue;
+    const eq = text.indexOf("=");
+    if (eq < 1) continue;
+    const key = text.slice(0, eq).trim();
+    let val = text.slice(eq + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    values[key] = val;
+  }
+  return normalize(
+    values.ODATA_DB_TRADE_BASE_URL || values.ODATA_BASE_URL,
+    values.ODATA_DB_TRADE_USERNAME || values.ODATA_USERNAME,
+    values.ODATA_DB_TRADE_PASSWORD || values.ODATA_PASSWORD
+  );
+}
+
+function fromMcpJson() {
+  const mcpPath = join(homedir(), ".cursor", "mcp.json");
+  if (!existsSync(mcpPath)) return null;
+  const env = JSON.parse(readFileSync(mcpPath, "utf8")).mcpServers?.["1c-odata"]?.env;
+  if (!env) return null;
+  return normalize(env.ODATA_DB_TRADE_BASE_URL, env.ODATA_DB_TRADE_USERNAME, env.ODATA_DB_TRADE_PASSWORD);
+}
 
 function loadTradeOData() {
-  const fromEnvUrl = process.env.ODATA_DB_TRADE_BASE_URL || process.env.ODATA_BASE_URL;
-  const fromEnvUser = process.env.ODATA_DB_TRADE_USERNAME || process.env.ODATA_USERNAME;
-  const fromEnvPass = process.env.ODATA_DB_TRADE_PASSWORD || process.env.ODATA_PASSWORD;
-  if (fromEnvUrl && fromEnvUser && fromEnvPass) {
-    return {
-      base: fromEnvUrl.endsWith("/") ? fromEnvUrl : `${fromEnvUrl}/`,
-      user: fromEnvUser,
-      pass: fromEnvPass,
-    };
-  }
-
-  const cfg = JSON.parse(readFileSync(join(homedir(), ".cursor", "mcp.json"), "utf8"));
-  const env = cfg.mcpServers["1c-odata"].env;
-  const base = env.ODATA_DB_TRADE_BASE_URL.endsWith("/")
-    ? env.ODATA_DB_TRADE_BASE_URL
-    : `${env.ODATA_DB_TRADE_BASE_URL}/`;
-  return { base, user: env.ODATA_DB_TRADE_USERNAME, pass: env.ODATA_DB_TRADE_PASSWORD };
+  const loaded = fromProcessEnv() || fromLocalEnvFile() || fromMcpJson();
+  if (loaded) return loaded;
+  throw new Error(
+    `Нет доступа к 1С. На этой машине нет Cursor (файл ${join(homedir(), ".cursor", "mcp.json")}). ` +
+      `Создайте файл ${localEnvPath} по образцу odata.env.example и укажите адрес, логин и пароль OData.`
+  );
 }
 
 export function odataConfig() {

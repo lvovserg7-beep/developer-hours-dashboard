@@ -47,7 +47,20 @@ git clone --branch v1.0.0 https://github.com/lvovserg7-beep/developer-hours-dash
 
 ### Доступ к 1С (обязательно)
 
-Проще всего — переменные среды Windows (для этого пользователя или для всей системы):
+На чистой Windows **нет** файла Cursor `%USERPROFILE%\.cursor\mcp.json`. Самый простой способ — файл рядом с программой:
+
+1. Скопируйте `dashboard\odata.env.example` в `dashboard\odata.env`.
+2. Откройте `odata.env` в блокноте и укажите логин и пароль OData:
+
+```
+ODATA_DB_TRADE_BASE_URL=https://trade.alsn.ru/trade/odata/standard.odata/
+ODATA_DB_TRADE_USERNAME=логин
+ODATA_DB_TRADE_PASSWORD=пароль
+```
+
+Если запустить `start.cmd` без `odata.env`, скрипт сам создаст файл из образца и откроет блокнот.
+
+Можно вместо файла задать переменные среды Windows:
 
 | Имя | Значение |
 |---|---|
@@ -57,9 +70,9 @@ git clone --branch v1.0.0 https://github.com/lvovserg7-beep/developer-hours-dash
 
 Путь: Параметры Windows → Система → О программе → Дополнительные параметры системы → Переменные среды.
 
-Если на компьютере уже стоит Cursor и есть `%USERPROFILE%\.cursor\mcp.json` с сервером `1c-odata`, программа возьмёт данные оттуда. На «чистой» машине надёжнее переменные среды.
+Если на компьютере уже стоит Cursor и есть `%USERPROFILE%\.cursor\mcp.json` с сервером `1c-odata`, программа возьмёт данные оттуда.
 
-Логин и пароль — те же, что у публикации OData 1С. Их должен выдать тот, кто администрирует базу.
+Логин и пароль — те же, что у публикации OData 1С. Файл `odata.env` в git не попадает.
 
 ### Запуск
 
@@ -80,7 +93,7 @@ node server.mjs
 3. Окно не закрывайте — это и есть сервер.
 4. В браузере: http://localhost:8787/
 
-Если в консоли `Connecting via DNS trade.alsn.ru` и затем `Dashboard http://localhost:8787/` — всё хорошо. Если ошибка про `mcp.json` — не заданы переменные среды. Если `401` или таймаут — нет доступа к 1С (логин, пароль или сеть).
+Если в консоли `Connecting via DNS trade.alsn.ru` и затем `Dashboard http://localhost:8787/` — всё хорошо. Если ошибка про `mcp.json` — нет файла `.env` (или пустые логин/пароль). Если `401` или таймаут — нет доступа к 1С (логин, пароль или сеть).
 
 ### Чтобы открывалось с других компьютеров в сети
 
@@ -106,4 +119,4 @@ node server.mjs
 - npm-пакеты (`npm install` нет)
 - SQL, Python, IIS — для этой версии не требуются
 
-Коротко: Node.js → клон **v1.0.0** → три переменные OData → `dashboard\start.cmd` → браузер на порт 8787.
+Коротко: Node.js → клон репозитория → файл `dashboard\.env` с логином и паролем 1С → `dashboard\start.cmd` → браузер на порт 8787.
