@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { odataConfig } from "./lib/odata.mjs";
+import { renderChartParts } from "./lib/render-charts.mjs";
 import { loadActiveEmployees } from "./load-employees.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -15,7 +16,15 @@ let cache = { at: 0, data: null, html: "", error: null, inflight: null };
 
 function renderHtml(data) {
   const payload = JSON.stringify(data).replace(/</g, "\\u003c");
-  return template.replace("__EMBEDDED_DATA__", payload);
+  const parts = renderChartParts(data);
+  return template
+    .replace("__EMBEDDED_DATA__", payload)
+    .replace("__META__", parts.meta)
+    .replace("__CHART_STATUS__", parts.status)
+    .replace("__CHART_KPIS__", parts.kpis)
+    .replace("__CHART_DEV_WORK__", parts.devWork)
+    .replace("__CHART_CLIENT_DONE__", parts.clientDone)
+    .replace("__CHART_DEV_DONE__", parts.devDone);
 }
 
 async function refresh(force = false) {
@@ -126,7 +135,7 @@ const server = createServer(async (req, res) => {
 
     send(res, 404, "Not found", "text/plain; charset=utf-8");
   } catch (err) {
-    send(res, 502, JSON.stringify({ error: String(err.message || err) }), "application/json; charset=utf-8");
+    send(res, 502, `<!DOCTYPE html><meta charset="utf-8"><title>Ошибка 1С</title><pre>${String(err.message || err).replace(/</g, "&lt;")}</pre>`, "text/html; charset=utf-8");
   }
 });
 

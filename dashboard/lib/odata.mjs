@@ -3,7 +3,8 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const localEnvPath = join(dirname(fileURLToPath(import.meta.url)), "..", "odata.env");
+const dashboardDir = join(dirname(fileURLToPath(import.meta.url)), "..");
+const localEnvPaths = [join(dashboardDir, ".env"), join(dashboardDir, "odata.env")];
 
 function normalize(url, user, pass) {
   if (!url || !user || !pass) return null;
@@ -23,7 +24,8 @@ function fromProcessEnv() {
 }
 
 function fromLocalEnvFile() {
-  if (!existsSync(localEnvPath)) return null;
+  const localEnvPath = localEnvPaths.find((p) => existsSync(p));
+  if (!localEnvPath) return null;
   const values = {};
   for (const line of readFileSync(localEnvPath, "utf8").split(/\r?\n/)) {
     const text = line.trim();
@@ -57,7 +59,7 @@ function loadTradeOData() {
   if (loaded) return loaded;
   throw new Error(
     `Нет доступа к 1С. На этой машине нет Cursor (файл ${join(homedir(), ".cursor", "mcp.json")}). ` +
-      `Создайте файл ${localEnvPath} по образцу odata.env.example и укажите адрес, логин и пароль OData.`
+      `Создайте файл ${join(dashboardDir, ".env")} по образцу .env.example и укажите адрес, логин и пароль OData.`
   );
 }
 
@@ -75,6 +77,7 @@ export async function odataGet(path) {
   const url = path.startsWith("http") ? path : new URL(path, base).toString();
   const res = await fetch(url, {
     headers: { Authorization: authHeader, Accept: "application/json" },
+    signal: AbortSignal.timeout(45_000),
   });
   const text = await res.text();
   if (!res.ok) {

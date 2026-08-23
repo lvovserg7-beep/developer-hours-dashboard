@@ -85,19 +85,22 @@
     <div class="wrap">
       <h1>Часы по задачам разработчика</h1>
       <p class="lead">Пять показателей из 1С Аллсан Интеграция. Статусы берутся по порядковому номеру, не по названию: в работе номера 1–6, выполненные — 7 и выше. Отложенные часы в работу не входят.</p>
-      <p class="meta" id="meta">Загрузка с trade.alsn.ru…</p>
+      <p class="meta" id="meta">__META__</p>
     </div>
   </header>
   <main>
+    <!--[if IE]>
+    <div class="err">Откройте эту страницу в Google Chrome или Microsoft Edge. Internet Explorer не обновляет графики.</div>
+    <![endif]-->
     <div id="error" class="err" hidden></div>
     <div class="board">
-      <section class="panel" id="chart-status"></section>
-      <section class="panel center" id="chart-kpis"></section>
-      <section class="panel" id="chart-dev-work"></section>
+      <section class="panel" id="chart-status">__CHART_STATUS__</section>
+      <section class="panel center" id="chart-kpis">__CHART_KPIS__</section>
+      <section class="panel" id="chart-dev-work">__CHART_DEV_WORK__</section>
     </div>
     <div class="bottom">
-      <section class="panel" id="chart-client-done"></section>
-      <section class="panel" id="chart-dev-done"></section>
+      <section class="panel" id="chart-client-done">__CHART_CLIENT_DONE__</section>
+      <section class="panel" id="chart-dev-done">__CHART_DEV_DONE__</section>
     </div>
     <footer>Источник: 1С · DNS trade.alsn.ru. Часы в работе по статусам — реквизит «Часы». Часы в работе по разработчикам — реквизит «Часы разработки», не общие часы задачи. Выполненные: анализ = часы минус разработка и внедрение; разработка = часы разработки и внедрения.</footer>
   </main>
@@ -234,11 +237,11 @@
       let last = "нет ответа";
       for (const url of urls) {
         try {
-          const res = await fetch(url, { cache: "no-store" });
+          const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(20000) });
           if (!res.ok) { last = "код " + res.status; continue; }
           return res.json();
         } catch (e) {
-          last = e.message;
+          last = e.message || String(e);
         }
       }
       throw new Error(last);
@@ -246,21 +249,23 @@
 
     async function boot() {
       const err = document.getElementById("error");
+      if (EMBEDDED && EMBEDDED.charts) {
+        data = EMBEDDED;
+        render();
+      }
       try {
         data = await loadLive();
         err.hidden = true;
+        render();
       } catch (e) {
-        if (EMBEDDED && EMBEDDED.charts) {
-          data = EMBEDDED;
+        if (data && data.charts) {
           err.hidden = false;
           err.textContent = "Показан снимок. Живое обновление недоступно: " + e.message;
-        } else {
-          err.hidden = false;
-          err.textContent = "Не удалось получить данные из 1С: " + e.message;
           return;
         }
+        err.hidden = false;
+        err.textContent = "Не удалось получить данные из 1С: " + e.message;
       }
-      render();
     }
 
     boot();

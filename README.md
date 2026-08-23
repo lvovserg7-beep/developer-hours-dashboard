@@ -2,7 +2,7 @@
 
 Приложение для компании Аллсан Интеграция. Берёт данные из 1С по OData (`trade.alsn.ru`) и показывает пять графиков часов.
 
-Стабильная версия: [v1.0.0](https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.0.0)
+Стабильная версия: [v1.1.0](https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.1.0)
 
 Репозиторий: [https://github.com/lvovserg7-beep/developer-hours-dashboard](https://github.com/lvovserg7-beep/developer-hours-dashboard)
 
@@ -32,13 +32,13 @@ IIS не обязателен. Дашборд сам слушает порт **8
 
 Стабильная версия:
 
-https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.0.0
+https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.1.0
 
 В PowerShell:
 
 ```powershell
 cd C:\Apps
-git clone --branch v1.0.0 https://github.com/lvovserg7-beep/developer-hours-dashboard.git
+git clone --branch v1.1.0 https://github.com/lvovserg7-beep/developer-hours-dashboard.git
 ```
 
 Или скачайте Source code (zip) у релиза и распакуйте, например в `C:\Apps\developer-hours-dashboard`.
@@ -49,8 +49,8 @@ git clone --branch v1.0.0 https://github.com/lvovserg7-beep/developer-hours-dash
 
 На чистой Windows **нет** файла Cursor `%USERPROFILE%\.cursor\mcp.json`. Самый простой способ — файл рядом с программой:
 
-1. Скопируйте `dashboard\odata.env.example` в `dashboard\odata.env`.
-2. Откройте `odata.env` в блокноте и укажите логин и пароль OData:
+1. Скопируйте `dashboard\.env.example` в `dashboard\.env`.
+2. Откройте `.env` в блокноте и укажите логин и пароль OData:
 
 ```
 ODATA_DB_TRADE_BASE_URL=https://trade.alsn.ru/trade/odata/standard.odata/
@@ -58,7 +58,7 @@ ODATA_DB_TRADE_USERNAME=логин
 ODATA_DB_TRADE_PASSWORD=пароль
 ```
 
-Если запустить `start.cmd` без `odata.env`, скрипт сам создаст файл из образца и откроет блокнот.
+Если запустить `start.cmd` без `.env`, скрипт сам создаст файл из образца и откроет блокнот.
 
 Можно вместо файла задать переменные среды Windows:
 
@@ -72,7 +72,7 @@ ODATA_DB_TRADE_PASSWORD=пароль
 
 Если на компьютере уже стоит Cursor и есть `%USERPROFILE%\.cursor\mcp.json` с сервером `1c-odata`, программа возьмёт данные оттуда.
 
-Логин и пароль — те же, что у публикации OData 1С. Файл `odata.env` в git не попадает.
+Логин и пароль — те же, что у публикации OData 1С. Файл `.env` в git не попадает. Не подставляйте Windows-учётку компьютера.
 
 ### Запуск
 
@@ -91,16 +91,29 @@ node server.mjs
 ```
 
 3. Окно не закрывайте — это и есть сервер.
-4. В браузере: http://localhost:8787/
+4. В браузере **Google Chrome или Microsoft Edge**: http://localhost:8787/
+
+Не открывайте в Internet Explorer — там страница останется на «Загрузка с trade.alsn.ru…».
 
 Если в консоли `Connecting via DNS trade.alsn.ru` и затем `Dashboard http://localhost:8787/` — всё хорошо. Если ошибка про `mcp.json` — нет файла `.env` (или пустые логин/пароль). Если `401` или таймаут — нет доступа к 1С (логин, пароль или сеть).
 
 ### Чтобы открывалось с других компьютеров в сети
 
-1. В брандмауэре Windows разрешите входящий TCP **8787**.
-2. Открывайте `http://ИМЯ-ПК:8787/` или `http://IP:8787/`.
+Адрес вида `http://192.168.10.240:8787/` работает только **в той же локальной сети** (или по VPN). Из интернета этот адрес не открывается.
 
-Сервер уже слушает все интерфейсы (`0.0.0.0`), не только localhost.
+На компьютере, где запущен дашборд, один раз от администратора:
+
+```
+C:\Apps\developer-hours-dashboard\dashboard\open-firewall.cmd
+```
+
+Или вручную в PowerShell от администратора:
+
+```
+netsh advfirewall firewall add rule name="Developer hours dashboard 8787" dir=in action=allow protocol=TCP localport=8787 profile=any
+```
+
+Окно `start.cmd` не закрывайте. С другого компьютера откройте в Chrome или Edge: `http://192.168.10.240:8787/`
 
 ### Чтобы поднималось после перезагрузки
 
