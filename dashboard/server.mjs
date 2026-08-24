@@ -27,6 +27,17 @@ const CACHE_MS = 10 * 60 * 1000;
 
 let cache = { at: 0, data: null, html: "", error: null, inflight: null };
 
+const EMPTY_DATA = {
+  generatedAt: "",
+  source: "Аллсан Интеграция",
+  organization: "Аллсан Интеграция",
+  kpis: {},
+  charts: {},
+  totals: { employees: 0, tasks: 0, unassigned: 0, activity: 0 },
+  employees: [],
+  activity: [],
+};
+
 function renderHtml(data, user) {
   const template = readFileSync(join(root, "public", "index.html"), "utf8");
   const payload = JSON.stringify(filterDashboardData(data, user)).replace(/</g, "\\u003c");
@@ -65,7 +76,10 @@ async function refresh(force = false) {
   })().catch((err) => {
     cache.inflight = null;
     cache.error = String(err.message || err);
-    if (!cache.data) throw err;
+    if (!cache.data) {
+      cache.data = EMPTY_DATA;
+      cache.at = Date.now();
+    }
     return cache;
   });
 
@@ -274,7 +288,10 @@ refresh(true)
         console.log(`IIS snapshot http://localhost/employees/`);
       }
       if (snap.publishError) console.log(`IIS publish skipped: ${snap.publishError}`);
-      console.log(`Employees in work: ${snap.data.totals.employees}, tasks: ${snap.data.totals.tasks}, hours: ${snap.data.kpis?.hoursInWork}, done: ${snap.data.kpis?.hoursCompleted}`);
+      if (snap.error) console.log(`1C unavailable, UI started anyway: ${snap.error}`);
+      else {
+        console.log(`Employees in work: ${snap.data.totals.employees}, tasks: ${snap.data.totals.tasks}, hours: ${snap.data.kpis?.hoursInWork}, done: ${snap.data.kpis?.hoursCompleted}`);
+      }
     });
   })
   .catch((err) => {
