@@ -170,12 +170,12 @@ export function renderActivityTable(rows) {
   return `<div class="activity-scroll"><table class="activity">
       <thead>
         <tr>
-          <th>Номер</th>
-          <th>Задача</th>
-          <th>Клиент</th>
-          <th>Статус</th>
-          <th>Последний комментарий</th>
-          <th>Дата</th>
+          <th class="num">Номер</th>
+          <th class="title">Задача</th>
+          <th class="client">Клиент</th>
+          <th class="status">Статус</th>
+          <th class="comment">Последний комментарий</th>
+          <th class="when">Дата</th>
         </tr>
       </thead>
       <tbody>${body}</tbody>

@@ -29,7 +29,7 @@
       background: var(--card);
       padding: 18px 24px 14px;
     }
-    header .wrap, main { max-width: 1360px; margin: 0 auto; }
+    header .wrap, main { max-width: 1360px; margin: 0 auto; min-width: 0; }
     h1 { font-size: 22px; font-weight: 650; margin: 0 0 6px; }
     h2 { font-size: 14px; font-weight: 650; margin: 0 0 10px; }
     .lead, .meta, footer { color: var(--muted); }
@@ -146,7 +146,8 @@
       flex-direction: column;
       overflow: hidden;
     }
-    body.is-full #tab-admin .panel {
+    body.is-full #tab-admin .panel,
+    body.is-full #tab-pnl .panel {
       flex: 1;
       min-height: 0;
       overflow: auto;
@@ -194,17 +195,24 @@
       border-bottom-color: var(--accent);
       font-weight: 650;
     }
+    .tab-panel { min-width: 0; }
     .tab-panel[hidden] { display: none; }
+    .activity-scroll {
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+    }
     table.activity {
       width: 100%;
+      min-width: 960px;
       border-collapse: collapse;
-      table-layout: fixed;
     }
     table.activity th, table.activity td {
       text-align: left;
       vertical-align: top;
       padding: 10px 12px;
       border-bottom: 1px solid var(--line);
+      overflow-wrap: break-word;
     }
     table.activity th {
       font-size: 12px;
@@ -212,11 +220,16 @@
       font-weight: 600;
       background: #faf9f6;
     }
-    table.activity td.num { width: 118px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    table.activity td.title { width: 18%; word-break: break-word; }
-    table.activity td.client { width: 16%; word-break: break-word; }
-    table.activity td.status { width: 150px; word-break: break-word; }
-    table.activity td.comment { width: auto; }
+    table.activity th.num, table.activity td.num {
+      width: 118px;
+      min-width: 118px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    table.activity th.title, table.activity td.title { min-width: 220px; }
+    table.activity th.client, table.activity td.client { min-width: 140px; }
+    table.activity th.status, table.activity td.status { min-width: 130px; }
+    table.activity th.comment, table.activity td.comment { min-width: 240px; }
     .activity-filters {
       display: flex;
       flex-wrap: wrap;
@@ -266,8 +279,93 @@
       white-space: nowrap;
     }
     .comment-body { white-space: pre-wrap; word-break: break-word; max-height: 9em; overflow: auto; }
-    table.activity td.when { width: 140px; white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+    table.activity th.when, table.activity td.when {
+      width: 140px;
+      min-width: 140px;
+      white-space: nowrap;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
     table.activity thead th { position: sticky; top: 0; z-index: 1; }
+    .pnl-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      align-items: flex-end;
+      margin: 0 0 14px;
+    }
+    .pnl-toolbar .filter-dates {
+      flex: 1 1 280px;
+      min-width: 280px;
+      max-width: 340px;
+    }
+    .pnl-toolbar label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    .pnl-toolbar .dates {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 8px;
+    }
+    .pnl-toolbar .dates span { display: block; font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+    .pnl-toolbar input[type="date"] {
+      width: 100%;
+      min-width: 0;
+      padding: 6px 8px;
+      font: inherit;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .pnl-toolbar button {
+      appearance: none;
+      padding: 7px 14px;
+      font: inherit;
+      font-weight: 650;
+      color: #fff;
+      background: var(--accent);
+      border: 0;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .pnl-toolbar button:disabled { opacity: 0.6; cursor: wait; }
+    .pnl-note, .pnl-warn { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+    .pnl-warn { color: #9b2c2c; }
+    .pnl-section { margin-bottom: 18px; }
+    .pnl-section h2 { margin: 0 0 8px; }
+    .pnl-scroll {
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+    }
+    table.pnl {
+      width: 100%;
+      min-width: 720px;
+      border-collapse: collapse;
+    }
+    table.pnl th, table.pnl td {
+      text-align: left;
+      vertical-align: top;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+    table.pnl th {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      background: #faf9f6;
+      white-space: nowrap;
+    }
+    table.pnl th.num, table.pnl td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      min-width: 92px;
+    }
+    table.pnl td.name { min-width: 180px; }
+    table.pnl thead th { position: sticky; top: 0; z-index: 1; }
+    table.pnl tr.total td {
+      font-weight: 700;
+      border-top: 1px solid var(--ink);
+    }
+    table.pnl tr.pct td { font-weight: 650; }
     .task-link {
       font-weight: 650;
       color: var(--accent);
@@ -339,6 +437,33 @@
       body:not(.is-full) .board,
       body:not(.is-full) .bottom { grid-template-columns: 1fr; }
     }
+    @media (max-width: 700px) {
+      header { padding: 12px 12px 8px; }
+      main { padding: 12px 12px 40px; }
+      h1 { font-size: 18px; }
+      .lead { font-size: 13px; }
+      .tabs { flex-wrap: wrap; gap: 0 4px; }
+      .tab { padding: 8px 10px 10px; }
+      .tab-spacer { flex-basis: 100%; height: 0; margin: 0; }
+      .who { padding: 4px 8px 8px 0; }
+      .activity-filters > div,
+      .activity-filters .filter-dates {
+        flex: 1 1 100%;
+        min-width: 0;
+        max-width: none;
+      }
+      .activity-filters .dates { grid-template-columns: 1fr; }
+      .pnl-toolbar .filter-dates {
+        flex: 1 1 100%;
+        min-width: 0;
+        max-width: none;
+      }
+      .pnl-toolbar .dates { grid-template-columns: 1fr; }
+      .bar-row { grid-template-columns: minmax(0, 90px) 1fr 36px; }
+      .bar-row .lab { white-space: normal; }
+      table.admin { min-width: 780px; }
+      #admin-users { overflow: auto; -webkit-overflow-scrolling: touch; }
+    }
   </style>
 </head>
 <body>
@@ -350,6 +475,7 @@
       <nav class="tabs" role="tablist">
         <button type="button" class="tab is-on" data-tab="hours" role="tab" aria-selected="true">Часы</button>
         <button type="button" class="tab" data-tab="activity" role="tab" aria-selected="false">Активность</button>
+        <button type="button" class="tab" data-tab="pnl" role="tab" aria-selected="false">Доходы и расходы</button>
         <button type="button" class="tab" data-tab="admin" id="tab-btn-admin" role="tab" aria-selected="false" hidden>Админка</button>
         <span class="tab-spacer"></span>
         <span class="who" id="who"></span>
@@ -394,6 +520,7 @@
           <div class="admin-checks">
             <label><input type="checkbox" id="new-hours" checked> Часы</label>
             <label><input type="checkbox" id="new-activity" checked> Активность</label>
+            <label><input type="checkbox" id="new-pnl" checked> Доходы и расходы</label>
             <label><input type="checkbox" id="new-admin"> Администратор</label>
           </div>
           <button type="submit">Создать</button>
@@ -445,6 +572,30 @@
           </div>
         </form>
         <div id="activity-table">__ACTIVITY__</div>
+      </section>
+    </div>
+    <div id="tab-pnl" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Доходы и расходы</h2>
+        <p class="lead tab-intro">Отчёт по месяцам периода. Организация — Аллсан Интеграция. Суммы из 1С, без смешивания с кэшем часов.</p>
+        <form class="pnl-toolbar" id="pnl-form">
+          <div class="filter-dates">
+            <label>Период</label>
+            <div class="dates">
+              <div>
+                <span>с</span>
+                <input id="pnl-from" type="date" required>
+              </div>
+              <div>
+                <span>по</span>
+                <input id="pnl-to" type="date" required>
+              </div>
+            </div>
+          </div>
+          <button type="submit" id="pnl-run">Сформировать</button>
+        </form>
+        <div id="pnl-err" class="err" hidden></div>
+        <div id="pnl-report"></div>
       </section>
     </div>
   </main>
@@ -687,16 +838,127 @@
         ? `Всего ${total}.`
         : `Показано ${rows.length} из ${total}.`;
       return `<div class="activity-scroll"><table class="activity">
-        <thead><tr><th>Номер</th><th>Задача</th><th>Клиент</th><th>Статус</th><th>Последний комментарий</th><th>Дата</th></tr></thead>
+        <thead><tr><th class="num">Номер</th><th class="title">Задача</th><th class="client">Клиент</th><th class="status">Статус</th><th class="comment">Последний комментарий</th><th class="when">Дата</th></tr></thead>
         <tbody>${body}</tbody>
       </table></div>
       <p class="meta tab-intro">Только задачи в работе (порядок статуса 1–6). Сверху самые старые. ${count} Клик по номеру копирует ссылку 1С.</p>`;
+    }
+
+    let pnlLoaded = false;
+    let pnlInflight = false;
+
+    function isoDay(d) {
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+
+    function defaultPnlRange() {
+      const now = new Date();
+      const from = new Date(now.getFullYear(), now.getMonth() - 4, 1);
+      const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      return { from: isoDay(from), to: isoDay(to) };
+    }
+
+    function initPnlDates() {
+      const range = defaultPnlRange();
+      const from = document.getElementById("pnl-from");
+      const to = document.getElementById("pnl-to");
+      if (from && !from.value) from.value = range.from;
+      if (to && !to.value) to.value = range.to;
+    }
+
+    function formatPnlNumber(value, kind) {
+      const n = Number(value) || 0;
+      if (kind === "pct") {
+        return new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n) + " %";
+      }
+      if (kind === "hours") {
+        return new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
+      }
+      return new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+    }
+
+    function pnlErr(text) {
+      const el = document.getElementById("pnl-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function renderPnl(report) {
+      const box = document.getElementById("pnl-report");
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      const months = report.months || [];
+      const head = ["<th>Статья</th>"]
+        .concat(months.map((m) => `<th class="num">${escapeHtml(m.label)}</th>`))
+        .concat(['<th class="num">Итого</th>'])
+        .join("");
+      const sections = (report.sections || []).map((section) => {
+        const rows = (section.rows || []).map((row) => {
+          const kind = row.kind === "total" ? "total" : row.kind === "pct" ? "pct" : "";
+          const cells = (row.values || []).map((v) => `<td class="num">${formatPnlNumber(v, row.kind)}</td>`).join("");
+          return `<tr class="${kind}"><td class="name">${escapeHtml(row.name)}</td>${cells}<td class="num">${formatPnlNumber(row.total, row.kind)}</td></tr>`;
+        }).join("");
+        return `<div class="pnl-section">
+          <h2>${escapeHtml(section.title)}</h2>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead><tr>${head}</tr></thead>
+            <tbody>${rows || `<tr><td colspan="${months.length + 2}">Нет сумм за период</td></tr>`}</tbody>
+          </table></div>
+        </div>`;
+      }).join("");
+      const warn = (report.warnings || []).length
+        ? `<p class="pnl-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
+        : "";
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      box.innerHTML = warn + note + sections;
+    }
+
+    async function loadPnlReport() {
+      if (!USER.tabs?.pnl || pnlInflight) return;
+      const from = document.getElementById("pnl-from").value;
+      const to = document.getElementById("pnl-to").value;
+      if (!from || !to) {
+        pnlErr("Укажите период с и по");
+        return;
+      }
+      pnlInflight = true;
+      const btn = document.getElementById("pnl-run");
+      if (btn) btn.disabled = true;
+      pnlErr("");
+      document.getElementById("pnl-report").innerHTML = `<p class="pnl-note">Считаем отчёт из 1С…</p>`;
+      try {
+        const report = await api("/api/pnl?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to), {
+          signal: AbortSignal.timeout(180000),
+        });
+        pnlLoaded = true;
+        renderPnl(report);
+      } catch (e) {
+        pnlLoaded = false;
+        renderPnl(null);
+        pnlErr(e.message || String(e));
+      } finally {
+        pnlInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function loadPnlIfNeeded() {
+      if (pnlLoaded || pnlInflight) return;
+      loadPnlReport();
     }
 
     function visibleTabs() {
       const tabs = [];
       if (USER.tabs?.hours) tabs.push("hours");
       if (USER.tabs?.activity) tabs.push("activity");
+      if (USER.tabs?.pnl) tabs.push("pnl");
       if (USER.admin) tabs.push("admin");
       return tabs;
     }
@@ -715,6 +977,7 @@
       if (!allowed.includes(name)) name = allowed[0] || "hours";
       document.getElementById("tab-hours").hidden = name !== "hours";
       document.getElementById("tab-activity").hidden = name !== "activity";
+      document.getElementById("tab-pnl").hidden = name !== "pnl";
       document.getElementById("tab-admin").hidden = name !== "admin";
       for (const btn of document.querySelectorAll(".tab[data-tab]")) {
         const on = btn.getAttribute("data-tab") === name;
@@ -724,6 +987,7 @@
       if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
       if (name === "admin") loadAdminUsers();
       if (name === "activity" && data?.activity) fillActivityFilters(data.activity);
+      if (name === "pnl") loadPnlIfNeeded();
       fitHoursStage();
     }
 
@@ -757,6 +1021,7 @@
           <td>${escapeHtml(u.login)}${self ? ' <span class="meta">вы</span>' : ""}</td>
           <td><label><input type="checkbox" data-field="hours" ${u.tabs?.hours ? "checked" : ""}> Часы</label></td>
           <td><label><input type="checkbox" data-field="activity" ${u.tabs?.activity ? "checked" : ""}> Активность</label></td>
+          <td><label><input type="checkbox" data-field="pnl" ${u.tabs?.pnl ? "checked" : ""}> Доходы и расходы</label></td>
           <td><label><input type="checkbox" data-field="admin" ${u.admin ? "checked" : ""}> Админ</label></td>
           <td>
             <button type="button" data-act="pass">Пароль</button>
@@ -765,7 +1030,7 @@
         </tr>`;
       }).join("");
       return `<table class="admin">
-        <thead><tr><th>Логин</th><th>Вкладки</th><th></th><th>Права</th><th></th></tr></thead>
+        <thead><tr><th>Логин</th><th colspan="3">Вкладки</th><th>Права</th><th></th></tr></thead>
         <tbody>${body}</tbody>
       </table>`;
     }
@@ -847,12 +1112,14 @@
             tabs: {
               hours: document.getElementById("new-hours").checked,
               activity: document.getElementById("new-activity").checked,
+              pnl: document.getElementById("new-pnl").checked,
             },
           }),
         });
         e.target.reset();
         document.getElementById("new-hours").checked = true;
         document.getElementById("new-activity").checked = true;
+        document.getElementById("new-pnl").checked = true;
         await loadAdminUsers();
       } catch (ex) {
         adminErr(ex.message || String(ex));
@@ -935,6 +1202,12 @@
     activityFilters.addEventListener("reset", () => {
       requestAnimationFrame(renderActivity);
     });
+    document.getElementById("pnl-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      pnlLoaded = false;
+      loadPnlReport();
+    });
+    initPnlDates();
     applyUserUi();
     if (EMBEDDED?.activity) fillActivityFilters(EMBEDDED.activity);
     showTab(location.hash.replace("#", ""));

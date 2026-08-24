@@ -7,7 +7,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const USERS_FILE = join(root, "users.json");
 const COOKIE = "dash_session";
 const SESSION_MS = 14 * 24 * 60 * 60 * 1000;
-const TABS = ["hours", "activity"];
+const TABS = ["hours", "activity", "pnl"];
 
 function envValues() {
   const values = { ...process.env };
@@ -66,6 +66,7 @@ function publicUser(user) {
     tabs: {
       hours: user.tabs?.hours !== false,
       activity: user.tabs?.activity !== false,
+      pnl: user.tabs?.pnl !== false,
     },
   };
 }
@@ -75,6 +76,7 @@ function normalizeTabs(tabs, admin) {
   const out = {
     hours: src.hours !== false,
     activity: src.activity !== false,
+    pnl: src.pnl !== false,
   };
   if (admin) return out;
   return out;
@@ -107,7 +109,7 @@ export function ensureAuthReady() {
       salt,
       hash,
       admin: true,
-      tabs: { hours: true, activity: true },
+      tabs: { hours: true, activity: true, pnl: true },
     });
     changed = true;
     console.log(`First admin login: ${login}`);
@@ -229,6 +231,10 @@ export function removeUser(id, actorId) {
   saveStore(store);
 }
 
+export function userHasTab(user, tab) {
+  return TABS.includes(tab) && publicUser(user).tabs[tab] === true;
+}
+
 export function filterDashboardData(data, user) {
   const tabs = publicUser(user).tabs;
   const out = { ...data };
@@ -239,6 +245,7 @@ export function filterDashboardData(data, user) {
     out.statusTotals = {};
   }
   if (!tabs.activity) out.activity = [];
+  if (!tabs.pnl) out.pnl = null;
   return out;
 }
 

@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderChartParts } from "./lib/render-charts.mjs";
 import { loadActiveEmployees } from "./load-employees.mjs";
+import { loadPnl, defaultPnlRange } from "./lib/load-pnl.mjs";
 import {
   cookieName,
   ensureAuthReady,
@@ -16,6 +17,7 @@ import {
   removeUser,
   publicUser,
   filterDashboardData,
+  userHasTab,
 } from "./lib/auth.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -217,6 +219,24 @@ const server = createServer(async (req, res) => {
         return json(res, 200, { ok: true });
       }
       return json(res, 405, { error: "Метод не поддерживается" });
+    }
+
+    if (path === "/api/pnl") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "pnl")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Доходы и расходы»." });
+      }
+      const range = defaultPnlRange();
+      const from = String(url.searchParams.get("from") || range.from);
+      const to = String(url.searchParams.get("to") || range.to);
+      try {
+        const data = await loadPnl(from, to);
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /период/i.test(msg) ? 400 : 502, { error: msg });
+      }
     }
 
     if (path === "/api/employees" || path === "/api/health") {
