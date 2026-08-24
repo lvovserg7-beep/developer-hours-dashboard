@@ -112,78 +112,32 @@
       overflow: hidden;
     }
     body.is-full #tab-hours:not([hidden]) {
-      display: grid;
-      grid-template-rows: minmax(0, 1.35fr) minmax(0, 1fr);
-      grid-template-columns: minmax(0, 1fr);
-      gap: 10px;
+      position: relative;
+      display: block;
       overflow: hidden;
       width: 100%;
       height: 100%;
+    }
+    body.is-full #tab-hours .hours-stage {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 1360px;
+      transform-origin: center center;
     }
     body.is-full #tab-hours .board,
     body.is-full #tab-hours .bottom {
-      display: grid;
-      margin: 0;
-      min-height: 0;
-      min-width: 0;
-      height: 100%;
+      display: grid !important;
       width: 100%;
-      gap: 10px;
+      margin: 0 0 14px;
+      height: auto;
     }
     body.is-full #tab-hours .board {
-      grid-template-columns: minmax(0, 1.15fr) minmax(220px, 0.72fr) minmax(0, 1.15fr);
+      grid-template-columns: minmax(0, 1.15fr) 240px minmax(0, 1.15fr) !important;
     }
     body.is-full #tab-hours .bottom {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-columns: 1fr 1fr !important;
     }
-    body.is-full #tab-hours .panel {
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-      min-width: 0;
-      height: 100%;
-      overflow: hidden;
-    }
-    body.is-full #tab-hours .panel > h2 { flex: 0 0 auto; }
-    body.is-full #tab-hours .panel > .legend {
-      flex: 0 0 auto;
-      margin-top: 8px;
-    }
-    body.is-full #tab-hours .bars {
-      flex: 1 1 auto;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-evenly;
-      overflow: auto;
-    }
-    body.is-full #tab-hours .bar-row {
-      flex: 1 1 0;
-      min-height: 22px;
-      margin: 2px 0;
-      align-items: stretch;
-    }
-    body.is-full #tab-hours .bar-row .lab,
-    body.is-full #tab-hours .bar-row .num {
-      display: flex;
-      align-items: center;
-    }
-    body.is-full #tab-hours .track {
-      align-self: center;
-      height: 72%;
-      min-height: 16px;
-    }
-    body.is-full #tab-hours .seg { height: 100%; }
-    body.is-full #tab-hours .center {
-      justify-content: center;
-      gap: 10px;
-    }
-    body.is-full #tab-hours .center svg {
-      width: min(92%, 420px);
-      height: auto;
-      flex: 0 1 auto;
-    }
-    body.is-full #tab-hours .gauge-value { font-size: clamp(28px, 3.2vh, 44px); }
     body.is-full #tab-activity .panel {
       flex: 1;
       min-height: 0;
@@ -271,9 +225,8 @@
     }
     .copy-toast[hidden] { display: none; }
     @media (max-width: 1100px) {
-      .board, .bottom { grid-template-columns: 1fr; }
-      body.is-full #tab-hours .board,
-      body.is-full #tab-hours .bottom { grid-template-columns: 1fr; }
+      body:not(.is-full) .board,
+      body:not(.is-full) .bottom { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -296,6 +249,7 @@
     <![endif]-->
     <div id="error" class="err" hidden></div>
     <div id="tab-hours" class="tab-panel">
+    <div class="hours-stage">
     <div class="board">
       <section class="panel" id="chart-status">__CHART_STATUS__</section>
       <section class="panel center" id="chart-kpis">__CHART_KPIS__</section>
@@ -306,6 +260,7 @@
       <section class="panel" id="chart-dev-done">__CHART_DEV_DONE__</section>
     </div>
     <footer>Часы в работе по статусам — реквизит «Часы». Часы в работе по разработчикам — реквизит «Часы разработки», не общие часы задачи. Выполненные: анализ = часы минус разработка и внедрение; разработка = часы разработки и внедрения.</footer>
+    </div>
     </div>
     <div id="tab-activity" class="tab-panel" hidden>
       <section class="panel">
@@ -443,6 +398,7 @@
       document.getElementById("meta").innerHTML =
         `<b>${escapeHtml(data.source || "1С")}</b> · ${when} · в работе ${data.totals?.tasks || 0} задач, ${data.totals?.employees || 0} сотрудников`;
       document.getElementById("activity-table").innerHTML = activityTable(data.activity || []);
+      fitHoursStage();
     }
 
     function activityTable(rows) {
@@ -483,6 +439,24 @@
       }
       const hash = hours ? "hours" : "activity";
       if (location.hash !== "#" + hash) history.replaceState(null, "", "#" + hash);
+      fitHoursStage();
+    }
+
+    function fitHoursStage() {
+      const tab = document.getElementById("tab-hours");
+      const stage = tab && tab.querySelector(".hours-stage");
+      if (!tab || !stage) return;
+      stage.style.transform = "";
+      stage.style.width = "";
+      if (!document.body.classList.contains("is-full") || tab.hidden) return;
+      const designW = 1360;
+      stage.style.width = designW + "px";
+      const w = tab.clientWidth;
+      const h = tab.clientHeight;
+      const sh = stage.offsetHeight;
+      const s = Math.min(w / designW, h / Math.max(sh, 1));
+      if (!s || !isFinite(s)) return;
+      stage.style.transform = "translate(-50%, -50%) scale(" + s + ")";
     }
 
     function setFull(on) {
@@ -494,6 +468,7 @@
       } else if (document.fullscreenElement) {
         document.exitFullscreen?.().catch(() => {});
       }
+      requestAnimationFrame(() => requestAnimationFrame(fitHoursStage));
     }
 
     async function copyNavLink(link) {
@@ -525,6 +500,10 @@
         const btn = document.getElementById("btn-full");
         if (btn) btn.textContent = "На весь экран";
       }
+      requestAnimationFrame(() => requestAnimationFrame(fitHoursStage));
+    });
+    window.addEventListener("resize", () => {
+      requestAnimationFrame(fitHoursStage);
     });
     document.getElementById("activity-table").addEventListener("click", (e) => {
       const a = e.target.closest("a.task-link");

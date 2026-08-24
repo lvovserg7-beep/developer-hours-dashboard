@@ -1,20 +1,24 @@
 @echo off
+chcp 65001 >nul
 cd /d "%~dp0"
 if not exist ".env" if not exist "odata.env" (
   copy /Y ".env.example" ".env" >nul
   echo.
-  echo Создан файл .env. Впишите логин и пароль OData из 1С, сохраните и закройте блокнот.
-  echo Не используйте Windows-учётку этого компьютера — нужен пользователь публикации OData.
+  echo Created .env. Enter 1C OData login and password, save and close Notepad.
+  echo Do not use this computer Windows account. Use the OData publication user.
   echo.
   notepad ".env"
 )
+echo Stopping previous dashboard on port 8787 if it is running...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-NetTCPConnection -LocalPort 8787 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }"
+ping -n 2 127.0.0.1 >nul
 echo Starting dashboard...
-echo Локально:  http://localhost:8787/
-echo В сети:    http://192.168.10.240:8787/  (если брандмауэр закрыт — запустите open-firewall.cmd от администратора)
-node server.mjs
+echo Local:  http://localhost:8787/
+echo LAN:    http://192.168.10.240:8787/
+node server.mjs 2>&1
 if errorlevel 1 (
   echo.
-  echo Запуск не удался. Код 401 значит: логин или пароль OData не приняты сервером 1С.
-  echo Возьмите ODATA_DB_TRADE_USERNAME и ODATA_DB_TRADE_PASSWORD из mcp.json на рабочей машине с Cursor.
+  echo Start failed. Code 401 means OData login or password was rejected.
+  echo Set ODATA_DB_TRADE_USERNAME and ODATA_DB_TRADE_PASSWORD in dashboard\.env
   pause
 )

@@ -2,11 +2,11 @@
 
 Приложение для компании Аллсан Интеграция. Берёт данные из 1С и показывает часы по задачам разработчика и активность в чате.
 
-Стабильная версия: [v1.2.0](https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.2.0)
+Стабильная версия: [v1.3.0](https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.3.0)
 
 Репозиторий: [https://github.com/lvovserg7-beep/developer-hours-dashboard](https://github.com/lvovserg7-beep/developer-hours-dashboard)
 
-Страница обновляется раз в 10 минут. Две вкладки: **Часы** (пять графиков) и **Активность** (задачи в работе, статус, последний комментарий). Есть режим «На весь экран». Клик по номеру задачи копирует навигационную ссылку 1С. На самой странице адрес сервиса 1С не показывается.
+Страница обновляется раз в 10 минут. Две вкладки: **Часы** (пять графиков) и **Активность** (задачи в работе, статус, последний комментарий). Режим «На весь экран» масштабирует исходную сетку графиков, без мобильной вёрстки столбиком. Клик по номеру задачи копирует навигационную ссылку 1С. На самой странице адрес сервиса 1С не показывается. `start.cmd` перед запуском сам останавливает старый процесс на порту 8787.
 
 ## Правила отбора
 
@@ -32,13 +32,13 @@ IIS не обязателен. Дашборд сам слушает порт **8
 
 Стабильная версия:
 
-https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.2.0
+https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.3.0
 
 В PowerShell:
 
 ```powershell
 cd C:\Apps
-git clone --branch v1.2.0 https://github.com/lvovserg7-beep/developer-hours-dashboard.git
+git clone --branch v1.3.0 https://github.com/lvovserg7-beep/developer-hours-dashboard.git
 ```
 
 Или скачайте Source code (zip) у релиза и распакуйте, например в `C:\Apps\developer-hours-dashboard`.
