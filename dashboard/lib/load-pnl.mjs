@@ -169,7 +169,7 @@ export function classifyOpKo(bonusEnd, periodIso) {
 
 async function tryPages(path) {
   try {
-    return await odataAllPages(path, 80);
+    return await odataAllPages(path, 150);
   } catch (err) {
     return { error: String(err.message || err), rows: [] };
   }
@@ -197,8 +197,10 @@ async function tryEntity(paths) {
 async function orgKey() {
   const data = await tryPages("Catalog_Организации?$format=json&$select=Ref_Key,Description&$top=50");
   const rows = rowsOf(data);
-  const hit = rows.find((r) => String(r.Description || "").trim() === ORG_NAME);
-  return hit?.Ref_Key || "";
+  const exact = rows.find((r) => String(r.Description || "").trim() === ORG_NAME);
+  const llc = rows.find((r) => String(r.Description || "").trim() === `${ORG_NAME} ООО`);
+  const fuzzy = rows.find((r) => String(r.Description || "").includes(ORG_NAME));
+  return (exact || llc || fuzzy)?.Ref_Key || "";
 }
 
 async function resolveByKeys(entity, ids, select) {
@@ -284,35 +286,49 @@ function periodFilter(from, to) {
   return `Period ge datetime'${odataDate(from)}' and Period le datetime'${odataDate(to, true)}'`;
 }
 
+async function fetchAll(path) {
+  const pageSize = 200;
+  const maxPages = 80;
+  const base = String(path).replace(/&\$top=\d+/g, "").replace(/\?\$top=\d+&/g, "?").replace(/\?\$top=\d+$/g, "");
+  const rows = [];
+  for (let page = 0; page < maxPages; page++) {
+    const sep = base.includes("?") ? "&" : "?";
+    const pagePath = `${base}${sep}$top=${pageSize}&$skip=${page * pageSize}`;
+    try {
+      const chunk = await odataAllPages(pagePath, 2);
+      rows.push(...chunk);
+      if (chunk.length < pageSize) break;
+    } catch (err) {
+      return { rows, error: String(err.message || err) };
+    }
+  }
+  return { rows, error: "" };
+}
+
 async function loadSalesRegister(from, to) {
-  const select = "Period,Active,RecordType,АналитикаУчетаНоменклатуры_Key,АналитикаУчетаПоПартнерам_Key,Организация_Key,СуммаВыручки,СебестоимостьРегл,Количество";
+  const select = "Period,Active,АналитикаУчетаНоменклатуры_Key,АналитикаУчетаПоПартнерам_Key,СуммаВыручки,СебестоимостьРегл,Количество";
   const filter = encodeURIComponent(`${periodFilter(from, to)} and Active eq true`);
-  return tryEntity([
-    `AccumulationRegister_ВыручкаИСебестоимостьПродаж?$format=json&$filter=${filter}&$select=${select}&$top=200`,
-    `AccumulationRegister_ВыручкаИСебестоимостьПродаж?$format=json&$filter=${filter}&$top=200`,
-  ]);
+  const first = await fetchAll(
+    `AccumulationRegister_ВыручкаИСебестоимостьПродаж_RecordType?$format=json&$filter=${filter}&$select=${select}`
+  );
+  if (!first.error) return first;
+  return fetchAll(`AccumulationRegister_ВыручкаИСебестоимостьПродаж_RecordType?$format=json&$filter=${filter}`);
 }
 
 async function loadOtherExpenses(from, to) {
-  const filterReceipt = encodeURIComponent(`${periodFilter(from, to)} and Active eq true and RecordType eq 'Receipt'`);
-  const filterPlain = encodeURIComponent(`${periodFilter(from, to)} and Active eq true`);
-  const select = "Period,Active,RecordType,СтатьяРасходов_Key,Организация_Key,Сумма,СуммаУпр,СуммаРегл";
-  return tryEntity([
-    `AccumulationRegister_ПрочиеРасходы?$format=json&$filter=${filterReceipt}&$select=${select}&$top=200`,
-    `AccumulationRegister_ПрочиеРасходы?$format=json&$filter=${filterPlain}&$select=${select}&$top=200`,
-    `AccumulationRegister_ПрочиеРасходы?$format=json&$filter=${filterPlain}&$top=200`,
-  ]);
+  const filter = encodeURIComponent(`${periodFilter(from, to)} and Active eq true and RecordType eq 'Receipt'`);
+  const select = "Period,Active,RecordType,СтатьяРасходов_Key,Организация_Key,Сумма,СуммаРегл";
+  const first = await fetchAll(`AccumulationRegister_ПрочиеРасходы_RecordType?$format=json&$filter=${filter}&$select=${select}`);
+  if (!first.error) return first;
+  return fetchAll(`AccumulationRegister_ПрочиеРасходы_RecordType?$format=json&$filter=${filter}`);
 }
 
 async function loadOtherIncomeReg(from, to) {
-  const filterReceipt = encodeURIComponent(`${periodFilter(from, to)} and Active eq true and RecordType eq 'Receipt'`);
-  const filterPlain = encodeURIComponent(`${periodFilter(from, to)} and Active eq true`);
-  const select = "Period,Active,RecordType,СтатьяДоходов_Key,Организация_Key,Сумма,СуммаУпр,СуммаРегл";
-  return tryEntity([
-    `AccumulationRegister_ПрочиеДоходы?$format=json&$filter=${filterReceipt}&$select=${select}&$top=200`,
-    `AccumulationRegister_ПрочиеДоходы?$format=json&$filter=${filterPlain}&$select=${select}&$top=200`,
-    `AccumulationRegister_ПрочиеДоходы?$format=json&$filter=${filterPlain}&$top=200`,
-  ]);
+  const filter = encodeURIComponent(`${periodFilter(from, to)} and Active eq true and RecordType eq 'Receipt'`);
+  const select = "Period,Active,RecordType,СтатьяДоходов_Key,Организация_Key,Сумма,СуммаРегл";
+  const first = await fetchAll(`AccumulationRegister_ПрочиеДоходы_RecordType?$format=json&$filter=${filter}&$select=${select}`);
+  if (!first.error) return first;
+  return fetchAll(`AccumulationRegister_ПрочиеДоходы_RecordType?$format=json&$filter=${filter}`);
 }
 
 async function findMarketingKey() {
@@ -384,7 +400,6 @@ export async function loadPnl(fromText, toText) {
   } catch (err) {
     warnings.push(String(err.message || err));
   }
-  if (!org) warnings.push("Организация «Аллсан Интеграция» не найдена — отбор по организации не применён.");
 
   const dir = await loadDirSettings();
   warnings.push(...dir.warnings);
@@ -396,12 +411,12 @@ export async function loadPnl(fromText, toText) {
   const incomeReg = await loadOtherIncomeReg(from, to);
   if (incomeReg.error) warnings.push(`Прочие доходы: ${incomeReg.error.slice(0, 180)}`);
 
-  const salesRowsRaw = rowsOf(salesReg).filter((row) => row.Active !== false && isReceipt(row));
+  const salesRowsRaw = rowsOf(salesReg).filter((row) => row.Active !== false);
   const nomenKeys = salesRowsRaw.map((r) => refKey(r, "АналитикаУчетаНоменклатуры"));
   const partnerKeys = salesRowsRaw.map((r) => refKey(r, "АналитикаУчетаПоПартнерам"));
   const [nomenKeysMap, partnerKeysMap] = await Promise.all([
     resolveByKeys("Catalog_КлючиАналитикиУчетаНоменклатуры", nomenKeys, "Ref_Key,Номенклатура_Key"),
-    resolveByKeys("Catalog_КлючиАналитикиУчетаПоПартнерам", partnerKeys, "Ref_Key,Контрагент_Key,Организация_Key"),
+    resolveByKeys("Catalog_КлючиАналитикиУчетаПоПартнерам", partnerKeys, "Ref_Key,Контрагент,Контрагент_Type,Организация_Key"),
   ]);
 
   const counterparties = await resolveByKeys(
@@ -414,16 +429,6 @@ export async function loadPnl(fromText, toText) {
     [...nomenKeysMap.values()].map((r) => refKey(r, "Номенклатура")),
     "Ref_Key,Description,PredefinedDataName"
   );
-
-  const orgFromPartner = (partnerKey) => refKey(partnerKeysMap.get(partnerKey) || {}, "Организация");
-  const keepOrg = (row, partnerKey) => {
-    if (!org) return true;
-    const direct = refKey(row, "Организация");
-    if (direct) return direct === org;
-    const via = orgFromPartner(partnerKey);
-    if (via) return via === org;
-    return true;
-  };
 
   const revenueMap = new Map();
   const cogsMap = new Map();
@@ -443,7 +448,6 @@ export async function loadPnl(fromText, toText) {
 
   for (const row of salesRowsRaw) {
     const partnerKey = refKey(row, "АналитикаУчетаПоПартнерам");
-    if (!keepOrg(row, partnerKey)) continue;
     const i = monthIndex(months, row.Period);
     if (i < 0) continue;
     const analyticsNomen = nomenKeysMap.get(refKey(row, "АналитикаУчетаНоменклатуры"));
@@ -495,13 +499,12 @@ export async function loadPnl(fromText, toText) {
   const expenseRowsRaw = rowsOf(expensesReg).filter((row) => row.Active !== false && isReceipt(row));
   const articleKeys = expenseRowsRaw.map((r) => refKey(r, "СтатьяРасходов"));
   const articles = await resolveByKeys(
-    "Catalog_СтатьиРасходов",
+    "ChartOfCharacteristicTypes_СтатьиРасходов",
     articleKeys,
     "Ref_Key,Description,ВариантРаспределенияРасходов"
   );
   const expenseSections = new Map();
   for (const row of expenseRowsRaw) {
-    if (org && refKey(row, "Организация") && refKey(row, "Организация") !== org) continue;
     const i = monthIndex(months, row.Period);
     if (i < 0) continue;
     const articleKey = refKey(row, "СтатьяРасходов");
@@ -537,10 +540,9 @@ export async function loadPnl(fromText, toText) {
 
   const incomeRowsRaw = rowsOf(incomeReg).filter((row) => row.Active !== false && isReceipt(row));
   const incomeArticleKeys = incomeRowsRaw.map((r) => refKey(r, "СтатьяДоходов"));
-  const incomeArticles = await resolveByKeys("Catalog_СтатьиДоходов", incomeArticleKeys, "Ref_Key,Description");
+  const incomeArticles = await resolveByKeys("ChartOfCharacteristicTypes_СтатьиДоходов", incomeArticleKeys, "Ref_Key,Description");
   const incomeMap = new Map();
   for (const row of incomeRowsRaw) {
-    if (org && refKey(row, "Организация") && refKey(row, "Организация") !== org) continue;
     const i = monthIndex(months, row.Period);
     if (i < 0) continue;
     const name = String(incomeArticles.get(refKey(row, "СтатьяДоходов"))?.Description || "Без статьи").trim() || "Без статьи";
