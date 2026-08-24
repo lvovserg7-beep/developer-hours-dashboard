@@ -116,6 +116,17 @@ export function ensureAuthReady() {
     if (generated) console.log(`First admin password: ${password}`);
     else console.log("First admin password taken from DASHBOARD_ADMIN_PASSWORD");
   }
+  for (const user of store.users) {
+    if (!user.tabs || typeof user.tabs !== "object") {
+      user.tabs = { hours: true, activity: true, pnl: true };
+      changed = true;
+      continue;
+    }
+    if (user.tabs.pnl == null) {
+      user.tabs.pnl = true;
+      changed = true;
+    }
+  }
   if (changed) saveStore(store);
   return store;
 }
