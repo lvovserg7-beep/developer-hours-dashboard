@@ -69,7 +69,7 @@ function stackedChart(title, rows, emptyText) {
           <div class="num">${row.total}</div>
         </div>`;
   }).join("");
-  return `<h2>${escapeHtml(heading)}</h2>${body}<div class="legend">${legend}</div>`;
+  return `<h2>${escapeHtml(heading)}</h2><div class="bars">${body}</div><div class="legend">${legend}</div>`;
 }
 
 function gaugeSvg(value, max) {
@@ -115,5 +115,43 @@ export function renderChartParts(data) {
     devWork: stackedChart("Часов в работе по разработчикам", c.hoursByDeveloper, "Нет часов разработки в работе"),
     clientDone: stackedChart("Выполненные часы по клиентам", c.completedByClient, "Нет выполненных часов"),
     devDone: stackedChart("Выполненные часы по разработчикам", c.completedByDeveloper, "Нет выполненных часов"),
+    activity: renderActivityTable(data.activity || []),
   };
+}
+
+export function renderActivityTable(rows) {
+  if (!rows.length) {
+    return `<p class="meta">Нет задач с чатом.</p>`;
+  }
+  const body = rows.map((row) => {
+    const date = row.date ? fmt.format(new Date(row.date)) : "—";
+    const comment = row.comment
+      ? escapeHtml(row.comment).replace(/\n/g, "<br>")
+      : `<span class="meta">Нет комментариев</span>`;
+    const num = escapeHtml(row.number);
+    const link = escapeHtml(row.navLink || "");
+    const numberCell = link
+      ? `<a class="task-link" href="${link}" data-link="${link}" title="Нажмите, чтобы скопировать ссылку 1С">${num}</a>`
+      : `<span class="task-num">${num}</span>`;
+    return `<tr>
+        <td class="num">${numberCell}</td>
+        <td class="title">${escapeHtml(row.title)}</td>
+        <td class="status">${escapeHtml(row.status || "Без статуса")}</td>
+        <td class="comment"><div class="comment-body">${comment}</div></td>
+        <td class="when">${escapeHtml(date)}</td>
+      </tr>`;
+  }).join("");
+  return `<div class="activity-scroll"><table class="activity">
+      <thead>
+        <tr>
+          <th>Номер</th>
+          <th>Задача</th>
+          <th>Статус</th>
+          <th>Последний комментарий</th>
+          <th>Дата</th>
+        </tr>
+      </thead>
+      <tbody>${body}</tbody>
+    </table></div>
+    <p class="meta tab-intro">Только задачи в работе (порядок статуса 1–6). Сверху самые старые. Всего ${rows.length}. Клик по номеру копирует ссылку 1С.</p>`;
 }

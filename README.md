@@ -1,18 +1,18 @@
 # Дашборд часов по задачам разработчика
 
-Приложение для компании Аллсан Интеграция. Берёт данные из 1С по OData (`trade.alsn.ru`) и показывает пять графиков часов.
+Приложение для компании Аллсан Интеграция. Берёт данные из 1С и показывает часы по задачам разработчика и активность в чате.
 
-Стабильная версия: [v1.1.0](https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.1.0)
+Стабильная версия: [v1.2.0](https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.2.0)
 
 Репозиторий: [https://github.com/lvovserg7-beep/developer-hours-dashboard](https://github.com/lvovserg7-beep/developer-hours-dashboard)
 
-Страница обновляется раз в 10 минут.
+Страница обновляется раз в 10 минут. Две вкладки: **Часы** (пять графиков) и **Активность** (задачи в работе, статус, последний комментарий). Есть режим «На весь экран». Клик по номеру задачи копирует навигационную ссылку 1С. На самой странице адрес сервиса 1С не показывается.
 
 ## Правила отбора
 
 - Статусы — по реквизиту **Порядок**, не по названию.
 - В работе: номера 1–6. Выполненные: 7 и выше.
-- Отложенные часы в работу не входят.
+- Отложенные часы в работу не входят. В блоке «Отложено» — только задачи со статусом 1–6.
 - «Часов в работе по статусам» — реквизит **Часы**.
 - «Часов в работе по разработчикам» — реквизит **Часы разработки**, не общие «Часы» задачи.
 
@@ -32,13 +32,13 @@ IIS не обязателен. Дашборд сам слушает порт **8
 
 Стабильная версия:
 
-https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.1.0
+https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.2.0
 
 В PowerShell:
 
 ```powershell
 cd C:\Apps
-git clone --branch v1.1.0 https://github.com/lvovserg7-beep/developer-hours-dashboard.git
+git clone --branch v1.2.0 https://github.com/lvovserg7-beep/developer-hours-dashboard.git
 ```
 
 Или скачайте Source code (zip) у релиза и распакуйте, например в `C:\Apps\developer-hours-dashboard`.
@@ -93,9 +93,9 @@ node server.mjs
 3. Окно не закрывайте — это и есть сервер.
 4. В браузере **Google Chrome или Microsoft Edge**: http://localhost:8787/
 
-Не открывайте в Internet Explorer — там страница останется на «Загрузка с trade.alsn.ru…».
+Не открывайте в Internet Explorer — графики там не обновляются.
 
-Если в консоли `Connecting via DNS trade.alsn.ru` и затем `Dashboard http://localhost:8787/` — всё хорошо. Если ошибка про `mcp.json` — нет файла `.env` (или пустые логин/пароль). Если `401` или таймаут — нет доступа к 1С (логин, пароль или сеть).
+Если в консоли `Dashboard http://localhost:8787/` — всё хорошо. Если ошибка про `mcp.json` — нет файла `.env` (или пустые логин/пароль). Если `401` или таймаут — нет доступа к 1С (логин, пароль или сеть).
 
 ### Чтобы открывалось с других компьютеров в сети
 

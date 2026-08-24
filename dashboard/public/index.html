@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="refresh" content="600">
-  <title>Часы по задачам разработчика</title>
+  <title>Задачи разработчика</title>
   <style>
     :root {
       --bg: #f6f5f2;
@@ -75,17 +75,219 @@
     .legend { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 10px; font-size: 11px; color: var(--muted); }
     .legend i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; vertical-align: middle; }
     footer { font-size: 12px; margin-top: 16px; }
+    html, body { height: 100%; }
+    body.is-full {
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+    }
+    body.is-full header h1,
+    body.is-full header .lead,
+    body.is-full header #meta,
+    body.is-full .tab-intro,
+    body.is-full footer { display: none; }
+    body.is-full header {
+      flex: 0 0 auto;
+      padding: 4px 12px 0;
+    }
+    body.is-full header .wrap,
+    body.is-full main { max-width: none; width: 100%; }
+    body.is-full main {
+      flex: 1 1 auto;
+      min-height: 0;
+      padding: 8px 12px 12px;
+      display: flex;
+      flex-direction: column;
+      height: auto;
+      width: 100%;
+    }
+    body.is-full .tab-panel:not([hidden]) {
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    body.is-full #tab-hours:not([hidden]) {
+      display: grid;
+      grid-template-rows: minmax(0, 1.35fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr);
+      gap: 10px;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+    }
+    body.is-full #tab-hours .board,
+    body.is-full #tab-hours .bottom {
+      display: grid;
+      margin: 0;
+      min-height: 0;
+      min-width: 0;
+      height: 100%;
+      width: 100%;
+      gap: 10px;
+    }
+    body.is-full #tab-hours .board {
+      grid-template-columns: minmax(0, 1.15fr) minmax(220px, 0.72fr) minmax(0, 1.15fr);
+    }
+    body.is-full #tab-hours .bottom {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+    body.is-full #tab-hours .panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      min-width: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+    body.is-full #tab-hours .panel > h2 { flex: 0 0 auto; }
+    body.is-full #tab-hours .panel > .legend {
+      flex: 0 0 auto;
+      margin-top: 8px;
+    }
+    body.is-full #tab-hours .bars {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-evenly;
+      overflow: auto;
+    }
+    body.is-full #tab-hours .bar-row {
+      flex: 1 1 0;
+      min-height: 22px;
+      margin: 2px 0;
+      align-items: stretch;
+    }
+    body.is-full #tab-hours .bar-row .lab,
+    body.is-full #tab-hours .bar-row .num {
+      display: flex;
+      align-items: center;
+    }
+    body.is-full #tab-hours .track {
+      align-self: center;
+      height: 72%;
+      min-height: 16px;
+    }
+    body.is-full #tab-hours .seg { height: 100%; }
+    body.is-full #tab-hours .center {
+      justify-content: center;
+      gap: 10px;
+    }
+    body.is-full #tab-hours .center svg {
+      width: min(92%, 420px);
+      height: auto;
+      flex: 0 1 auto;
+    }
+    body.is-full #tab-hours .gauge-value { font-size: clamp(28px, 3.2vh, 44px); }
+    body.is-full #tab-activity .panel {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    body.is-full .activity-scroll { flex: 1; min-height: 0; overflow: auto; }
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-top: 14px;
+      border-bottom: 1px solid var(--line);
+      align-items: flex-end;
+    }
+    body.is-full .tabs { margin-top: 0; }
+    .tab-full {
+      margin-left: auto;
+      appearance: none;
+      background: none;
+      border: 0;
+      padding: 8px 4px 10px;
+      font: inherit;
+      color: var(--accent);
+      cursor: pointer;
+    }
+    .tab {
+      appearance: none;
+      background: none;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      padding: 8px 16px 10px;
+      font: inherit;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .tab.is-on {
+      color: var(--ink);
+      border-bottom-color: var(--accent);
+      font-weight: 650;
+    }
+    .tab-panel[hidden] { display: none; }
+    table.activity {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    table.activity th, table.activity td {
+      text-align: left;
+      vertical-align: top;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    table.activity th {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      background: #faf9f6;
+    }
+    table.activity td.num { width: 118px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    table.activity td.title { width: 22%; word-break: break-word; }
+    table.activity td.status { width: 168px; word-break: break-word; }
+    table.activity td.comment { width: auto; }
+    .comment-body { white-space: pre-wrap; word-break: break-word; max-height: 9em; overflow: auto; }
+    table.activity td.when { width: 140px; white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+    table.activity thead th { position: sticky; top: 0; z-index: 1; }
+    .task-link {
+      font-weight: 650;
+      color: var(--accent);
+      text-decoration: none;
+      border-bottom: 1px dotted var(--accent);
+      cursor: pointer;
+    }
+    .task-link:hover { color: var(--ink); }
+    .copy-toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      background: var(--ink);
+      color: #fff;
+      padding: 8px 12px;
+      font-size: 13px;
+      z-index: 20;
+    }
+    .copy-toast[hidden] { display: none; }
     @media (max-width: 1100px) {
       .board, .bottom { grid-template-columns: 1fr; }
+      body.is-full #tab-hours .board,
+      body.is-full #tab-hours .bottom { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <header>
     <div class="wrap">
-      <h1>Часы по задачам разработчика</h1>
-      <p class="lead">Пять показателей из 1С Аллсан Интеграция. Статусы берутся по порядковому номеру, не по названию: в работе номера 1–6, выполненные — 7 и выше. Отложенные часы в работу не входят.</p>
+      <h1>Задачи разработчика</h1>
+      <p class="lead">Данные из 1С Аллсан Интеграция. Статусы — по порядковому номеру: в работе 1–6, выполненные 7 и выше. Комментарии — из чата, привязанного к задаче.</p>
       <p class="meta" id="meta">__META__</p>
+      <nav class="tabs" role="tablist">
+        <button type="button" class="tab is-on" data-tab="hours" role="tab" aria-selected="true">Часы</button>
+        <button type="button" class="tab" data-tab="activity" role="tab" aria-selected="false">Активность</button>
+        <button type="button" class="tab-full" id="btn-full">На весь экран</button>
+      </nav>
     </div>
   </header>
   <main>
@@ -93,6 +295,7 @@
     <div class="err">Откройте эту страницу в Google Chrome или Microsoft Edge. Internet Explorer не обновляет графики.</div>
     <![endif]-->
     <div id="error" class="err" hidden></div>
+    <div id="tab-hours" class="tab-panel">
     <div class="board">
       <section class="panel" id="chart-status">__CHART_STATUS__</section>
       <section class="panel center" id="chart-kpis">__CHART_KPIS__</section>
@@ -102,8 +305,17 @@
       <section class="panel" id="chart-client-done">__CHART_CLIENT_DONE__</section>
       <section class="panel" id="chart-dev-done">__CHART_DEV_DONE__</section>
     </div>
-    <footer>Источник: 1С · DNS trade.alsn.ru. Часы в работе по статусам — реквизит «Часы». Часы в работе по разработчикам — реквизит «Часы разработки», не общие часы задачи. Выполненные: анализ = часы минус разработка и внедрение; разработка = часы разработки и внедрения.</footer>
+    <footer>Часы в работе по статусам — реквизит «Часы». Часы в работе по разработчикам — реквизит «Часы разработки», не общие часы задачи. Выполненные: анализ = часы минус разработка и внедрение; разработка = часы разработки и внедрения.</footer>
+    </div>
+    <div id="tab-activity" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Задачи в работе, последняя активность в чате</h2>
+        <p class="lead tab-intro">Только статусы с порядком 1–6. Номер, название, статус, последний комментарий из чата, дата. Сверху — самые старые. Клик по номеру копирует ссылку 1С.</p>
+        <div id="activity-table">__ACTIVITY__</div>
+      </section>
+    </div>
   </main>
+  <div id="copy-toast" class="copy-toast" hidden>Ссылка 1С скопирована</div>
   <script>
     const EMBEDDED = __EMBEDDED_DATA__;
     const PALETTE = ["#5c6b4a", "#8a5a12", "#3d4a5c", "#9a6b12", "#6b5344", "#7a8a62", "#4a5c6b", "#b08948", "#5a4a3a", "#2f4f4f", "#8a7060"];
@@ -178,7 +390,7 @@
           <div class="num">${row.total}</div>
         </div>`;
       }).join("");
-      return `<h2>${escapeHtml(heading)}</h2>${body}<div class="legend">${legend}</div>`;
+      return `<h2>${escapeHtml(heading)}</h2><div class="bars">${body}</div><div class="legend">${legend}</div>`;
     }
 
     function gaugeSvg(value, max) {
@@ -230,14 +442,104 @@
       const when = data.generatedAt ? fmt.format(new Date(data.generatedAt)) : "";
       document.getElementById("meta").innerHTML =
         `<b>${escapeHtml(data.source || "1С")}</b> · ${when} · в работе ${data.totals?.tasks || 0} задач, ${data.totals?.employees || 0} сотрудников`;
+      document.getElementById("activity-table").innerHTML = activityTable(data.activity || []);
     }
+
+    function activityTable(rows) {
+      if (!rows.length) return `<p class="meta">Нет задач с чатом.</p>`;
+      const body = rows.map((row) => {
+        const date = row.date ? fmt.format(new Date(row.date)) : "—";
+        const comment = row.comment
+          ? escapeHtml(row.comment).replace(/\n/g, "<br>")
+          : `<span class="meta">Нет комментариев</span>`;
+        const num = escapeHtml(row.number);
+        const link = escapeHtml(row.navLink || "");
+        const numberCell = link
+          ? `<a class="task-link" href="${link}" data-link="${link}" title="Нажмите, чтобы скопировать ссылку 1С">${num}</a>`
+          : `<span class="task-num">${num}</span>`;
+        return `<tr>
+          <td class="num">${numberCell}</td>
+          <td class="title">${escapeHtml(row.title)}</td>
+          <td class="status">${escapeHtml(row.status || "Без статуса")}</td>
+          <td class="comment"><div class="comment-body">${comment}</div></td>
+          <td class="when">${escapeHtml(date)}</td>
+        </tr>`;
+      }).join("");
+      return `<div class="activity-scroll"><table class="activity">
+        <thead><tr><th>Номер</th><th>Задача</th><th>Статус</th><th>Последний комментарий</th><th>Дата</th></tr></thead>
+        <tbody>${body}</tbody>
+      </table></div>
+      <p class="meta tab-intro">Только задачи в работе (порядок статуса 1–6). Сверху самые старые. Всего ${rows.length}. Клик по номеру копирует ссылку 1С.</p>`;
+    }
+
+    function showTab(name) {
+      const hours = name !== "activity";
+      document.getElementById("tab-hours").hidden = !hours;
+      document.getElementById("tab-activity").hidden = hours;
+      for (const btn of document.querySelectorAll(".tab")) {
+        const on = btn.getAttribute("data-tab") === (hours ? "hours" : "activity");
+        btn.classList.toggle("is-on", on);
+        btn.setAttribute("aria-selected", on ? "true" : "false");
+      }
+      const hash = hours ? "hours" : "activity";
+      if (location.hash !== "#" + hash) history.replaceState(null, "", "#" + hash);
+    }
+
+    function setFull(on) {
+      document.body.classList.toggle("is-full", on);
+      const btn = document.getElementById("btn-full");
+      if (btn) btn.textContent = on ? "Окно" : "На весь экран";
+      if (on) {
+        document.documentElement.requestFullscreen?.().catch(() => {});
+      } else if (document.fullscreenElement) {
+        document.exitFullscreen?.().catch(() => {});
+      }
+    }
+
+    async function copyNavLink(link) {
+      const toast = document.getElementById("copy-toast");
+      try {
+        await navigator.clipboard.writeText(link);
+      } catch {
+        window.prompt("Скопируйте ссылку 1С", link);
+        return;
+      }
+      toast.hidden = false;
+      toast.textContent = "Ссылка 1С скопирована. В 1С: перейти по навигационной ссылке.";
+      clearTimeout(copyNavLink.timer);
+      copyNavLink.timer = setTimeout(() => { toast.hidden = true; }, 2500);
+    }
+
+    for (const btn of document.querySelectorAll(".tab")) {
+      btn.addEventListener("click", () => showTab(btn.getAttribute("data-tab")));
+    }
+    document.getElementById("btn-full").addEventListener("click", () => {
+      setFull(!document.body.classList.contains("is-full"));
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("is-full")) setFull(false);
+    });
+    document.addEventListener("fullscreenchange", () => {
+      if (!document.fullscreenElement && document.body.classList.contains("is-full")) {
+        document.body.classList.remove("is-full");
+        const btn = document.getElementById("btn-full");
+        if (btn) btn.textContent = "На весь экран";
+      }
+    });
+    document.getElementById("activity-table").addEventListener("click", (e) => {
+      const a = e.target.closest("a.task-link");
+      if (!a) return;
+      e.preventDefault();
+      copyNavLink(a.getAttribute("data-link") || a.getAttribute("href"));
+    });
+    showTab(location.hash === "#activity" ? "activity" : "hours");
 
     async function loadLive() {
       const urls = ["/api/employees", "http://127.0.0.1:8787/api/employees"];
       let last = "нет ответа";
       for (const url of urls) {
         try {
-          const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(20000) });
+          const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(120000) });
           if (!res.ok) { last = "код " + res.status; continue; }
           return res.json();
         } catch (e) {

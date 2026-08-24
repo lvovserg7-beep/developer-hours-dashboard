@@ -1,4 +1,4 @@
-import { odataAllPages } from "./lib/odata.mjs";
+import { odataAllPages, odataGet } from "./lib/odata.mjs";
 
 export const EMPTY_GUID = "00000000-0000-0000-0000-000000000000";
 
@@ -47,6 +47,24 @@ function round1(value) {
 
 function shortNumber(value) {
   return String(value || "").replace(/^0+/, "") || "0";
+}
+
+function documentNumber(value) {
+  return String(value ?? "").trim();
+}
+
+function guidTo1CRef(uuid) {
+  const raw = String(uuid || "").replace(/[{}-]/g, "").toLowerCase();
+  if (raw.length !== 32) return "";
+  // УникальныйИдентификатор / OData: g1(8)-g2(4)-g3(4)-g4(4)-g5(12)
+  // В e1cib ?ref= группы идут как g4 + g5 + g3 + g2 + g1 (внутренний формат 1С).
+  return raw.slice(16, 20) + raw.slice(20) + raw.slice(12, 16) + raw.slice(8, 12) + raw.slice(0, 8);
+}
+
+function taskNavLink(refKey) {
+  const packed = guidTo1CRef(refKey);
+  if (!packed) return "";
+  return `e1cib/data/Документ.ЗадачаРазработчика?ref=${packed}`;
 }
 
 function statusLabel(meta) {
@@ -118,6 +136,63 @@ function addSeg(map, row, seg, value) {
   segs.set(seg, (segs.get(seg) || 0) + value);
 }
 
+function isEmptyDate(value) {
+  return !value || String(value).startsWith("0001");
+}
+
+function uniqueTasks(lists) {
+  const seen = new Set();
+  const rows = [];
+  for (const list of lists) {
+    for (const task of list) {
+      const id = task.Ref_Key;
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      rows.push(task);
+    }
+  }
+  return rows;
+}
+
+async function loadLatestChats(taskIds) {
+  const needed = new Set([...taskIds].filter((id) => id && id !== EMPTY_GUID));
+  const latest = new Map();
+  if (!needed.size) return latest;
+
+  const head = await odataGet(
+    "Catalog_ЧатыПоЗадачамРазработчиков?$format=json&$top=1&$inlinecount=allpages&$select=Ref_Key"
+  );
+  const total = Number(head["odata.count"] || 0);
+  const pageSize = 1000;
+  const skips = [];
+  for (let skip = 0; skip < Math.max(total, pageSize); skip += pageSize) skips.push(skip);
+
+  const absorb = (rows) => {
+    for (const row of rows) {
+      if (row.DeletionMark) continue;
+      const id = row.Задача;
+      if (!needed.has(id)) continue;
+      const t = isEmptyDate(row.Дата) ? 0 : Date.parse(row.Дата);
+      const prev = latest.get(id);
+      if (prev && prev._t >= t) continue;
+      latest.set(id, {
+        date: t ? row.Дата : null,
+        comment: String(row.Сообщение || "").trim(),
+        _t: t,
+      });
+    }
+  };
+
+  for (let i = 0; i < skips.length; i += 4) {
+    const chunk = skips.slice(i, i + 4);
+    const pages = await Promise.all(chunk.map((skip) => odataGet(
+      `Catalog_ЧатыПоЗадачамРазработчиков?$format=json&$select=Задача,Дата,Сообщение,DeletionMark&$top=${pageSize}&$skip=${skip}`
+    )));
+    for (const page of pages) absorb(page.value || []);
+  }
+  return latest;
+}
+
 export async function loadActiveEmployees() {
   const statusRows = await odataAllPages("Catalog_СтатусыЗадач?$format=json&$top=200");
   const statusById = new Map();
@@ -164,6 +239,8 @@ export async function loadActiveEmployees() {
   );
   for (const task of postponedRows) {
     if (task.Архив) continue;
+    const meta = statusById.get(task.Статус_Key);
+    if (!meta || !isInWorkOrder(meta.order)) continue;
     postponed.push(task);
   }
 
@@ -272,9 +349,28 @@ export async function loadActiveEmployees() {
 
   const gaugeMax = Math.max(500, Math.ceil(hoursCompleted / 500) * 500);
 
+  const boardTasks = uniqueTasks([inWork]);
+  const chats = await loadLatestChats(boardTasks.map((t) => t.Ref_Key));
+  const activity = boardTasks.map((task) => {
+    const chat = chats.get(task.Ref_Key);
+    return {
+      number: documentNumber(task.Number),
+      title: task.Задача || "Без названия",
+      status: taskStatus(task),
+      comment: chat?.comment || "",
+      date: chat?.date || null,
+      navLink: taskNavLink(task.Ref_Key),
+    };
+  }).sort((a, b) => {
+    const da = a.date ? Date.parse(a.date) : 0;
+    const db = b.date ? Date.parse(b.date) : 0;
+    if (da !== db) return da - db;
+    return Number(a.number) - Number(b.number);
+  });
+
   return {
     generatedAt: new Date().toISOString(),
-    source: "1C OData · trade.alsn.ru · Аллсан Интеграция",
+    source: "Аллсан Интеграция",
     organization: "Аллсан Интеграция",
     activeStatuses: inWorkLabels,
     completedStatuses: completedLabels,
@@ -295,9 +391,11 @@ export async function loadActiveEmployees() {
       employees: employees.filter((e) => !e.unassigned).length,
       tasks: inWork.length,
       unassigned: unassignedCount,
+      activity: activity.length,
     },
     statusTotals,
     employees,
+    activity,
   };
 }
 
