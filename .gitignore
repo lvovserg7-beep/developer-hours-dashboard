@@ -1,6 +1,7 @@
 node_modules/
 .env
 dashboard/.env
+dashboard/users.json
 *.log
 dashboard/published/
 dashboard/odata.env

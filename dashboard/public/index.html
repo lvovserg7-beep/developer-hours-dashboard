@@ -37,6 +37,7 @@
     .meta { font-size: 12px; margin: 8px 0 0; }
     main { padding: 20px 24px 56px; }
     .err { background: #f8ecec; border: 1px solid #e3c4c4; padding: 12px 16px; margin-bottom: 16px; }
+    .err[hidden] { display: none; }
     .board {
       display: grid;
       grid-template-columns: minmax(0, 1.15fr) 240px minmax(0, 1.15fr);
@@ -145,6 +146,18 @@
       flex-direction: column;
       overflow: hidden;
     }
+    body.is-full #tab-admin .panel {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+    }
+    body.is-full #activity-table {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
     body.is-full .activity-scroll { flex: 1; min-height: 0; overflow: auto; }
     .tabs {
       display: flex;
@@ -154,8 +167,8 @@
       align-items: flex-end;
     }
     body.is-full .tabs { margin-top: 0; }
+    .tab-spacer { margin-left: auto; }
     .tab-full {
-      margin-left: auto;
       appearance: none;
       background: none;
       border: 0;
@@ -164,6 +177,7 @@
       color: var(--accent);
       cursor: pointer;
     }
+    .who { font-size: 12px; color: var(--muted); padding: 8px 8px 10px; }
     .tab {
       appearance: none;
       background: none;
@@ -199,9 +213,58 @@
       background: #faf9f6;
     }
     table.activity td.num { width: 118px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    table.activity td.title { width: 22%; word-break: break-word; }
-    table.activity td.status { width: 168px; word-break: break-word; }
+    table.activity td.title { width: 18%; word-break: break-word; }
+    table.activity td.client { width: 16%; word-break: break-word; }
+    table.activity td.status { width: 150px; word-break: break-word; }
     table.activity td.comment { width: auto; }
+    .activity-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      align-items: flex-end;
+      margin: 0 0 14px;
+    }
+    .activity-filters > div {
+      flex: 1 1 150px;
+      min-width: 150px;
+      max-width: 220px;
+    }
+    .activity-filters .filter-dates {
+      flex: 1 1 280px;
+      min-width: 280px;
+      max-width: 340px;
+    }
+    .activity-filters .filter-reset {
+      flex: 0 0 auto;
+      min-width: 0;
+      max-width: none;
+    }
+    .activity-filters label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    .activity-filters input,
+    .activity-filters select {
+      width: 100%;
+      min-width: 0;
+      padding: 6px 8px;
+      font: inherit;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .activity-filters .dates {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 8px;
+    }
+    .activity-filters .dates span { display: block; font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+    .activity-filters button {
+      appearance: none;
+      padding: 7px 12px;
+      font: inherit;
+      color: var(--accent);
+      background: #fff;
+      border: 1px solid var(--line);
+      cursor: pointer;
+      white-space: nowrap;
+    }
     .comment-body { white-space: pre-wrap; word-break: break-word; max-height: 9em; overflow: auto; }
     table.activity td.when { width: 140px; white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
     table.activity thead th { position: sticky; top: 0; z-index: 1; }
@@ -224,6 +287,54 @@
       z-index: 20;
     }
     .copy-toast[hidden] { display: none; }
+    table.admin {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table.admin th, table.admin td {
+      text-align: left;
+      vertical-align: middle;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+    .admin-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px 12px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+    .admin-form label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    .admin-form input:not([type="checkbox"]) {
+      width: 100%;
+      padding: 8px 10px;
+      font: inherit;
+      border: 1px solid var(--line);
+    }
+    .admin-checks { display: flex; flex-wrap: wrap; gap: 10px 14px; padding-bottom: 6px; }
+    .admin-checks label { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; color: var(--ink); }
+    .admin-form button {
+      appearance: none;
+      padding: 8px 12px;
+      font: inherit;
+      font-weight: 650;
+      color: #fff;
+      background: var(--accent);
+      border: 0;
+      cursor: pointer;
+    }
+    table.admin label { display: flex; align-items: center; gap: 6px; margin: 0; }
+    table.admin td:last-child { white-space: nowrap; }
+    table.admin td:last-child button + button { margin-left: 12px; }
+    table.admin button {
+      appearance: none;
+      background: none;
+      border: 0;
+      color: var(--accent);
+      cursor: pointer;
+      font: inherit;
+      padding: 0;
+    }
     @media (max-width: 1100px) {
       body:not(.is-full) .board,
       body:not(.is-full) .bottom { grid-template-columns: 1fr; }
@@ -239,6 +350,10 @@
       <nav class="tabs" role="tablist">
         <button type="button" class="tab is-on" data-tab="hours" role="tab" aria-selected="true">Часы</button>
         <button type="button" class="tab" data-tab="activity" role="tab" aria-selected="false">Активность</button>
+        <button type="button" class="tab" data-tab="admin" id="tab-btn-admin" role="tab" aria-selected="false" hidden>Админка</button>
+        <span class="tab-spacer"></span>
+        <span class="who" id="who"></span>
+        <button type="button" class="tab-full" id="btn-logout">Выйти</button>
         <button type="button" class="tab-full" id="btn-full">На весь экран</button>
       </nav>
     </div>
@@ -262,10 +377,72 @@
     <footer>Часы в работе по статусам — реквизит «Часы». Часы в работе по разработчикам — реквизит «Часы разработки», не общие часы задачи. Выполненные: анализ = часы минус разработка и внедрение; разработка = часы разработки и внедрения.</footer>
     </div>
     </div>
+    <div id="tab-admin" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Пользователи и права</h2>
+        <p class="lead tab-intro">Администратор создаёт учётки, включает вкладки и выдаёт права администратора.</p>
+        <form class="admin-form" id="user-create">
+          <div>
+            <label for="new-login">Логин</label>
+            <input id="new-login" name="login" type="text" required minlength="2" autocomplete="off">
+          </div>
+          <div>
+            <label for="new-pass">Пароль</label>
+            <input id="new-pass" name="password" type="password" required minlength="4" autocomplete="new-password">
+          </div>
+          <div class="admin-checks">
+            <label><input type="checkbox" id="new-hours" checked> Часы</label>
+            <label><input type="checkbox" id="new-activity" checked> Активность</label>
+            <label><input type="checkbox" id="new-admin"> Администратор</label>
+          </div>
+          <button type="submit">Создать</button>
+        </form>
+        <div id="admin-err" class="err" hidden></div>
+        <div id="admin-users"></div>
+      </section>
+    </div>
     <div id="tab-activity" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Задачи в работе, последняя активность в чате</h2>
-        <p class="lead tab-intro">Только статусы с порядком 1–6. Номер, название, статус, последний комментарий из чата, дата. Сверху — самые старые. Клик по номеру копирует ссылку 1С.</p>
+        <p class="lead tab-intro">Только статусы с порядком 1–6. Номер, задача, клиент, статус, последний комментарий из чата, дата. Сверху — самые старые. Клик по номеру копирует ссылку 1С.</p>
+        <form class="activity-filters" id="activity-filters">
+          <div>
+            <label for="f-number">Номер</label>
+            <input id="f-number" type="text" autocomplete="off">
+          </div>
+          <div>
+            <label for="f-title">Задача</label>
+            <input id="f-title" type="text" autocomplete="off">
+          </div>
+          <div>
+            <label for="f-client">Клиент</label>
+            <select id="f-client">__CLIENT_OPTIONS__</select>
+          </div>
+          <div>
+            <label for="f-status">Статус</label>
+            <select id="f-status">__STATUS_OPTIONS__</select>
+          </div>
+          <div>
+            <label for="f-comment">Комментарий</label>
+            <input id="f-comment" type="text" autocomplete="off">
+          </div>
+          <div class="filter-dates">
+            <label>Дата</label>
+            <div class="dates">
+              <div>
+                <span>с</span>
+                <input id="f-from" type="date">
+              </div>
+              <div>
+                <span>по</span>
+                <input id="f-to" type="date">
+              </div>
+            </div>
+          </div>
+          <div class="filter-reset">
+            <button type="reset">Сбросить</button>
+          </div>
+        </form>
         <div id="activity-table">__ACTIVITY__</div>
       </section>
     </div>
@@ -273,6 +450,7 @@
   <div id="copy-toast" class="copy-toast" hidden>Ссылка 1С скопирована</div>
   <script>
     const EMBEDDED = __EMBEDDED_DATA__;
+    const USER = __USER__;
     const PALETTE = ["#5c6b4a", "#8a5a12", "#3d4a5c", "#9a6b12", "#6b5344", "#7a8a62", "#4a5c6b", "#b08948", "#5a4a3a", "#2f4f4f", "#8a7060"];
     const fmt = new Intl.DateTimeFormat("ru-RU", { dateStyle: "short", timeStyle: "short" });
     let data = null;
@@ -377,6 +555,8 @@
     }
 
     function render() {
+      fillActivityFilters(data.activity || []);
+      renderActivity();
       const c = data.charts || {};
       const k = data.kpis || {};
       document.getElementById("chart-status").innerHTML =
@@ -397,12 +577,90 @@
       const when = data.generatedAt ? fmt.format(new Date(data.generatedAt)) : "";
       document.getElementById("meta").innerHTML =
         `<b>${escapeHtml(data.source || "1С")}</b> · ${when} · в работе ${data.totals?.tasks || 0} задач, ${data.totals?.employees || 0} сотрудников`;
-      document.getElementById("activity-table").innerHTML = activityTable(data.activity || []);
       fitHoursStage();
     }
 
-    function activityTable(rows) {
-      if (!rows.length) return `<p class="meta">Нет задач с чатом.</p>`;
+    function hasSub(text, query) {
+      if (!query) return true;
+      return String(text || "").toLowerCase().includes(query.trim().toLowerCase());
+    }
+
+    function dayStamp(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "";
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${d.getFullYear()}-${m}-${day}`;
+    }
+
+    function uniqueSorted(values, numbered) {
+      const set = [...new Set(values)];
+      if (numbered && allNumbered(set)) {
+        return set.sort((a, b) => orderNum(a) - orderNum(b) || a.localeCompare(b, "ru"));
+      }
+      return set.sort((a, b) => a.localeCompare(b, "ru"));
+    }
+
+    function fillSelect(id, values, extra) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const current = el.value;
+      const add = (value, label) => {
+        const opt = document.createElement("option");
+        opt.value = value;
+        opt.textContent = label;
+        el.appendChild(opt);
+      };
+      el.replaceChildren();
+      add("", "Все");
+      if (extra) add(extra.value, extra.label);
+      for (const value of values) add(value, value);
+      el.value = [...el.options].some((o) => o.value === current) ? current : "";
+    }
+
+    function fillActivityFilters(rows) {
+      const clients = uniqueSorted(rows.map((r) => r.client).filter(Boolean));
+      const statuses = uniqueSorted(rows.map((r) => r.status || "Без статуса"), true);
+      const hasEmptyClient = rows.some((r) => !r.client);
+      fillSelect("f-client", clients, hasEmptyClient ? { value: "__none__", label: "Без клиента" } : null);
+      fillSelect("f-status", statuses);
+    }
+
+    function filteredActivity(rows) {
+      const number = document.getElementById("f-number")?.value || "";
+      const title = document.getElementById("f-title")?.value || "";
+      const client = document.getElementById("f-client")?.value || "";
+      const status = document.getElementById("f-status")?.value || "";
+      const comment = document.getElementById("f-comment")?.value || "";
+      const from = document.getElementById("f-from")?.value || "";
+      const to = document.getElementById("f-to")?.value || "";
+      return rows.filter((row) => {
+        if (!hasSub(row.number, number)) return false;
+        if (!hasSub(row.title, title)) return false;
+        if (!hasSub(row.comment, comment)) return false;
+        if (client === "__none__" && row.client) return false;
+        if (client && client !== "__none__" && row.client !== client) return false;
+        if (status && (row.status || "Без статуса") !== status) return false;
+        if (from || to) {
+          const day = dayStamp(row.date);
+          if (!day) return false;
+          if (from && day < from) return false;
+          if (to && day > to) return false;
+        }
+        return true;
+      });
+    }
+
+    function renderActivity() {
+      const all = data?.activity || [];
+      const rows = filteredActivity(all);
+      document.getElementById("activity-table").innerHTML = activityTable(rows, all.length);
+    }
+
+    function activityTable(rows, total) {
+      if (!total) return `<p class="meta">Нет задач с чатом.</p>`;
+      if (!rows.length) return `<p class="meta">Нет задач по выбранным фильтрам.</p>`;
       const body = rows.map((row) => {
         const date = row.date ? fmt.format(new Date(row.date)) : "—";
         const comment = row.comment
@@ -416,30 +674,108 @@
         return `<tr>
           <td class="num">${numberCell}</td>
           <td class="title">${escapeHtml(row.title)}</td>
+          <td class="client">${escapeHtml(row.client || "Без клиента")}</td>
           <td class="status">${escapeHtml(row.status || "Без статуса")}</td>
           <td class="comment"><div class="comment-body">${comment}</div></td>
           <td class="when">${escapeHtml(date)}</td>
         </tr>`;
       }).join("");
+      const count = rows.length === total
+        ? `Всего ${total}.`
+        : `Показано ${rows.length} из ${total}.`;
       return `<div class="activity-scroll"><table class="activity">
-        <thead><tr><th>Номер</th><th>Задача</th><th>Статус</th><th>Последний комментарий</th><th>Дата</th></tr></thead>
+        <thead><tr><th>Номер</th><th>Задача</th><th>Клиент</th><th>Статус</th><th>Последний комментарий</th><th>Дата</th></tr></thead>
         <tbody>${body}</tbody>
       </table></div>
-      <p class="meta tab-intro">Только задачи в работе (порядок статуса 1–6). Сверху самые старые. Всего ${rows.length}. Клик по номеру копирует ссылку 1С.</p>`;
+      <p class="meta tab-intro">Только задачи в работе (порядок статуса 1–6). Сверху самые старые. ${count} Клик по номеру копирует ссылку 1С.</p>`;
+    }
+
+    function visibleTabs() {
+      const tabs = [];
+      if (USER.tabs?.hours) tabs.push("hours");
+      if (USER.tabs?.activity) tabs.push("activity");
+      if (USER.admin) tabs.push("admin");
+      return tabs;
+    }
+
+    function applyUserUi() {
+      const who = document.getElementById("who");
+      if (who) who.textContent = USER.login || "";
+      for (const btn of document.querySelectorAll(".tab[data-tab]")) {
+        const name = btn.getAttribute("data-tab");
+        btn.hidden = !visibleTabs().includes(name);
+      }
     }
 
     function showTab(name) {
-      const hours = name !== "activity";
-      document.getElementById("tab-hours").hidden = !hours;
-      document.getElementById("tab-activity").hidden = hours;
-      for (const btn of document.querySelectorAll(".tab")) {
-        const on = btn.getAttribute("data-tab") === (hours ? "hours" : "activity");
+      const allowed = visibleTabs();
+      if (!allowed.includes(name)) name = allowed[0] || "hours";
+      document.getElementById("tab-hours").hidden = name !== "hours";
+      document.getElementById("tab-activity").hidden = name !== "activity";
+      document.getElementById("tab-admin").hidden = name !== "admin";
+      for (const btn of document.querySelectorAll(".tab[data-tab]")) {
+        const on = btn.getAttribute("data-tab") === name;
         btn.classList.toggle("is-on", on);
         btn.setAttribute("aria-selected", on ? "true" : "false");
       }
-      const hash = hours ? "hours" : "activity";
-      if (location.hash !== "#" + hash) history.replaceState(null, "", "#" + hash);
+      if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
+      if (name === "admin") loadAdminUsers();
+      if (name === "activity" && data?.activity) fillActivityFilters(data.activity);
       fitHoursStage();
+    }
+
+    function adminErr(text) {
+      const el = document.getElementById("admin-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    async function api(url, opts = {}) {
+      const res = await fetch(url, { credentials: "same-origin", cache: "no-store", ...opts });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        location.href = "/login.html";
+        throw new Error("Нужно войти");
+      }
+      if (!res.ok) throw new Error(data.error || "Ошибка запроса");
+      return data;
+    }
+
+    function adminTable(users) {
+      if (!users.length) return `<p class="meta">Пользователей пока нет.</p>`;
+      const body = users.map((u) => {
+        const self = u.id === USER.id;
+        return `<tr data-id="${escapeHtml(u.id)}">
+          <td>${escapeHtml(u.login)}${self ? ' <span class="meta">вы</span>' : ""}</td>
+          <td><label><input type="checkbox" data-field="hours" ${u.tabs?.hours ? "checked" : ""}> Часы</label></td>
+          <td><label><input type="checkbox" data-field="activity" ${u.tabs?.activity ? "checked" : ""}> Активность</label></td>
+          <td><label><input type="checkbox" data-field="admin" ${u.admin ? "checked" : ""}> Админ</label></td>
+          <td>
+            <button type="button" data-act="pass">Пароль</button>
+            ${self ? "" : `<button type="button" data-act="del">Удалить</button>`}
+          </td>
+        </tr>`;
+      }).join("");
+      return `<table class="admin">
+        <thead><tr><th>Логин</th><th>Вкладки</th><th></th><th>Права</th><th></th></tr></thead>
+        <tbody>${body}</tbody>
+      </table>`;
+    }
+
+    async function loadAdminUsers() {
+      if (!USER.admin) return;
+      try {
+        adminErr("");
+        const data = await api("/api/admin/users");
+        document.getElementById("admin-users").innerHTML = adminTable(data.users || []);
+      } catch (e) {
+        adminErr(e.message || String(e));
+      }
     }
 
     function fitHoursStage() {
@@ -485,9 +821,88 @@
       copyNavLink.timer = setTimeout(() => { toast.hidden = true; }, 2500);
     }
 
-    for (const btn of document.querySelectorAll(".tab")) {
+    for (const btn of document.querySelectorAll(".tab[data-tab]")) {
       btn.addEventListener("click", () => showTab(btn.getAttribute("data-tab")));
     }
+    document.getElementById("btn-logout").addEventListener("click", async () => {
+      try {
+        await fetch("/api/logout", { method: "POST", credentials: "same-origin" });
+      } catch {}
+      location.href = "/login.html";
+    });
+    document.getElementById("user-create").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        adminErr("");
+        await api("/api/admin/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            login: document.getElementById("new-login").value,
+            password: document.getElementById("new-pass").value,
+            admin: document.getElementById("new-admin").checked,
+            tabs: {
+              hours: document.getElementById("new-hours").checked,
+              activity: document.getElementById("new-activity").checked,
+            },
+          }),
+        });
+        e.target.reset();
+        document.getElementById("new-hours").checked = true;
+        document.getElementById("new-activity").checked = true;
+        await loadAdminUsers();
+      } catch (ex) {
+        adminErr(ex.message || String(ex));
+      }
+    });
+    document.getElementById("admin-users").addEventListener("change", async (e) => {
+      const input = e.target.closest("input[data-field]");
+      const row = e.target.closest("tr[data-id]");
+      if (!input || !row) return;
+      const id = row.getAttribute("data-id");
+      const field = input.getAttribute("data-field");
+      const patch = field === "admin"
+        ? { admin: input.checked }
+        : { tabs: { [field]: input.checked } };
+      try {
+        adminErr("");
+        await api("/api/admin/users?id=" + encodeURIComponent(id), {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        });
+        if (id === USER.id) location.reload();
+      } catch (ex) {
+        input.checked = !input.checked;
+        adminErr(ex.message || String(ex));
+      }
+    });
+    document.getElementById("admin-users").addEventListener("click", async (e) => {
+      const btn = e.target.closest("button[data-act]");
+      const row = e.target.closest("tr[data-id]");
+      if (!btn || !row) return;
+      const id = row.getAttribute("data-id");
+      const act = btn.getAttribute("data-act");
+      try {
+        adminErr("");
+        if (act === "del") {
+          if (!confirm("Удалить этого пользователя?")) return;
+          await api("/api/admin/users?id=" + encodeURIComponent(id), { method: "DELETE" });
+          await loadAdminUsers();
+        }
+        if (act === "pass") {
+          const password = prompt("Новый пароль (не меньше 4 символов)");
+          if (!password) return;
+          await api("/api/admin/users?id=" + encodeURIComponent(id), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password }),
+          });
+        }
+      } catch (ex) {
+        adminErr(ex.message || String(ex));
+      }
+    });
     document.getElementById("btn-full").addEventListener("click", () => {
       setFull(!document.body.classList.contains("is-full"));
     });
@@ -511,14 +926,23 @@
       e.preventDefault();
       copyNavLink(a.getAttribute("data-link") || a.getAttribute("href"));
     });
-    showTab(location.hash === "#activity" ? "activity" : "hours");
+    const activityFilters = document.getElementById("activity-filters");
+    activityFilters.addEventListener("input", renderActivity);
+    activityFilters.addEventListener("change", renderActivity);
+    activityFilters.addEventListener("reset", () => {
+      requestAnimationFrame(renderActivity);
+    });
+    applyUserUi();
+    if (EMBEDDED?.activity) fillActivityFilters(EMBEDDED.activity);
+    showTab(location.hash.replace("#", ""));
 
     async function loadLive() {
       const urls = ["/api/employees", "http://127.0.0.1:8787/api/employees"];
       let last = "нет ответа";
       for (const url of urls) {
         try {
-          const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(120000) });
+          const res = await fetch(url, { cache: "no-store", credentials: "same-origin", signal: AbortSignal.timeout(120000) });
+          if (res.status === 401) { location.href = "/login.html"; throw new Error("Нужно войти"); }
           if (!res.ok) { last = "код " + res.status; continue; }
           return res.json();
         } catch (e) {

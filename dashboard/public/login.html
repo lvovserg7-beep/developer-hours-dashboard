@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Вход — Задачи разработчика</title>
+  <style>
+    :root { --bg: #f6f5f2; --ink: #1c1b18; --muted: #5c5a54; --line: #ddd9d0; --card: #fff; --accent: #8a5a12; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font: 14px/1.4 "Segoe UI", system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+    form {
+      width: min(100% - 32px, 360px);
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 24px;
+    }
+    h1 { font-size: 20px; font-weight: 650; margin: 0 0 6px; }
+    p { margin: 0 0 16px; color: var(--muted); }
+    label { display: block; margin: 0 0 6px; font-size: 12px; color: var(--muted); }
+    input {
+      width: 100%;
+      margin: 0 0 12px;
+      padding: 8px 10px;
+      font: inherit;
+      border: 1px solid var(--line);
+    }
+    button {
+      appearance: none;
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px 12px;
+      font: inherit;
+      font-weight: 650;
+      color: #fff;
+      background: var(--accent);
+      border: 0;
+      cursor: pointer;
+    }
+    .err { background: #f8ecec; border: 1px solid #e3c4c4; padding: 8px 10px; margin-bottom: 12px; }
+    .err[hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <form id="login">
+    <h1>Задачи разработчика</h1>
+    <p>Войдите, чтобы открыть дашборд.</p>
+    <div id="err" class="err" hidden></div>
+    <label for="login-name">Логин</label>
+    <input id="login-name" name="login" autocomplete="username" required>
+    <label for="login-pass">Пароль</label>
+    <input id="login-pass" name="password" type="password" autocomplete="current-password" required>
+    <button type="submit">Войти</button>
+  </form>
+  <script>
+    fetch("/api/me", { credentials: "same-origin" }).then((r) => {
+      if (r.ok) location.href = "/";
+    }).catch(() => {});
+    document.getElementById("login").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const err = document.getElementById("err");
+      err.hidden = true;
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            login: document.getElementById("login-name").value,
+            password: document.getElementById("login-pass").value,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Не удалось войти");
+        location.href = "/";
+      } catch (ex) {
+        err.hidden = false;
+        err.textContent = ex.message || String(ex);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -116,7 +116,31 @@ export function renderChartParts(data) {
     clientDone: stackedChart("Выполненные часы по клиентам", c.completedByClient, "Нет выполненных часов"),
     devDone: stackedChart("Выполненные часы по разработчикам", c.completedByDeveloper, "Нет выполненных часов"),
     activity: renderActivityTable(data.activity || []),
+    clientOptions: selectOptions(
+      uniqueFilterValues((data.activity || []).map((r) => r.client).filter(Boolean)),
+      (data.activity || []).some((r) => !r.client) ? { value: "__none__", label: "Без клиента" } : null
+    ),
+    statusOptions: selectOptions(
+      uniqueFilterValues((data.activity || []).map((r) => r.status || "Без статуса"), true)
+    ),
   };
+}
+
+function uniqueFilterValues(values, numbered = false) {
+  const set = [...new Set(values)];
+  if (numbered && allNumbered(set)) {
+    return set.sort((a, b) => orderNum(a) - orderNum(b) || a.localeCompare(b, "ru"));
+  }
+  return set.sort((a, b) => a.localeCompare(b, "ru"));
+}
+
+function selectOptions(values, extra) {
+  let html = `<option value="">Все</option>`;
+  if (extra) html += `<option value="${escapeHtml(extra.value)}">${escapeHtml(extra.label)}</option>`;
+  for (const value of values) {
+    html += `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`;
+  }
+  return html;
 }
 
 export function renderActivityTable(rows) {
@@ -136,6 +160,7 @@ export function renderActivityTable(rows) {
     return `<tr>
         <td class="num">${numberCell}</td>
         <td class="title">${escapeHtml(row.title)}</td>
+        <td class="client">${escapeHtml(row.client || "Без клиента")}</td>
         <td class="status">${escapeHtml(row.status || "Без статуса")}</td>
         <td class="comment"><div class="comment-body">${comment}</div></td>
         <td class="when">${escapeHtml(date)}</td>
@@ -146,6 +171,7 @@ export function renderActivityTable(rows) {
         <tr>
           <th>Номер</th>
           <th>Задача</th>
+          <th>Клиент</th>
           <th>Статус</th>
           <th>Последний комментарий</th>
           <th>Дата</th>

@@ -356,6 +356,7 @@ export async function loadActiveEmployees() {
     return {
       number: documentNumber(task.Number),
       title: task.Задача || "Без названия",
+      client: clients.get(task.Контрагент_Key) || "",
       status: taskStatus(task),
       comment: chat?.comment || "",
       date: chat?.date || null,
