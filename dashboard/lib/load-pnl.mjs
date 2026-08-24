@@ -1,8 +1,9 @@
 import { odataAllPages } from "./odata.mjs";
-import { EMPTY_GUID, isCompletedOrder } from "../load-employees.mjs";
+import { EMPTY_GUID } from "../load-employees.mjs";
 
 const ORG_NAME = "Аллсан Интеграция";
 const MONTHS_RU = ["январь", "февраль", "март", "апрель", "май", "июнь", "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"];
+const ALLOWED_EXPENSE_VARIANTS = ["НаНаправленияДеятельности", "НеРаспределять"];
 
 function num(value) {
   const n = Number(value);
@@ -15,6 +16,10 @@ function roundMoney(value) {
 
 function round1(value) {
   return Math.round(num(value) * 10) / 10;
+}
+
+function roundPct(value) {
+  return Math.round(num(value));
 }
 
 function isoDay(d) {
@@ -39,7 +44,7 @@ function odataDate(d, endOfDay = false) {
 
 export function defaultPnlRange() {
   const now = new Date();
-  const from = new Date(now.getFullYear(), now.getMonth() - 4, 1);
+  const from = new Date(now.getFullYear(), now.getMonth() - 3, 1);
   const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   return { from: isoDay(from), to: isoDay(to) };
 }
@@ -70,10 +75,6 @@ function monthKeyOf(iso) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function moneyOf(doc) {
-  return roundMoney(doc.СуммаДокумента ?? doc.Sum ?? doc.Сумма ?? doc.Amount ?? 0);
-}
-
 function zeros(n) {
   return Array.from({ length: n }, () => 0);
 }
@@ -85,7 +86,8 @@ function addInto(map, name, index, amount, len) {
 }
 
 function roundCell(kind, value) {
-  if (kind === "pct" || kind === "hours") return round1(value);
+  if (kind === "pct") return roundPct(value);
+  if (kind === "hours") return round1(value);
   return roundMoney(value);
 }
 
@@ -94,18 +96,20 @@ function rowFromValues(name, values, kind = "line") {
   return { name, kind, values: values.map((v) => roundCell(kind, v)), total: roundCell(kind, total) };
 }
 
-function sumMaps(maps, len) {
+function sumVec(list, len) {
   const out = zeros(len);
-  for (const m of maps) {
-    for (const vals of m.values()) {
-      for (let i = 0; i < len; i++) out[i] += vals[i] || 0;
-    }
+  for (const vals of list) {
+    for (let i = 0; i < len; i++) out[i] += vals[i] || 0;
   }
   return out;
 }
 
 function subVec(a, b) {
   return a.map((v, i) => v - (b[i] || 0));
+}
+
+function addVec(a, b) {
+  return a.map((v, i) => v + (b[i] || 0));
 }
 
 function pctVec(profit, revenue) {
@@ -115,203 +119,272 @@ function pctVec(profit, revenue) {
   });
 }
 
-function linesOf(map) {
-  return [...map.entries()]
-    .map(([name, values]) => rowFromValues(name, values))
-    .filter((r) => r.total !== 0 || r.values.some((v) => v !== 0))
-    .sort((a, b) => Math.abs(b.total) - Math.abs(a.total) || a.name.localeCompare(b.name, "ru"));
+function safeDiv(a, b) {
+  return b ? a / b : 0;
+}
+
+function firstNumber(row, names) {
+  for (const name of names) {
+    if (row[name] != null && row[name] !== "") return num(row[name]);
+  }
+  return 0;
+}
+
+function extractKey(value) {
+  if (!value) return "";
+  if (typeof value === "object") {
+    return String(value.Ref_Key || value.Key || "").trim();
+  }
+  const text = String(value);
+  const guid = text.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  return guid ? guid[0] : text.trim();
+}
+
+function refKey(row, name) {
+  return extractKey(row[`${name}_Key`]) || extractKey(row[name]);
+}
+
+function isEmptyGuid(id) {
+  return !id || id === EMPTY_GUID;
+}
+
+function isReceipt(row) {
+  const rt = String(row.RecordType || row.ВидДвижения || "");
+  if (!rt) return true;
+  if (/Expense|Расход/i.test(rt)) return false;
+  return true;
+}
+
+function variantAllowed(value) {
+  const text = String(value || "");
+  return ALLOWED_EXPENSE_VARIANTS.some((name) => text.includes(name));
+}
+
+export function classifyOpKo(bonusEnd, periodIso) {
+  const end = Date.parse(bonusEnd);
+  const period = Date.parse(periodIso);
+  if (!Number.isFinite(end) || !Number.isFinite(period) || end < Date.parse("2000-01-01T00:00:00")) return "КО";
+  return end > period ? "ОП" : "КО";
 }
 
 async function tryPages(path) {
   try {
-    return await odataAllPages(path, 80);
+    return await odataAllPages(path, 150);
   } catch (err) {
     return { error: String(err.message || err), rows: [] };
   }
 }
 
+function rowsOf(data) {
+  return Array.isArray(data) ? data : data.rows || [];
+}
+
+function errorOf(data) {
+  return Array.isArray(data) ? "" : data.error || "";
+}
+
+async function tryEntity(paths) {
+  const warnings = [];
+  for (const path of paths) {
+    const data = await tryPages(path);
+    const err = errorOf(data);
+    if (!err) return { rows: rowsOf(data), error: "", warnings };
+    warnings.push(err);
+  }
+  return { rows: [], error: warnings[warnings.length - 1] || "нет в OData", warnings };
+}
+
 async function orgKey() {
   const data = await tryPages("Catalog_Организации?$format=json&$select=Ref_Key,Description&$top=50");
-  const rows = Array.isArray(data) ? data : data.rows;
-  const hit = (rows || []).find((r) => String(r.Description || "").trim() === ORG_NAME);
-  return hit?.Ref_Key || "";
+  const rows = rowsOf(data);
+  const exact = rows.find((r) => String(r.Description || "").trim() === ORG_NAME);
+  const llc = rows.find((r) => String(r.Description || "").trim() === `${ORG_NAME} ООО`);
+  const fuzzy = rows.find((r) => String(r.Description || "").includes(ORG_NAME));
+  return (exact || llc || fuzzy)?.Ref_Key || "";
 }
 
-function dateFilter(from, to, org, dateField = "Date") {
-  const parts = [
-    "DeletionMark eq false",
-    `${dateField} ge datetime'${odataDate(from)}'`,
-    `${dateField} le datetime'${odataDate(to, true)}'`,
-  ];
-  if (org) parts.push(`Организация_Key eq guid'${org}'`);
-  return parts.join(" and ");
-}
-
-async function loadPosted(entity, from, to, org, extra = "Posted eq true") {
-  if (!org) return { entity, rows: [], error: "" };
-  const filter = encodeURIComponent(`${dateFilter(from, to, org)} and ${extra}`);
-  const path = `${entity}?$format=json&$filter=${filter}&$select=Date,СуммаДокумента,Posted,DeletionMark&$top=200`;
-  const data = await tryPages(path);
-  if (Array.isArray(data)) return { entity, rows: data, error: "" };
-  return { entity, rows: data.rows || [], error: data.error || "" };
-}
-
-async function resolveNames(ids, entity) {
+async function resolveByKeys(entity, ids, select) {
   const map = new Map();
-  const list = [...new Set(ids.filter((id) => id && id !== EMPTY_GUID))];
+  const list = [...new Set(ids.filter((id) => id && !isEmptyGuid(id)))];
   for (let i = 0; i < list.length; i += 8) {
     const part = list.slice(i, i + 8);
     const filter = encodeURIComponent(part.map((id) => `Ref_Key eq guid'${id}'`).join(" or "));
-    const rows = await odataAllPages(`${entity}?$format=json&$filter=${filter}&$select=Ref_Key,Description&$top=50`);
-    for (const row of rows) map.set(row.Ref_Key, String(row.Description || "").trim() || "Без имени");
+    const data = await tryPages(`${entity}?$format=json&$filter=${filter}&$select=${select}&$top=50`);
+    if (errorOf(data)) {
+      const fallback = await tryPages(`${entity}?$format=json&$filter=${filter}&$top=50`);
+      for (const row of rowsOf(fallback)) map.set(row.Ref_Key, row);
+      continue;
+    }
+    for (const row of rowsOf(data)) map.set(row.Ref_Key, row);
   }
   return map;
 }
 
-function classifyExpense(name) {
-  const n = String(name || "").toLowerCase();
-  if (/проч.*доход|внереализац|проценты получен/.test(n)) return "otherIncome";
-  if (/простой/.test(n)) return "otherCogs";
-  if (/оплат.*аналитик|аналитик/.test(n)) return "otherCogs";
-  if (/бонус/.test(n) && /продаж/.test(n)) return "otherCogs";
-  if (/r\s*&\s*d|рнп|research/.test(n)) return "commercial";
-  if (/маркетинг/.test(n)) return "commercial";
-  if (/зарплат|фоте|оплата труда|вознагражден/.test(n)) {
-    if (/продаж|коммерч/.test(n)) return "commercial";
-    return "operating";
-  }
-  if (/обучен|семинар/.test(n)) return "fixed";
-  if (/офис/.test(n)) return "fixed";
-  if (/связ|телефон|интернет/.test(n)) return "fixed";
-  if (/аренд/.test(n)) return "fixed";
-  if (/транспорт|такси|бензин/.test(n)) return "fixed";
-  if (/налог|взнос|ндс|усн/.test(n)) return "fixed";
-  if (/сервер|хостинг|vps|облак/.test(n)) return "fixed";
-  return "fixed";
-}
-
-function bucketDocs(rows, months, from, to) {
-  const index = new Map(months.map((m, i) => [m.key, i]));
-  const map = new Map();
-  const fromT = from.getTime();
-  const toT = to.getTime() + 24 * 60 * 60 * 1000 - 1;
-  for (const doc of rows) {
-    if (doc.Posted === false) continue;
-    const t = Date.parse(doc.Date);
-    if (!Number.isFinite(t) || t < fromT || t > toT) continue;
-    const i = index.get(monthKeyOf(doc.Date));
-    if (i == null) continue;
-    addInto(map, "row", i, moneyOf(doc), months.length);
-  }
-  return map.get("row") || zeros(months.length);
-}
-
-function putNamed(rows, name, months, from, to) {
-  const map = new Map();
-  const vec = bucketDocs(rows, months, from, to);
-  if (vec.some((v) => v)) map.set(name, vec);
-  return map;
-}
-
-async function loadCashOut(from, to, org, months) {
-  if (!org) return { buckets: { otherCogs: new Map(), operating: new Map(), commercial: new Map(), fixed: new Map(), otherIncome: new Map() }, warnings: [] };
-  const filter = encodeURIComponent(`${dateFilter(from, to, org)} and Posted eq true`);
-  const entities = [
-    "Document_СписаниеБезналичныхДенежныхСредств",
-    "Document_РасходныйКассовыйОрдер",
-  ];
-  const warnings = [];
-  const raw = [];
-  for (const entity of entities) {
-    const path = `${entity}?$format=json&$filter=${filter}&$select=Date,СуммаДокумента,СтатьяДвиженияДенежныхСредств_Key,Posted,DeletionMark&$top=200`;
-    const data = await tryPages(path);
-    const rows = Array.isArray(data) ? data : data.rows;
-    const err = Array.isArray(data) ? "" : data.error;
-    if (err) warnings.push(`${entity}: нет в OData`);
-    else raw.push(...(rows || []));
-  }
-  let names = new Map();
-  try {
-    names = await resolveNames(raw.map((r) => r.СтатьяДвиженияДенежныхСредств_Key), "Catalog_СтатьиДвиженияДенежныхСредств");
-  } catch (err) {
-    warnings.push(`Статьи ДДС: ${String(err.message || err).slice(0, 160)}`);
-  }
-  const index = new Map(months.map((m, i) => [m.key, i]));
-  const fromT = from.getTime();
-  const toT = to.getTime() + 24 * 60 * 60 * 1000 - 1;
-  const buckets = {
-    otherCogs: new Map(),
-    operating: new Map(),
-    commercial: new Map(),
-    fixed: new Map(),
-    otherIncome: new Map(),
+function dirFromRow(row) {
+  return {
+    name: String(row.Description || row.Наименование || "").trim() || "Без имени",
+    order: Number.isFinite(Number(row.Порядок)) ? Number(row.Порядок) : 999,
+    isRevenue: row.Выручка !== false && row.Выручка !== "false" && row.Выручка !== 0,
   };
-  for (const doc of raw) {
-    if (doc.Posted === false) continue;
-    const t = Date.parse(doc.Date);
-    if (!Number.isFinite(t) || t < fromT || t > toT) continue;
-    const i = index.get(monthKeyOf(doc.Date));
-    if (i == null) continue;
-    const article = names.get(doc.СтатьяДвиженияДенежныхСредств_Key) || "Без статьи";
-    const section = classifyExpense(article);
-    addInto(buckets[section], article, i, moneyOf(doc), months.length);
-  }
-  return { buckets, warnings };
 }
 
-async function loadClosedHours(from, to, months) {
-  const statusRows = await odataAllPages("Catalog_СтатусыЗадач?$format=json&$top=200");
-  const completed = [];
-  for (const row of statusRows) {
-    if (row.DeletionMark) continue;
-    if (!isCompletedOrder(row.Порядок)) continue;
-    completed.push(row.Ref_Key);
+async function loadDirSettings() {
+  const warnings = [];
+  const headersData = await tryEntity([
+    "Catalog_НастройкаДИР?$format=json&$filter=DeletionMark eq false&$expand=СтатьиРасходаВыручки&$top=200",
+    "Catalog_НастройкаДИР?$format=json&$filter=DeletionMark eq false&$top=200",
+  ]);
+  if (headersData.error) {
+    return { byItem: new Map(), headers: [], warnings: [`НастройкаДИР: ${headersData.error.slice(0, 180)}`] };
   }
-  const index = new Map(months.map((m, i) => [m.key, i]));
-  const fromT = from.getTime();
-  const toT = to.getTime() + 24 * 60 * 60 * 1000 - 1;
-  const hours = zeros(months.length);
-  for (const statusId of completed) {
-    const filter = encodeURIComponent(
-      `Статус_Key eq guid'${statusId}' and DeletionMark eq false and ДатаИсполнения ge datetime'${odataDate(from)}' and ДатаИсполнения le datetime'${odataDate(to, true)}'`
-    );
-    let rows;
+  const headers = rowsOf(headersData).map((row) => {
+    const raw = row.СтатьиРасходаВыручки;
+    const lines = Array.isArray(raw) ? raw : raw?.results || [];
+    return { key: row.Ref_Key, ...dirFromRow(row), lines };
+  });
+  let lines = headers.flatMap((h) => (h.lines || []).map((line) => ({ ...line, Ref_Key: line.Ref_Key || h.key })));
+  if (!lines.length) {
+    const linesData = await tryEntity([
+      "Catalog_НастройкаДИР_СтатьиРасходаВыручки?$format=json&$top=500",
+    ]);
+    if (linesData.error) warnings.push(`НастройкаДИР.СтатьиРасходаВыручки: ${linesData.error.slice(0, 160)}`);
+    lines = rowsOf(linesData);
+  }
+  const headerByKey = new Map(headers.map((h) => [h.key, h]));
+  const byItem = new Map();
+  for (const line of lines) {
+    const parent = headerByKey.get(line.Ref_Key) || dirFromRow(line);
+    const itemKey = refKey(line, "СтатьяРасходаНоменклатура") || extractKey(line.СтатьяРасходаНоменклатура);
+    if (isEmptyGuid(itemKey)) continue;
+    const prev = byItem.get(itemKey);
+    const next = {
+      name: parent.name || "Без имени",
+      order: parent.order ?? 999,
+      isRevenue: parent.isRevenue !== false,
+    };
+    if (!prev || next.order < prev.order) byItem.set(itemKey, next);
+  }
+  if (!byItem.size) warnings.push("НастройкаДИР: нет сопоставления номенклатуры и статей");
+  return { byItem, headers, warnings };
+}
+
+function mapRevenueItem(byItem, nomenclatureKey) {
+  const hit = byItem.get(nomenclatureKey);
+  if (!hit) return { name: "Прочая выручка", order: 999, isRevenue: true };
+  if (!hit.isRevenue) return null;
+  return hit;
+}
+
+function mapExpenseItem(byItem, articleKey) {
+  const hit = byItem.get(articleKey);
+  if (!hit) return { name: "Прочий расход", order: 999, isRevenue: false };
+  if (hit.isRevenue) return null;
+  return hit;
+}
+
+function periodFilter(from, to) {
+  return `Period ge datetime'${odataDate(from)}' and Period le datetime'${odataDate(to, true)}'`;
+}
+
+async function fetchAll(path) {
+  const pageSize = 200;
+  const maxPages = 80;
+  const base = String(path).replace(/&\$top=\d+/g, "").replace(/\?\$top=\d+&/g, "?").replace(/\?\$top=\d+$/g, "");
+  const rows = [];
+  for (let page = 0; page < maxPages; page++) {
+    const sep = base.includes("?") ? "&" : "?";
+    const pagePath = `${base}${sep}$top=${pageSize}&$skip=${page * pageSize}`;
     try {
-      rows = await odataAllPages(`Document_ЗадачаРазработчика?$format=json&$filter=${filter}&$select=ДатаИсполнения,Date,Часы,Архив&$top=200`, 80);
-    } catch {
-      const fallback = encodeURIComponent(
-        `Статус_Key eq guid'${statusId}' and DeletionMark eq false and Date ge datetime'${odataDate(from)}' and Date le datetime'${odataDate(to, true)}'`
-      );
-      rows = await odataAllPages(`Document_ЗадачаРазработчика?$format=json&$filter=${fallback}&$select=ДатаИсполнения,Date,Часы,Архив&$top=200`, 80);
-    }
-    for (const task of rows) {
-      if (task.Архив) continue;
-      const when = task.ДатаИсполнения && !String(task.ДатаИсполнения).startsWith("0001") ? task.ДатаИсполнения : task.Date;
-      const t = Date.parse(when);
-      if (!Number.isFinite(t) || t < fromT || t > toT) continue;
-      const i = index.get(monthKeyOf(when));
-      if (i == null) continue;
-      hours[i] += num(task.Часы);
+      const chunk = await odataAllPages(pagePath, 2);
+      rows.push(...chunk);
+      if (chunk.length < pageSize) break;
+    } catch (err) {
+      return { rows, error: String(err.message || err) };
     }
   }
-  return hours.map(round1);
+  return { rows, error: "" };
 }
 
-function afterCost(title, extraLines, revenue, prevProfit, costVec) {
+async function loadSalesRegister(from, to) {
+  const select = "Period,Active,АналитикаУчетаНоменклатуры_Key,АналитикаУчетаПоПартнерам_Key,СуммаВыручки,СебестоимостьРегл,Количество";
+  const filter = encodeURIComponent(`${periodFilter(from, to)} and Active eq true`);
+  const first = await fetchAll(
+    `AccumulationRegister_ВыручкаИСебестоимостьПродаж_RecordType?$format=json&$filter=${filter}&$select=${select}`
+  );
+  if (!first.error) return first;
+  return fetchAll(`AccumulationRegister_ВыручкаИСебестоимостьПродаж_RecordType?$format=json&$filter=${filter}`);
+}
+
+async function loadOtherExpenses(from, to) {
+  const filter = encodeURIComponent(`${periodFilter(from, to)} and Active eq true and RecordType eq 'Receipt'`);
+  const select = "Period,Active,RecordType,СтатьяРасходов_Key,Организация_Key,Сумма,СуммаРегл";
+  const first = await fetchAll(`AccumulationRegister_ПрочиеРасходы_RecordType?$format=json&$filter=${filter}&$select=${select}`);
+  if (!first.error) return first;
+  return fetchAll(`AccumulationRegister_ПрочиеРасходы_RecordType?$format=json&$filter=${filter}`);
+}
+
+async function loadOtherIncomeReg(from, to) {
+  const filter = encodeURIComponent(`${periodFilter(from, to)} and Active eq true and RecordType eq 'Receipt'`);
+  const select = "Period,Active,RecordType,СтатьяДоходов_Key,Организация_Key,Сумма,СуммаРегл";
+  const first = await fetchAll(`AccumulationRegister_ПрочиеДоходы_RecordType?$format=json&$filter=${filter}&$select=${select}`);
+  if (!first.error) return first;
+  return fetchAll(`AccumulationRegister_ПрочиеДоходы_RecordType?$format=json&$filter=${filter}`);
+}
+
+async function findMarketingKey() {
+  const data = await tryEntity([
+    "Catalog_Номенклатура?$format=json&$filter=PredefinedDataName eq 'Маркетинг'&$select=Ref_Key,Description,PredefinedDataName&$top=5",
+    "Catalog_Номенклатура?$format=json&$filter=Description eq 'Маркетинг' and DeletionMark eq false&$select=Ref_Key,Description&$top=5",
+  ]);
+  return rowsOf(data)[0]?.Ref_Key || "";
+}
+
+function monthIndex(months, iso) {
+  const key = monthKeyOf(iso);
+  return months.findIndex((m) => m.key === key);
+}
+
+function rowMoney(name, values) {
+  return rowFromValues(name, values, "line");
+}
+
+function totalsAndRent(title, costVec, prevProfit, revenue) {
   const profit = subVec(prevProfit, costVec);
   const rent = pctVec(profit, revenue);
   const revSum = revenue.reduce((s, v) => s + v, 0);
   const profitSum = profit.reduce((s, v) => s + v, 0);
   return {
-    title,
     rows: [
-      ...extraLines,
-      rowFromValues("Итого " + title.toLowerCase(), costVec, "total"),
-      rowFromValues("Итого прибыль", profit, "total"),
-      { name: "Рентабельность", kind: "pct", values: rent.map(round1), total: revSum ? round1((profitSum / revSum) * 100) : 0 },
+      rowFromValues(title, costVec, "total"),
+      rowFromValues("Итого прибыль:", profit, "total"),
+      { name: "Рентабельность:", kind: "pct", values: rent.map(roundPct), total: revSum ? roundPct((profitSum / revSum) * 100) : 0 },
     ],
     profit,
   };
+}
+
+export function avgHourMetrics({
+  revenueSales,
+  hours,
+  marketing,
+  support,
+  cogs,
+  cogsSales,
+  otherCogs,
+}) {
+  const hoursNet = hours.map((h, i) => h - (marketing[i] || 0));
+  const avgPrice = revenueSales.map((v, i) => safeDiv(v, hoursNet[i]));
+  const cleanup = support.map((v, i) => v / 2 + ((cogs[i] || 0) - (cogsSales[i] || 0)));
+  const avgCost = otherCogs.map((v, i) => safeDiv((v || 0) + (cogs[i] || 0) - (cleanup[i] || 0), hoursNet[i]));
+  const hourRent = avgPrice.map((v, i) => v - (avgCost[i] || 0));
+  const hourYield = avgPrice.map((v, i) => (v ? ((v - (avgCost[i] || 0)) / v) * 100 : 0));
+  const hoursNetSum = hoursNet.reduce((s, v) => s + v, 0);
+  const priceTotal = safeDiv(revenueSales.reduce((s, v) => s + v, 0), hoursNetSum);
+  const costTotal = safeDiv(
+    otherCogs.reduce((s, v) => s + v, 0) + cogs.reduce((s, v) => s + v, 0) - cleanup.reduce((s, v) => s + v, 0),
+    hoursNetSum
+  );
+  return { hoursNet, avgPrice, avgCost, hourRent, hourYield, priceTotal, costTotal, hoursNetSum };
 }
 
 export async function loadPnl(fromText, toText) {
@@ -319,6 +392,7 @@ export async function loadPnl(fromText, toText) {
   const to = parseDay(toText);
   if (!from || !to) throw new Error("Укажите период с и по");
   const months = monthColumns(fromText, toText);
+  const n = months.length;
   const warnings = [];
   let org = "";
   try {
@@ -326,116 +400,231 @@ export async function loadPnl(fromText, toText) {
   } catch (err) {
     warnings.push(String(err.message || err));
   }
-  if (!org) warnings.push("Организация «Аллсан Интеграция» не найдена — суммы по документам не собраны.");
 
-  const salesEntities = [
-    ["Document_РеализацияТоваровУслуг", "Реализация товаров и услуг"],
-    ["Document_АктВыполненныхРабот", "Акт выполненных работ"],
-    ["Document_РеализацияУслугПрочихАктивов", "Реализация услуг и прочих активов"],
-  ];
-  const salesMap = new Map();
-  for (const [entity, label] of salesEntities) {
-    const { rows, error } = await loadPosted(entity, from, to, org);
-    if (error) warnings.push(error.includes("404") || /не найден|Not Found/i.test(error) ? `${label}: нет в OData` : `${label}: ${error.slice(0, 160)}`);
-    for (const [k, v] of putNamed(rows, label, months, from, to)) salesMap.set(k, v);
-  }
+  const dir = await loadDirSettings();
+  warnings.push(...dir.warnings);
 
-  const cogsEntities = [
-    ["Document_ПриобретениеТоваровУслуг", "Приобретение товаров и услуг"],
-    ["Document_ПоступлениеТоваровУслуг", "Поступление товаров и услуг"],
-  ];
+  const salesReg = await loadSalesRegister(from, to);
+  if (salesReg.error) warnings.push(`Выручка и себестоимость продаж: ${salesReg.error.slice(0, 180)}`);
+  const expensesReg = await loadOtherExpenses(from, to);
+  if (expensesReg.error) warnings.push(`Прочие расходы: ${expensesReg.error.slice(0, 180)}`);
+  const incomeReg = await loadOtherIncomeReg(from, to);
+  if (incomeReg.error) warnings.push(`Прочие доходы: ${incomeReg.error.slice(0, 180)}`);
+
+  const salesRowsRaw = rowsOf(salesReg).filter((row) => row.Active !== false);
+  const nomenKeys = salesRowsRaw.map((r) => refKey(r, "АналитикаУчетаНоменклатуры"));
+  const partnerKeys = salesRowsRaw.map((r) => refKey(r, "АналитикаУчетаПоПартнерам"));
+  const [nomenKeysMap, partnerKeysMap] = await Promise.all([
+    resolveByKeys("Catalog_КлючиАналитикиУчетаНоменклатуры", nomenKeys, "Ref_Key,Номенклатура_Key"),
+    resolveByKeys("Catalog_КлючиАналитикиУчетаПоПартнерам", partnerKeys, "Ref_Key,Контрагент,Контрагент_Type,Организация_Key"),
+  ]);
+
+  const counterparties = await resolveByKeys(
+    "Catalog_Контрагенты",
+    [...partnerKeysMap.values()].map((r) => refKey(r, "Контрагент")),
+    "Ref_Key,Description,ОкончанияБонусовОП"
+  );
+  const nomenclatures = await resolveByKeys(
+    "Catalog_Номенклатура",
+    [...nomenKeysMap.values()].map((r) => refKey(r, "Номенклатура")),
+    "Ref_Key,Description,PredefinedDataName"
+  );
+
+  const revenueMap = new Map();
   const cogsMap = new Map();
-  for (const [entity, label] of cogsEntities) {
-    const { rows, error } = await loadPosted(entity, from, to, org);
-    if (error) warnings.push(`${label}: нет в OData или нет доступа`);
-    for (const [k, v] of putNamed(rows, label, months, from, to)) cogsMap.set(k, v);
-  }
-
-  const cash = await loadCashOut(from, to, org, months);
-  warnings.push(...cash.warnings);
-
-  let hours = zeros(months.length);
+  const hours = zeros(n);
+  const marketing = zeros(n);
+  const rowMeta = new Map();
+  let marketingKey = "";
   try {
-    hours = await loadClosedHours(from, to, months);
+    marketingKey = await findMarketingKey();
   } catch (err) {
-    warnings.push(`Закрытые часы: ${String(err.message || err).slice(0, 180)}`);
+    warnings.push(`Номенклатура «Маркетинг»: ${String(err.message || err).slice(0, 160)}`);
+  }
+  if (!marketingKey) {
+    const byName = [...nomenclatures.entries()].find(([, row]) => String(row.Description || "").trim() === "Маркетинг");
+    marketingKey = byName?.[0] || "";
   }
 
-  const n = months.length;
-  const revenue = sumMaps([salesMap], n);
-  const cogs = sumMaps([cogsMap], n);
-  const otherCogs = sumMaps([cash.buckets.otherCogs], n);
-  const operating = sumMaps([cash.buckets.operating], n);
-  const commercial = sumMaps([cash.buckets.commercial], n);
-  const fixed = sumMaps([cash.buckets.fixed], n);
+  for (const row of salesRowsRaw) {
+    const partnerKey = refKey(row, "АналитикаУчетаПоПартнерам");
+    const i = monthIndex(months, row.Period);
+    if (i < 0) continue;
+    const analyticsNomen = nomenKeysMap.get(refKey(row, "АналитикаУчетаНоменклатуры"));
+    const nomenKey = refKey(analyticsNomen || {}, "Номенклатура") || refKey(row, "Номенклатура");
+    const mapped = mapRevenueItem(dir.byItem, nomenKey);
+    if (!mapped) continue;
+    const partner = partnerKeysMap.get(partnerKey);
+    const contr = counterparties.get(refKey(partner || {}, "Контрагент"));
+    const op = classifyOpKo(contr?.ОкончанияБонусовОП, row.Period);
+    const key = `${mapped.order}\t${mapped.name}\t${op}`;
+    rowMeta.set(key, mapped);
+    addInto(revenueMap, key, i, firstNumber(row, ["СуммаВыручки", "СуммаВыручкиОборот"]), n);
+    addInto(cogsMap, key, i, firstNumber(row, ["СебестоимостьРегл", "СебестоимостьРеглОборот"]), n);
+    const qty = firstNumber(row, ["Количество", "КоличествоОборот"]);
+    if (mapped.order === 1) hours[i] += qty;
+    if (marketingKey && nomenKey === marketingKey && mapped.order === 1) marketing[i] += qty;
+  }
 
-  const salesRows = [
-    ...linesOf(salesMap),
-    rowFromValues("Итого выручка", revenue, "total"),
-  ];
-
-  const cogsBlock = afterCost("Себестоимость", linesOf(cogsMap), revenue, revenue, cogs);
-  const otherBlock = afterCost("Себестоимость прочая", linesOf(cash.buckets.otherCogs), revenue, cogsBlock.profit, otherCogs);
-  const operBlock = afterCost("Операционные расходы", linesOf(cash.buckets.operating), revenue, otherBlock.profit, operating);
-  const commBlock = afterCost("Коммерческие расходы", linesOf(cash.buckets.commercial), revenue, operBlock.profit, commercial);
-  const fixedBlock = afterCost("Постоянные расходы", linesOf(cash.buckets.fixed), revenue, commBlock.profit, fixed);
-
-  const otherIn = sumMaps([cash.buckets.otherIncome], n);
-  const profitFinal = subVec(fixedBlock.profit, otherIn.map((v) => -v));
-  const otherIncomeRows = [
-    ...linesOf(cash.buckets.otherIncome),
-    rowFromValues("Итого прибыль", profitFinal, "total"),
-    (() => {
-      const rent = pctVec(profitFinal, revenue);
-      const revSum = revenue.reduce((s, v) => s + v, 0);
-      const pSum = profitFinal.reduce((s, v) => s + v, 0);
-      return { name: "Рентабельность", kind: "pct", values: rent.map(round1), total: revSum ? round1((pSum / revSum) * 100) : 0 };
-    })(),
-  ];
-
-  const avgPrice = hours.map((h, i) => (h ? roundMoney(revenue[i] / h) : 0));
-  const costTotal = cogs.map((v, i) => v + otherCogs[i] + operating[i] + commercial[i] + fixed[i]);
-  const avgCost = hours.map((h, i) => (h ? roundMoney(costTotal[i] / h) : 0));
-  const hourYield = hours.map((h, i) => (h ? roundMoney(profitFinal[i] / h) : 0));
-
-  const hoursSum = hours.reduce((s, v) => s + v, 0);
-  const revSum = revenue.reduce((s, v) => s + v, 0);
-  const costSum = costTotal.reduce((s, v) => s + v, 0);
-  const profitSum = profitFinal.reduce((s, v) => s + v, 0);
-  const avgRow = (name, monthVals, total) => ({
-    name,
-    kind: "line",
-    values: monthVals.map(roundMoney),
-    total: roundMoney(total),
+  const salesKeys = [...revenueMap.keys()].sort((a, b) => {
+    const ma = rowMeta.get(a) || { order: 999, name: a };
+    const mb = rowMeta.get(b) || { order: 999, name: b };
+    if (ma.order !== mb.order) return ma.order - mb.order;
+    if (ma.name !== mb.name) return ma.name.localeCompare(mb.name, "ru");
+    const opA = a.split("\t")[2] || "";
+    const opB = b.split("\t")[2] || "";
+    return opA.localeCompare(opB, "ru");
   });
 
-  const sections = [
-    { title: "Продажи", rows: salesRows },
-    { title: cogsBlock.title, rows: cogsBlock.rows },
-    { title: otherBlock.title, rows: otherBlock.rows },
-    { title: operBlock.title, rows: operBlock.rows },
-    { title: commBlock.title, rows: commBlock.rows },
-    { title: fixedBlock.title, rows: fixedBlock.rows },
-    { title: "Прочие доходы", rows: otherIncomeRows },
-    {
-      title: "Справочно",
-      rows: [
-        rowFromValues("Количество закрытых часов", hours, "hours"),
-        avgRow("Средняя цена часа", avgPrice, hoursSum ? revSum / hoursSum : 0),
-        avgRow("Средняя себестоимость часа", avgCost, hoursSum ? costSum / hoursSum : 0),
-        avgRow("Доходность часа", hourYield, hoursSum ? profitSum / hoursSum : 0),
-      ],
-    },
-  ];
+  const labelOf = (prefix, key) => {
+    const parts = key.split("\t");
+    return `${prefix} ${parts[1]} ${parts[2]}`;
+  };
+  const salesLines = salesKeys
+    .map((key) => rowMoney(labelOf("Выручка", key), revenueMap.get(key) || zeros(n)))
+    .filter((r) => r.total !== 0 || r.values.some((v) => v));
+  const cogsLines = salesKeys
+    .map((key) => rowMoney(labelOf("Себестоимость", key), cogsMap.get(key) || zeros(n)))
+    .filter((r) => r.total !== 0 || r.values.some((v) => v));
+
+  const revenue = sumVec(salesKeys.map((k) => revenueMap.get(k) || zeros(n)), n);
+  const cogs = sumVec(salesKeys.map((k) => cogsMap.get(k) || zeros(n)), n);
+  const salesBlock = {
+    title: "Продажи",
+    rows: [...salesLines, rowFromValues("Итого выручка:", revenue, "total")],
+  };
+  const cogsTotals = totalsAndRent("Итого себестоимость:", cogs, revenue, revenue);
+  const cogsBlock = { title: "Себестоимость", rows: [...cogsLines, ...cogsTotals.rows] };
+
+  const expenseRowsRaw = rowsOf(expensesReg).filter((row) => row.Active !== false && isReceipt(row));
+  const articleKeys = expenseRowsRaw.map((r) => refKey(r, "СтатьяРасходов"));
+  const articles = await resolveByKeys(
+    "ChartOfCharacteristicTypes_СтатьиРасходов",
+    articleKeys,
+    "Ref_Key,Description,ВариантРаспределенияРасходов"
+  );
+  const expenseSections = new Map();
+  for (const row of expenseRowsRaw) {
+    const i = monthIndex(months, row.Period);
+    if (i < 0) continue;
+    const articleKey = refKey(row, "СтатьяРасходов");
+    const article = articles.get(articleKey);
+    const variant = article?.ВариантРаспределенияРасходов;
+    if (variant != null && variant !== "" && !variantAllowed(variant)) continue;
+    const mapped = mapExpenseItem(dir.byItem, articleKey);
+    if (!mapped) continue;
+    const articleName = String(article?.Description || "Без статьи").trim() || "Без статьи";
+    if (!expenseSections.has(mapped.name)) {
+      expenseSections.set(mapped.name, { order: mapped.order, articles: new Map() });
+    }
+    const section = expenseSections.get(mapped.name);
+    section.order = Math.min(section.order, mapped.order);
+    addInto(section.articles, articleName, i, firstNumber(row, ["СуммаПриход", "Сумма", "СуммаУпр", "СуммаРегл"]), n);
+  }
+
+  const expenseBlocks = [];
+  let profit = cogsTotals.profit;
+  const orderedExpenseNames = [...expenseSections.entries()].sort((a, b) => a[1].order - b[1].order || a[0].localeCompare(b[0], "ru"));
+  let otherCogs = zeros(n);
+  for (const [title, section] of orderedExpenseNames) {
+    const articleRows = [...section.articles.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0], "ru"))
+      .map(([name, values]) => rowMoney(name, values))
+      .filter((r) => r.total !== 0 || r.values.some((v) => v));
+    const costVec = sumVec([...section.articles.values()], n);
+    if (title === "Себестоимость прочая") otherCogs = costVec;
+    const totals = totalsAndRent(`Итого ${title}:`, costVec, profit, revenue);
+    profit = totals.profit;
+    expenseBlocks.push({ title, rows: [...articleRows, ...totals.rows] });
+  }
+
+  const incomeRowsRaw = rowsOf(incomeReg).filter((row) => row.Active !== false && isReceipt(row));
+  const incomeArticleKeys = incomeRowsRaw.map((r) => refKey(r, "СтатьяДоходов"));
+  const incomeArticles = await resolveByKeys("ChartOfCharacteristicTypes_СтатьиДоходов", incomeArticleKeys, "Ref_Key,Description");
+  const incomeMap = new Map();
+  for (const row of incomeRowsRaw) {
+    const i = monthIndex(months, row.Period);
+    if (i < 0) continue;
+    const name = String(incomeArticles.get(refKey(row, "СтатьяДоходов"))?.Description || "Без статьи").trim() || "Без статьи";
+    addInto(incomeMap, name, i, firstNumber(row, ["СуммаПриход", "Сумма", "СуммаУпр", "СуммаРегл"]), n);
+  }
+  const incomeLines = [...incomeMap.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0], "ru"))
+    .map(([name, values]) => rowMoney(name, values));
+  const incomeVec = sumVec([...incomeMap.values()], n);
+  const profitAfterIncome = addVec(profit, incomeVec);
+  const rentFinal = pctVec(profitAfterIncome, revenue);
+  const revSum = revenue.reduce((s, v) => s + v, 0);
+  const profitSum = profitAfterIncome.reduce((s, v) => s + v, 0);
+  const incomeBlock = {
+    title: "Прочие доходы",
+    rows: [
+      ...incomeLines,
+      rowFromValues("Итого:", incomeVec, "total"),
+      rowFromValues("Итого прибыль:", profitAfterIncome, "total"),
+      { name: "Рентабельность:", kind: "pct", values: rentFinal.map(roundPct), total: revSum ? roundPct((profitSum / revSum) * 100) : 0 },
+    ],
+  };
+
+  const firstTwo = salesKeys.slice(0, 2);
+  const revenueSales = sumVec(firstTwo.map((k) => revenueMap.get(k) || zeros(n)), n);
+  const cogsSales = sumVec(firstTwo.map((k) => cogsMap.get(k) || zeros(n)), n);
+  const supportKeys = salesKeys.filter((k) => (rowMeta.get(k) || {}).order === 4);
+  const support = supportKeys.length
+    ? revenueMap.get(supportKeys[supportKeys.length - 1]) || zeros(n)
+    : zeros(n);
+
+  const metrics = avgHourMetrics({
+    revenueSales,
+    hours,
+    marketing,
+    support,
+    cogs,
+    cogsSales,
+    otherCogs,
+  });
+  const hoursTotal = hours.reduce((s, v) => s + v, 0);
+  const marketingTotal = marketing.reduce((s, v) => s + v, 0);
+  const refBlock = {
+    title: "Справочно",
+    rows: [
+      { name: "Количество закрытых часов", kind: "hours", values: hours.map(round1), total: round1(hoursTotal) },
+      { name: "Из них маркетинга", kind: "hours", values: marketing.map(round1), total: round1(marketingTotal) },
+      {
+        name: "Средняя цена часа:",
+        kind: "line",
+        values: metrics.avgPrice.map(roundMoney),
+        total: roundMoney(metrics.priceTotal),
+      },
+      {
+        name: "Средняя себестоимость часа:",
+        kind: "line",
+        values: metrics.avgCost.map(roundMoney),
+        total: roundMoney(metrics.costTotal),
+      },
+      {
+        name: "Рентабельность часа:",
+        kind: "line",
+        values: metrics.hourRent.map(roundMoney),
+        total: roundMoney(metrics.priceTotal - metrics.costTotal),
+      },
+      {
+        name: "Доходность часа:",
+        kind: "pct",
+        values: metrics.hourYield.map(roundPct),
+        total: metrics.priceTotal ? roundPct(((metrics.priceTotal - metrics.costTotal) / metrics.priceTotal) * 100) : 0,
+      },
+    ],
+  };
 
   return {
     from: fromText,
     to: toText,
     organization: ORG_NAME,
     months: months.map((m) => ({ key: m.key, label: m.label })),
-    sections,
+    sections: [salesBlock, cogsBlock, ...expenseBlocks, incomeBlock, refBlock],
     warnings: [...new Set(warnings.filter(Boolean))],
     generatedAt: new Date().toISOString(),
-    note: "Код исходного отчёта 1С не прислан: выручка и закупки — по проведённым документам, расходы — по статьям ДДС, закрытые часы — задачи со статусом Порядок ≥ 7 и датой исполнения в периоде.",
+    note: "Считается как отчёт 1С «Доходы и расходы»: выручка и себестоимость — обороты регистра «Выручка и себестоимость продаж» (ОП/КО по «ОкончанияБонусовОП»), статьи — справочник «НастройкаДИР», расходы — «Прочие расходы» (на направления деятельности / не распределять), прочие доходы — регистр «Прочие доходы». Закрытые часы — количество с номенклатуры настройки порядка 1, не задачи разработчика.",
   };
 }

@@ -162,6 +162,7 @@
     body.is-full .activity-scroll { flex: 1; min-height: 0; overflow: auto; }
     .tabs {
       display: flex;
+      flex-wrap: wrap;
       gap: 0;
       margin-top: 14px;
       border-bottom: 1px solid var(--line);
@@ -177,8 +178,10 @@
       font: inherit;
       color: var(--accent);
       cursor: pointer;
+      flex-shrink: 0;
+      white-space: nowrap;
     }
-    .who { font-size: 12px; color: var(--muted); padding: 8px 8px 10px; }
+    .who { font-size: 12px; color: var(--muted); padding: 8px 8px 10px; white-space: nowrap; }
     .tab {
       appearance: none;
       background: none;
@@ -189,6 +192,8 @@
       font: inherit;
       color: var(--muted);
       cursor: pointer;
+      flex-shrink: 0;
+      white-space: nowrap;
     }
     .tab.is-on {
       color: var(--ink);
@@ -577,7 +582,7 @@
     <div id="tab-pnl" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Доходы и расходы</h2>
-        <p class="lead tab-intro">Отчёт по месяцам периода. Организация — Аллсан Интеграция. Суммы из 1С, без смешивания с кэшем часов.</p>
+        <p class="lead tab-intro">Как отчёт 1С «Доходы и расходы»: выручка и себестоимость продаж, прочие расходы по настройке ДИР, прочие доходы. Организация — Аллсан Интеграция. Без кэша часов.</p>
         <form class="pnl-toolbar" id="pnl-form">
           <div class="filter-dates">
             <label>Период</label>
@@ -853,7 +858,7 @@
 
     function defaultPnlRange() {
       const now = new Date();
-      const from = new Date(now.getFullYear(), now.getMonth() - 4, 1);
+      const from = new Date(now.getFullYear(), now.getMonth() - 3, 1);
       const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       return { from: isoDay(from), to: isoDay(to) };
     }
@@ -869,7 +874,7 @@
     function formatPnlNumber(value, kind) {
       const n = Number(value) || 0;
       if (kind === "pct") {
-        return new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n) + " %";
+        return new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n) + " %";
       }
       if (kind === "hours") {
         return new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(n);
@@ -921,7 +926,7 @@
     }
 
     async function loadPnlReport() {
-      if (!USER.tabs?.pnl || pnlInflight) return;
+      if (USER.tabs?.pnl === false || pnlInflight) return;
       const from = document.getElementById("pnl-from").value;
       const to = document.getElementById("pnl-to").value;
       if (!from || !to) {
@@ -956,9 +961,9 @@
 
     function visibleTabs() {
       const tabs = [];
-      if (USER.tabs?.hours) tabs.push("hours");
-      if (USER.tabs?.activity) tabs.push("activity");
-      if (USER.tabs?.pnl) tabs.push("pnl");
+      if (USER.tabs?.hours !== false) tabs.push("hours");
+      if (USER.tabs?.activity !== false) tabs.push("activity");
+      if (USER.tabs?.pnl !== false) tabs.push("pnl");
       if (USER.admin) tabs.push("admin");
       return tabs;
     }
@@ -1021,7 +1026,7 @@
           <td>${escapeHtml(u.login)}${self ? ' <span class="meta">вы</span>' : ""}</td>
           <td><label><input type="checkbox" data-field="hours" ${u.tabs?.hours ? "checked" : ""}> Часы</label></td>
           <td><label><input type="checkbox" data-field="activity" ${u.tabs?.activity ? "checked" : ""}> Активность</label></td>
-          <td><label><input type="checkbox" data-field="pnl" ${u.tabs?.pnl ? "checked" : ""}> Доходы и расходы</label></td>
+          <td><label><input type="checkbox" data-field="pnl" ${u.tabs?.pnl !== false ? "checked" : ""}> Доходы и расходы</label></td>
           <td><label><input type="checkbox" data-field="admin" ${u.admin ? "checked" : ""}> Админ</label></td>
           <td>
             <button type="button" data-act="pass">Пароль</button>
