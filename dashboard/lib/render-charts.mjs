@@ -114,6 +114,7 @@ export function renderChartParts(data) {
         <div class="kpi">Отложено: <b>${k.hoursPostponed ?? 0}</b></div>`,
     devWork: stackedChart("Часов в работе по разработчикам", c.hoursByDeveloper, "Нет часов разработки в работе"),
     clientDone: stackedChart("Выполненные часы по клиентам", c.completedByClient, "Нет выполненных часов"),
+    analystDone: stackedChart("Выполненные часы по аналитикам", c.completedByAnalyst, "Нет выполненных часов"),
     devDone: stackedChart("Выполненные часы по разработчикам", c.completedByDeveloper, "Нет выполненных часов"),
     activity: renderActivityTable(data.activity || []),
     clientOptions: selectOptions(

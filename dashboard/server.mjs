@@ -37,6 +37,7 @@ function renderHtml(data, user) {
     .replace("__CHART_KPIS__", parts.kpis)
     .replace("__CHART_DEV_WORK__", parts.devWork)
     .replace("__CHART_CLIENT_DONE__", parts.clientDone)
+    .replace("__CHART_ANALYST_DONE__", parts.analystDone)
     .replace("__CHART_DEV_DONE__", parts.devDone)
     .replace("__ACTIVITY__", parts.activity)
     .replace("__CLIENT_OPTIONS__", parts.clientOptions)

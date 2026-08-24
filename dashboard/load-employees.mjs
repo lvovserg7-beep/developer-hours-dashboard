@@ -37,6 +37,10 @@ function hoursDev(task) {
   return num(task.ЧасыРазработки) + num(task.ЧасыВнедрения);
 }
 
+function hoursImplementation(task) {
+  return num(task.ЧасыВнедрения);
+}
+
 function hoursAnalysis(task) {
   return Math.max(0, hours(task) - hoursDev(task));
 }
@@ -245,13 +249,21 @@ export async function loadActiveEmployees() {
   }
 
   const all = [...inWork, ...completed, ...postponed];
-  const users = await resolveNames(all.map((t) => t.Разработчик_Key), "Catalog_Пользователи");
+  const users = await resolveNames([
+    ...all.map((t) => t.Разработчик_Key),
+    ...all.map((t) => t.РуководительПроектов_Key),
+  ], "Catalog_Пользователи");
   const clients = await resolveNames(all.map((t) => t.Контрагент_Key), "Catalog_Контрагенты");
 
   const clientName = (task) => clients.get(task.Контрагент_Key) || "Без клиента";
   const devName = (task) => {
     const id = task.Разработчик_Key;
     if (!id || id === EMPTY_GUID) return "Без исполнителя";
+    return users.get(id) || "Без имени";
+  };
+  const analystName = (task) => {
+    const id = task.РуководительПроектов_Key;
+    if (!id || id === EMPTY_GUID) return "Без аналитика";
     return users.get(id) || "Без имени";
   };
   const taskStatus = (task) => statusLabel(statusById.get(task.Статус_Key));
@@ -295,6 +307,11 @@ export async function loadActiveEmployees() {
     const name = devName(task);
     addSeg(byDevType, name, "Анализ", hoursAnalysis(task));
     addSeg(byDevType, name, "Разработка", hoursDev(task));
+  }
+
+  const byAnalystType = new Map();
+  for (const task of completed) {
+    addSeg(byAnalystType, analystName(task), "Внедрение", hoursImplementation(task));
   }
 
   const byEmployee = new Map();
@@ -386,6 +403,7 @@ export async function loadActiveEmployees() {
       hoursByStatus: stackedRows(byStatusClientTrim, inWorkLabels),
       hoursByDeveloper: stackedRows(byDevStatus, null),
       completedByClient: stackedRows(byClientSupport, null),
+      completedByAnalyst: stackedRows(byAnalystType, null),
       completedByDeveloper: stackedRows(byDevType, null),
     },
     totals: {

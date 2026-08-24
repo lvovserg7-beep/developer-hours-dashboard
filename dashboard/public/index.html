@@ -46,7 +46,7 @@
     }
     .bottom {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 14px;
       margin-bottom: 16px;
     }
@@ -137,7 +137,7 @@
       grid-template-columns: minmax(0, 1.15fr) 240px minmax(0, 1.15fr) !important;
     }
     body.is-full #tab-hours .bottom {
-      grid-template-columns: 1fr 1fr !important;
+      grid-template-columns: 1fr 1fr 1fr !important;
     }
     body.is-full #tab-activity .panel {
       flex: 1;
@@ -372,9 +372,10 @@
     </div>
     <div class="bottom">
       <section class="panel" id="chart-client-done">__CHART_CLIENT_DONE__</section>
+      <section class="panel" id="chart-analyst-done">__CHART_ANALYST_DONE__</section>
       <section class="panel" id="chart-dev-done">__CHART_DEV_DONE__</section>
     </div>
-    <footer>Часы в работе по статусам — реквизит «Часы». Часы в работе по разработчикам — реквизит «Часы разработки», не общие часы задачи. Выполненные: анализ = часы минус разработка и внедрение; разработка = часы разработки и внедрения.</footer>
+    <footer>Часы в работе по статусам — реквизит «Часы». Часы в работе по разработчикам — реквизит «Часы разработки», не общие часы задачи. Выполненные по разработчикам: анализ = часы минус разработка и внедрение; разработка = часы разработки и внедрения. Выполненные по аналитикам: только реквизит «Часы внедрения», без часов анализа. Аналитик — реквизит «Руководитель проектов».</footer>
     </div>
     </div>
     <div id="tab-admin" class="tab-panel" hidden>
@@ -565,6 +566,8 @@
         stackedChart("Часов в работе по разработчикам", c.hoursByDeveloper, "Нет часов разработки в работе");
       document.getElementById("chart-client-done").innerHTML =
         stackedChart("Выполненные часы по клиентам", c.completedByClient, "Нет выполненных часов");
+      document.getElementById("chart-analyst-done").innerHTML =
+        stackedChart("Выполненные часы по аналитикам", c.completedByAnalyst, "Нет выполненных часов");
       document.getElementById("chart-dev-done").innerHTML =
         stackedChart("Выполненные часы по разработчикам", c.completedByDeveloper, "Нет выполненных часов");
       document.getElementById("chart-kpis").innerHTML = `
