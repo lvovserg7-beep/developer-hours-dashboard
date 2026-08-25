@@ -21,14 +21,17 @@ function parseYmd(value) {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-/** @param {"yesterday"|"week"|"month"|"custom"} preset */
+/** @param {"today"|"yesterday"|"week"|"month"|"custom"} preset */
 export function resolveBitrixRange(preset, fromRaw, toRaw) {
   const today = startOfLocalDay(new Date());
   let from;
   let to;
   let resolved = preset || "week";
 
-  if (resolved === "yesterday") {
+  if (resolved === "today") {
+    from = today;
+    to = today;
+  } else if (resolved === "yesterday") {
     from = new Date(today.getTime() - DAY_MS);
     to = from;
   } else if (resolved === "month") {
@@ -335,9 +338,6 @@ export async function loadBitrixAnalytics(opts = {}) {
   if (dealsOpenLive.length >= 400 * 50) {
     warnings.push("Сделки в работе: достигнут лимит выгрузки REST (~20 000). Сумма может быть неполной.");
   }
-  if (archiveCategories.length) {
-    warnings.push(`Исключена воронка «Архив» (CATEGORY_ID: ${archiveCategories.join(", ")}).`);
-  }
 
   const nameById = await loadUserNames([
     ...callsBy.keys(),
@@ -399,8 +399,7 @@ export async function loadBitrixAnalytics(opts = {}) {
       "Звонки — статистика телефонии за период. Сделки и лиды — по дате создания. " +
       "Выигранные лиды — статус «качественный» / конвертация в сделку по дате закрытия. " +
       "Выигранные и проигранные сделки — по дате закрытия и семантике стадии. " +
-      "Сделки в работе (шт и ₽) — текущий снимок открытой воронки, не фильтр периода. " +
-      "Воронка «Архив» в сделки не входит.",
+      "Сделки в работе (шт и ₽) — текущий снимок открытой воронки, не фильтр периода.",
     warnings,
   };
 }

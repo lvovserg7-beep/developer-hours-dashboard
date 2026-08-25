@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="refresh" content="600">
-  <title>Центр управления корпорации</title>
+  <title>Центр управления корпорацией</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -470,6 +470,18 @@
       min-width: 280px;
       max-width: 340px;
     }
+    .filter-dates .month-pick {
+      width: 100%;
+      min-width: 0;
+      margin: 0 0 8px;
+      padding: 7px 10px;
+      font: inherit;
+      font-size: var(--fs-sm);
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+    }
     .activity-filters .filter-reset {
       flex: 0 0 auto;
       min-width: 0;
@@ -880,7 +892,7 @@
           <img src="/assets/logo-ecotidy.jpg" alt="Экотайди" width="66" height="48">
         </div>
         <div class="brand-text">
-          <h1>Центр управления корпорации</h1>
+          <h1>Центр управления корпорацией</h1>
           <p class="mission">Собираем достоверные данные в понятный и быстрый формат — чтобы вся компания принимала управленческие решения вовремя, уверенно и по существу.</p>
         </div>
       </div>
@@ -1173,6 +1185,7 @@
         <p class="lead tab-intro">Звонки, лиды и сделки по менеджерам. Сверху — итоговые цифры. По умолчанию — последняя неделя. Данные с портала alsn.bitrix24.ru.</p>
         <form class="pnl-toolbar" id="bitrix-form">
           <div class="bitrix-preset" role="group" aria-label="Быстрый период">
+            <button type="button" data-bitrix-preset="today">Сегодня</button>
             <button type="button" data-bitrix-preset="yesterday">Вчера</button>
             <button type="button" class="is-on" data-bitrix-preset="week">Неделя</button>
             <button type="button" data-bitrix-preset="month">Месяц</button>
@@ -1576,6 +1589,87 @@
 
     function isoDay(d) {
       return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+
+    const MONTH_NAMES_RU = [
+      "январь", "февраль", "март", "апрель", "май", "июнь",
+      "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь",
+    ];
+
+    function monthBounds(year, monthIndex) {
+      const from = new Date(year, monthIndex, 1);
+      const to = new Date(year, monthIndex + 1, 0);
+      return { from: isoDay(from), to: isoDay(to), key: isoDay(from).slice(0, 7) };
+    }
+
+    function buildMonthOptionsHtml() {
+      const now = new Date();
+      const items = [];
+      for (let i = 0; i < 36; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const y = d.getFullYear();
+        const m = d.getMonth();
+        const key = y + "-" + String(m + 1).padStart(2, "0");
+        const label = MONTH_NAMES_RU[m] + " " + y;
+        items.push(`<option value="${key}">${label}</option>`);
+      }
+      return `<option value="">Выбрать месяц…</option>` + items.join("");
+    }
+
+    function syncMonthPick(sel, fromEl, toEl) {
+      if (!sel || !fromEl || !toEl) return;
+      const from = fromEl.value || "";
+      const to = toEl.value || "";
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+        sel.value = "";
+        return;
+      }
+      const y = Number(from.slice(0, 4));
+      const m = Number(from.slice(5, 7)) - 1;
+      if (from.slice(0, 7) !== to.slice(0, 7)) {
+        sel.value = "";
+        return;
+      }
+      const bounds = monthBounds(y, m);
+      sel.value = from === bounds.from && to === bounds.to ? bounds.key : "";
+    }
+
+    function installMonthPickers() {
+      const optionsHtml = buildMonthOptionsHtml();
+      for (const box of document.querySelectorAll(".filter-dates")) {
+        if (box.querySelector(".month-pick")) continue;
+        const dates = box.querySelectorAll('input[type="date"]');
+        if (dates.length < 2) continue;
+        const fromEl = dates[0];
+        const toEl = dates[1];
+        const sel = document.createElement("select");
+        sel.className = "month-pick";
+        sel.setAttribute("aria-label", "Выбрать месяц");
+        sel.innerHTML = optionsHtml;
+        const datesWrap = box.querySelector(".dates");
+        if (datesWrap) box.insertBefore(sel, datesWrap);
+        else box.appendChild(sel);
+
+        sel.addEventListener("change", () => {
+          const key = sel.value;
+          if (!key) return;
+          const [ys, ms] = key.split("-");
+          const bounds = monthBounds(Number(ys), Number(ms) - 1);
+          fromEl.value = bounds.from;
+          toEl.value = bounds.to;
+          fromEl.dispatchEvent(new Event("change", { bubbles: true }));
+          toEl.dispatchEvent(new Event("change", { bubbles: true }));
+          fromEl.dispatchEvent(new Event("input", { bubbles: true }));
+          toEl.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+
+        const sync = () => syncMonthPick(sel, fromEl, toEl);
+        fromEl.addEventListener("change", sync);
+        toEl.addEventListener("change", sync);
+        fromEl.addEventListener("input", sync);
+        toEl.addEventListener("input", sync);
+        sync();
+      }
     }
 
     function defaultPnlRange() {
@@ -2296,7 +2390,10 @@
       const fromEl = document.getElementById("bitrix-from");
       const toEl = document.getElementById("bitrix-to");
       const dates = document.getElementById("bitrix-dates");
-      if (preset === "yesterday") {
+      if (preset === "today") {
+        fromEl.value = ymdLocal(today);
+        toEl.value = ymdLocal(today);
+      } else if (preset === "yesterday") {
         const y = new Date(today.getTime() - 86400000);
         fromEl.value = ymdLocal(y);
         toEl.value = ymdLocal(y);
@@ -3549,6 +3646,7 @@
     initOzonDates();
     initOzonDrrDates();
     initWbDates();
+    installMonthPickers();
     applyUserUi();
     if (EMBEDDED?.activity) fillActivityFilters(EMBEDDED.activity);
     showTab(location.hash.replace("#", ""));

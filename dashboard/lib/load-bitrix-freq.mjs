@@ -409,15 +409,9 @@ export async function loadBitrixFrequency() {
       managers: managers.length,
     },
     managers,
-    warnings: [
-      ...new Set(warnings.filter(Boolean)),
-      ...(archiveCategories.length
-        ? [`Исключена воронка «Архив» (CATEGORY_ID: ${archiveCategories.join(", ")}).`]
-        : []),
-    ],
+    warnings: [...new Set(warnings.filter(Boolean))],
     note:
       "Снимок на сейчас: открытые сделки и лиды, просроченные задачи, недозвоны по лидам. " +
-      "«ННН» = ИНН в реквизитах контакта/компании, привязанных к сделке. " +
-      "Воронка «Архив» в сделки не входит.",
+      "«ННН» = ИНН в реквизитах контакта/компании, привязанных к сделке.",
   };
 }
