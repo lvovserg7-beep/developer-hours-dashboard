@@ -248,49 +248,71 @@
     body.is-full header .wrap,
     body.is-full main { max-width: none; width: 100%; }
     body.is-full main {
-      flex: 1 1 auto;
+      flex: 1 1 0;
       min-height: 0;
       padding: 8px 12px 12px;
       display: flex;
       flex-direction: column;
-      height: auto;
+      height: 100%;
       width: 100%;
     }
     body.is-full .tab-panel:not([hidden]) {
-      flex: 1 1 auto;
+      flex: 1 1 0;
       min-height: 0;
       width: 100%;
+      height: 100%;
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
-    body.is-full #tab-hours:not([hidden]) {
+    body.is-full #tab-hours .hours-stage,
+    body.is-full #tab-bitrix .bitrix-stage,
+    body.is-full .report-stage-inner {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      transform: none;
+      transform-origin: center center;
+      overflow: visible;
+    }
+    body.is-full .report-stage {
+      flex: 1 1 0;
+      min-height: 0;
+      height: 100%;
       position: relative;
-      display: block;
       overflow: hidden;
       width: 100%;
-      height: 100%;
     }
+    body.is-full .tab-panel:not([hidden]) > .panel {
+      flex: 1 1 0;
+      min-height: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      width: 100%;
+    }
+    body.is-full #tab-hours:not([hidden]),
     body.is-full #tab-bitrix:not([hidden]) {
       position: relative;
-      display: block;
+      display: flex;
+      flex-direction: column;
       overflow: hidden;
       width: 100%;
       height: 100%;
+      min-height: 0;
+      flex: 1 1 0;
     }
-    body.is-full #tab-hours .hours-stage {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 1360px;
-      transform-origin: center center;
-    }
-    body.is-full #tab-bitrix .bitrix-stage {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 1360px;
-      transform-origin: center center;
+    body.is-full .report-stage-inner .activity-scroll,
+    body.is-full .report-stage-inner #activity-table,
+    body.is-full .report-stage-inner .pnl-scroll {
+      flex: none !important;
+      height: auto !important;
+      max-height: none !important;
+      max-width: none !important;
+      overflow: visible !important;
     }
     body.is-full #tab-hours .board,
     body.is-full #tab-hours .bottom,
@@ -314,26 +336,37 @@
     body.is-full #tab-bitrix .bottom {
       grid-template-columns: 1fr 1fr 1fr 1fr !important;
     }
+    body.is-full:not(.filters-open) .pnl-toolbar,
+    body.is-full:not(.filters-open) .activity-filters {
+      display: none !important;
+    }
+    body.is-full.filters-open .pnl-toolbar,
+    body.is-full.filters-open .activity-filters {
+      display: flex !important;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 4;
+      margin: 0 0 10px;
+      padding: 10px 12px;
+      background: var(--card);
+      border: 1px solid var(--line);
+    }
+    body.is-full #btn-filters {
+      display: inline-block;
+    }
+    #btn-filters {
+      display: none;
+    }
+    body.is-full #btn-filters.is-on {
+      font-weight: var(--weight);
+      color: var(--ink);
+    }
     body.is-full #tab-activity .panel {
       flex: 1;
       min-height: 0;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-    }
-    body.is-full #tab-admin .panel,
-    body.is-full #tab-pnl .panel,
-    body.is-full #tab-pnlecotidy .panel,
-    body.is-full #tab-units .panel,
-    body.is-full #tab-plan .panel,
-    body.is-full #tab-budget .panel,
-    body.is-full #tab-bitrixfreq .panel,
-    body.is-full #tab-ozon .panel,
-    body.is-full #tab-ozondrr .panel,
-    body.is-full #tab-wb .panel {
-      flex: 1;
-      min-height: 0;
-      overflow: auto;
     }
     body.is-full #activity-table {
       flex: 1;
@@ -343,6 +376,7 @@
       overflow: hidden;
     }
     body.is-full .activity-scroll { flex: 1; min-height: 0; overflow: auto; }
+    body.is-full .tabs { margin-top: 0; }
     .tabs {
       display: flex;
       flex-wrap: wrap;
@@ -351,7 +385,6 @@
       border-bottom: 1px solid var(--line);
       align-items: flex-end;
     }
-    body.is-full .tabs { margin-top: 0; }
     .tab-spacer { margin-left: auto; }
     .tab-full {
       appearance: none;
@@ -466,20 +499,50 @@
     }
     .activity-filters .filter-dates,
     .pnl-toolbar .filter-dates {
-      flex: 1 1 280px;
-      min-width: 280px;
-      max-width: 340px;
+      flex: 1 1 auto;
+      min-width: 0;
+      max-width: none;
     }
-    .filter-dates .month-pick {
+    .filter-dates {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 10px;
+    }
+    .filter-dates > label {
+      margin: 0;
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+    .activity-filters .dates,
+    .pnl-toolbar .dates {
+      display: grid;
+      grid-template-columns: minmax(148px, 168px) auto auto;
+      gap: 8px 10px;
+      align-items: center;
+      min-width: 0;
+    }
+    .activity-filters .dates > div,
+    .pnl-toolbar .dates > div {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+    .activity-filters .filter-dates .month-pick,
+    .pnl-toolbar .filter-dates .month-pick {
       width: 100%;
       min-width: 0;
-      margin: 0 0 8px;
+      max-width: none;
+      margin: 0;
       padding: 7px 10px;
       font: inherit;
       font-size: var(--fs-sm);
       border: 1px solid var(--line);
       background: #fff;
       color: var(--ink);
+      border-radius: var(--radius);
       cursor: pointer;
     }
     .activity-filters .filter-reset {
@@ -494,6 +557,10 @@
       color: var(--muted);
       margin-bottom: 4px;
       font-weight: 500;
+    }
+    .activity-filters .filter-dates > label,
+    .pnl-toolbar .filter-dates > label {
+      margin-bottom: 0;
     }
     .activity-filters input,
     .activity-filters select,
@@ -510,18 +577,23 @@
       border-radius: var(--radius);
     }
     .pnl-toolbar select { width: auto; min-width: 180px; }
-    .activity-filters .dates,
-    .pnl-toolbar .dates {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 8px;
+    .pnl-toolbar .filter-dates .month-pick,
+    .activity-filters .filter-dates .month-pick {
+      width: 100%;
+      min-width: 0;
+    }
+    .activity-filters .dates input[type="date"],
+    .pnl-toolbar .dates input[type="date"] {
+      width: auto;
+      min-width: 124px;
     }
     .activity-filters .dates span,
     .pnl-toolbar .dates span {
-      display: block;
+      display: inline;
       font-size: var(--fs-xs);
       color: var(--muted);
-      margin-bottom: 2px;
+      margin: 0;
+      white-space: nowrap;
     }
     .activity-filters button,
     .btn-secondary {
@@ -864,18 +936,19 @@
       .tab-spacer { flex-basis: 100%; height: 0; margin: 0; }
       .who { padding: 4px 8px 8px 0; }
       .activity-filters > div,
-      .activity-filters .filter-dates {
-        flex: 1 1 100%;
-        min-width: 0;
-        max-width: none;
-      }
-      .activity-filters .dates { grid-template-columns: 1fr; }
+      .activity-filters .filter-dates,
       .pnl-toolbar .filter-dates {
         flex: 1 1 100%;
         min-width: 0;
         max-width: none;
       }
-      .pnl-toolbar .dates { grid-template-columns: 1fr; }
+      .filter-dates {
+        overflow-x: auto;
+      }
+      .activity-filters .dates,
+      .pnl-toolbar .dates {
+        grid-template-columns: minmax(132px, 150px) auto auto;
+      }
       .bar-row { grid-template-columns: minmax(0, 90px) 1fr 36px; }
       .bar-row .lab { white-space: normal; }
       table.admin { min-width: 780px; }
@@ -928,6 +1001,7 @@
         </span>
         <span class="who" id="who"></span>
         <button type="button" class="tab-full" id="btn-logout">Выйти</button>
+        <button type="button" class="tab-full" id="btn-filters" aria-pressed="false" title="Показать или скрыть фильтры">Фильтры</button>
         <button type="button" class="tab-full" id="btn-full">На весь экран</button>
       </nav>
     </div>
@@ -955,7 +1029,7 @@
     <div id="tab-admin" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Пользователи и права</h2>
-        <p class="lead tab-intro">Администратор создаёт учётки, включает вкладки, задаёт их порядок для каждого пользователя и выдаёт права администратора.</p>
+        <p class="lead tab-intro">Администратор создаёт учётки и сам включает нужные доски — по умолчанию у нового пользователя все вкладки выключены. Также задаёт порядок вкладок и права администратора.</p>
         <form class="admin-form" id="user-create">
           <div>
             <label for="new-login">Логин</label>
@@ -966,18 +1040,18 @@
             <input id="new-pass" name="password" type="password" required minlength="4" autocomplete="new-password">
           </div>
           <div class="admin-checks">
-            <label><input type="checkbox" id="new-hours" checked> Часы</label>
-            <label><input type="checkbox" id="new-activity" checked> Активность</label>
-            <label><input type="checkbox" id="new-pnl" checked> Доходы и расходы</label>
-            <label><input type="checkbox" id="new-pnlecotidy" checked> ДИР Первый интегратор</label>
-            <label><input type="checkbox" id="new-units" checked> Сводка юнитов</label>
-            <label><input type="checkbox" id="new-budget" checked> Бюджет план-факт</label>
-            <label><input type="checkbox" id="new-plan" checked> Исполнение плана</label>
-            <label><input type="checkbox" id="new-bitrix" checked> Bitrix</label>
-            <label><input type="checkbox" id="new-bitrixfreq" checked> Чистота ведения Битрикс</label>
-            <label><input type="checkbox" id="new-ozon" checked> Озон себестоимость</label>
-            <label><input type="checkbox" id="new-ozondrr" checked> Озон ДРР</label>
-            <label><input type="checkbox" id="new-wb" checked> WB рентабельность</label>
+            <label><input type="checkbox" id="new-hours"> Часы</label>
+            <label><input type="checkbox" id="new-activity"> Активность</label>
+            <label><input type="checkbox" id="new-pnl"> Доходы и расходы</label>
+            <label><input type="checkbox" id="new-pnlecotidy"> ДИР Первый интегратор</label>
+            <label><input type="checkbox" id="new-units"> Сводка юнитов</label>
+            <label><input type="checkbox" id="new-budget"> Бюджет план-факт</label>
+            <label><input type="checkbox" id="new-plan"> Исполнение плана</label>
+            <label><input type="checkbox" id="new-bitrix"> Bitrix</label>
+            <label><input type="checkbox" id="new-bitrixfreq"> Чистота ведения Битрикс</label>
+            <label><input type="checkbox" id="new-ozon"> Озон себестоимость</label>
+            <label><input type="checkbox" id="new-ozondrr"> Озон ДРР</label>
+            <label><input type="checkbox" id="new-wb"> WB рентабельность</label>
             <label><input type="checkbox" id="new-admin"> Администратор</label>
           </div>
           <button type="submit">Создать</button>
@@ -1664,8 +1738,16 @@
         sel.setAttribute("aria-label", "Выбрать месяц");
         sel.innerHTML = optionsHtml;
         const datesWrap = box.querySelector(".dates");
-        if (datesWrap) box.insertBefore(sel, datesWrap);
-        else box.appendChild(sel);
+        if (datesWrap) {
+          const leftover = box.querySelector(".filter-period-row");
+          if (leftover && leftover !== datesWrap) {
+            leftover.parentNode.insertBefore(datesWrap, leftover);
+            leftover.remove();
+          }
+          datesWrap.insertBefore(sel, datesWrap.firstChild);
+        } else {
+          box.appendChild(sel);
+        }
 
         sel.addEventListener("change", () => {
           const key = sel.value;
@@ -1756,6 +1838,7 @@
         : "";
       const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
       box.innerHTML = warn + note + sections;
+      afterReportPaint();
     }
 
     async function loadPnlReport() {
@@ -1856,6 +1939,7 @@
         ? `<p class="pnl-note">${escapeHtml(report.organization)} · ${escapeHtml(report.source || "")}</p>`
         : "";
       box.innerHTML = warn + org + note + sections;
+      afterReportPaint();
     }
 
     async function loadPnlEcotidyReport() {
@@ -2355,6 +2439,7 @@
             <tbody>${supportRows || `<tr><td colspan="9">Нет клиентов с поддержкой</td></tr>`}${supportTotal}</tbody>
           </table></div>
         </div>`;
+      afterReportPaint();
     }
 
     async function loadPlanReport() {
@@ -2648,6 +2733,7 @@
             <tbody>${rows || `<tr><td colspan="7">Нет данных</td></tr>`}${totalRow}</tbody>
           </table></div>
         </div>${rules}`;
+      afterReportPaint();
     }
 
     async function loadBitrixFreqReport() {
@@ -3116,7 +3202,7 @@
       const order = normalizeClientTabOrder(USER.tabOrder);
       const tabs = [];
       for (const name of order) {
-        if (USER.tabs?.[name] !== false) tabs.push(name);
+        if (USER.tabs?.[name] === true) tabs.push(name);
       }
       if (USER.admin) tabs.push("admin");
       return tabs;
@@ -3397,11 +3483,11 @@
         const self = u.id === USER.id;
         const order = normalizeClientTabOrder(u.tabOrder);
         const checks = tabFields.map(([field, label]) => {
-          const on = u.tabs?.[field] !== false;
+          const on = u.tabs?.[field] === true;
           return `<label><input type="checkbox" data-field="${field}" ${on ? "checked" : ""}> ${escapeHtml(label)}</label>`;
         }).join("");
         const orderItems = order.map((name, idx) => {
-          const on = u.tabs?.[name] !== false;
+          const on = u.tabs?.[name] === true;
           return `<li class="${on ? "" : "is-off"}" data-tab="${escapeHtml(name)}">
             <span class="ord-label">${escapeHtml(TAB_LABELS[name] || name)}</span>
             <button type="button" data-act="tab-up" title="Выше" ${idx === 0 ? "disabled" : ""}>↑</button>
@@ -3436,30 +3522,124 @@
       }
     }
 
+    function wrapStageHost(tab, stage) {
+      if (!tab || !stage || stage.parentElement?.classList.contains("report-stage")) return;
+      const host = document.createElement("div");
+      host.className = "report-stage";
+      stage.parentNode.insertBefore(host, stage);
+      host.appendChild(stage);
+    }
+
+    function ensureReportStages() {
+      const hoursTab = document.getElementById("tab-hours");
+      wrapStageHost(hoursTab, hoursTab?.querySelector(":scope > .hours-stage") || hoursTab?.querySelector(".hours-stage"));
+      const bitrixTab = document.getElementById("tab-bitrix");
+      const bitrixStage = bitrixTab?.querySelector(".bitrix-stage");
+      if (bitrixTab && bitrixStage) {
+        const form = bitrixStage.querySelector(":scope > form.pnl-toolbar");
+        if (form) bitrixTab.insertBefore(form, bitrixStage);
+        wrapStageHost(bitrixTab, bitrixStage);
+      }
+      const skip = new Set(["tab-hours", "tab-bitrix", "tab-admin"]);
+      for (const tab of document.querySelectorAll(".tab-panel")) {
+        if (skip.has(tab.id)) continue;
+        const panel = tab.querySelector(":scope > .panel");
+        if (!panel || panel.querySelector(":scope > .report-stage")) continue;
+        const stage = document.createElement("div");
+        stage.className = "report-stage";
+        const inner = document.createElement("div");
+        inner.className = "report-stage-inner";
+        const keep = (el) =>
+          el.matches?.(
+            "h2.tab-intro, p.lead.tab-intro, p.tab-intro, form.pnl-toolbar, form.activity-filters"
+          );
+        for (const child of [...panel.children]) {
+          if (keep(child)) continue;
+          inner.appendChild(child);
+        }
+        if (!inner.children.length) continue;
+        stage.appendChild(inner);
+        panel.appendChild(stage);
+      }
+    }
+
+    function clearStageStyles() {
+      for (const el of document.querySelectorAll(".hours-stage, .bitrix-stage, .report-stage-inner")) {
+        el.style.transform = "";
+        el.style.width = "";
+        el.style.left = "";
+        el.style.top = "";
+      }
+    }
+
     function fitStage(tabId, stageSelector) {
       const tab = document.getElementById(tabId);
       const stage = tab && tab.querySelector(stageSelector);
       if (!tab || !stage) return;
-      stage.style.transform = "";
-      stage.style.width = "";
-      if (!document.body.classList.contains("is-full") || tab.hidden) return;
-      const designW = 1360;
-      stage.style.width = designW + "px";
-      const w = tab.clientWidth;
-      const h = tab.clientHeight;
-      const sh = stage.offsetHeight;
-      const s = Math.min(w / designW, h / Math.max(sh, 1));
-      if (!s || !isFinite(s)) return;
-      stage.style.transform = "translate(-50%, -50%) scale(" + s + ")";
+      if (!document.body.classList.contains("is-full") || tab.hidden) {
+        stage.style.transform = "";
+        stage.style.width = "";
+        stage.style.left = "";
+        stage.style.top = "";
+        return;
+      }
+      const host = stage.closest(".report-stage") || tab;
+      const box = host.getBoundingClientRect();
+      const w = box.width || host.clientWidth || tab.clientWidth;
+      const h = box.height || host.clientHeight || tab.clientHeight;
+      if (!w || !h) return;
+      stage.style.transform = "none";
+      stage.style.left = "0";
+      stage.style.top = "0";
+      stage.style.width = w + "px";
+      const naturalW = Math.max(stage.scrollWidth, stage.offsetWidth, 1);
+      const naturalH = Math.max(stage.scrollHeight, stage.offsetHeight, 1);
+      const s = Math.min(w / naturalW, h / naturalH, 1);
+      if (!s || !isFinite(s) || s <= 0) return;
+      if (s < 0.999) {
+        stage.style.width = naturalW + "px";
+        stage.style.left = "50%";
+        stage.style.top = "50%";
+        stage.style.transform = "translate(-50%, -50%) scale(" + s + ")";
+      } else {
+        stage.style.width = w + "px";
+        stage.style.left = "0";
+        stage.style.top = "50%";
+        stage.style.transform = "translateY(-50%)";
+      }
     }
 
     function fitHoursStage() {
+      if (!document.body.classList.contains("is-full")) {
+        clearStageStyles();
+        return;
+      }
       fitStage("tab-hours", ".hours-stage");
       fitStage("tab-bitrix", ".bitrix-stage");
+      for (const tab of document.querySelectorAll(".tab-panel")) {
+        if (tab.hidden) continue;
+        if (tab.querySelector(".report-stage-inner")) fitStage(tab.id, ".report-stage-inner");
+      }
+    }
+
+    function afterReportPaint() {
+      requestAnimationFrame(() => requestAnimationFrame(fitHoursStage));
+    }
+
+    function setFiltersOpen(on) {
+      document.body.classList.toggle("filters-open", Boolean(on));
+      const btn = document.getElementById("btn-filters");
+      if (btn) {
+        btn.classList.toggle("is-on", Boolean(on));
+        btn.setAttribute("aria-pressed", on ? "true" : "false");
+        btn.textContent = on ? "Скрыть фильтры" : "Фильтры";
+      }
+      requestAnimationFrame(() => requestAnimationFrame(fitHoursStage));
     }
 
     function setFull(on) {
       document.body.classList.toggle("is-full", on);
+      if (!on) setFiltersOpen(false);
       const btn = document.getElementById("btn-full");
       if (btn) btn.textContent = on ? "Окно" : "На весь экран";
       if (on) {
@@ -3522,18 +3702,6 @@
           }),
         });
         e.target.reset();
-        document.getElementById("new-hours").checked = true;
-        document.getElementById("new-activity").checked = true;
-        document.getElementById("new-pnl").checked = true;
-        document.getElementById("new-pnlecotidy").checked = true;
-        document.getElementById("new-units").checked = true;
-        document.getElementById("new-budget").checked = true;
-        document.getElementById("new-plan").checked = true;
-        document.getElementById("new-bitrix").checked = true;
-        document.getElementById("new-bitrixfreq").checked = true;
-        document.getElementById("new-ozon").checked = true;
-        document.getElementById("new-ozondrr").checked = true;
-        document.getElementById("new-wb").checked = true;
         await loadAdminUsers();
       } catch (ex) {
         adminErr(ex.message || String(ex));
@@ -3624,6 +3792,10 @@
     document.getElementById("btn-full").addEventListener("click", () => {
       setFull(!document.body.classList.contains("is-full"));
     });
+    document.getElementById("btn-filters").addEventListener("click", () => {
+      if (!document.body.classList.contains("is-full")) return;
+      setFiltersOpen(!document.body.classList.contains("filters-open"));
+    });
     document.getElementById("slide-prev").addEventListener("click", () => slideStep(-1));
     document.getElementById("slide-next").addEventListener("click", () => slideStep(1));
     document.getElementById("slide-pause").addEventListener("click", () => {
@@ -3658,6 +3830,7 @@
     document.addEventListener("fullscreenchange", () => {
       if (!document.fullscreenElement && document.body.classList.contains("is-full")) {
         document.body.classList.remove("is-full");
+        setFiltersOpen(false);
         const btn = document.getElementById("btn-full");
         if (btn) btn.textContent = "На весь экран";
         syncSlideBar();
@@ -3772,6 +3945,7 @@
     initOzonDrrDates();
     initWbDates();
     installMonthPickers();
+    ensureReportStages();
     applyUserUi();
     if (EMBEDDED?.activity) fillActivityFilters(EMBEDDED.activity);
     showTab(location.hash.replace("#", ""));

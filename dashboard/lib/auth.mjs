@@ -73,23 +73,14 @@ function verifyPassword(password, salt, hash) {
   return timingSafeEqual(next, prev);
 }
 
-function normalizeTabs(tabs, admin) {
+function tabOn(tabs, key) {
+  return !!(tabs && tabs[key] === true);
+}
+
+function normalizeTabs(tabs) {
   const src = tabs && typeof tabs === "object" ? tabs : {};
-  const out = {
-    hours: src.hours !== false,
-    activity: src.activity !== false,
-    pnl: src.pnl !== false,
-    pnlecotidy: src.pnlecotidy !== false,
-    units: src.units !== false,
-    plan: src.plan !== false,
-    budget: src.budget !== false,
-    bitrix: src.bitrix !== false,
-    bitrixfreq: src.bitrixfreq !== false,
-    ozon: src.ozon !== false,
-    ozondrr: src.ozondrr !== false,
-    wb: src.wb !== false,
-  };
-  if (admin) return out;
+  const out = {};
+  for (const key of TABS) out[key] = tabOn(src, key);
   return out;
 }
 
@@ -114,20 +105,7 @@ function publicUser(user) {
     id: user.id,
     login: user.login,
     admin: !!user.admin,
-    tabs: {
-      hours: user.tabs?.hours !== false,
-      activity: user.tabs?.activity !== false,
-      pnl: user.tabs?.pnl !== false,
-      pnlecotidy: user.tabs?.pnlecotidy !== false,
-      units: user.tabs?.units !== false,
-      plan: user.tabs?.plan !== false,
-      budget: user.tabs?.budget !== false,
-      bitrix: user.tabs?.bitrix !== false,
-      bitrixfreq: user.tabs?.bitrixfreq !== false,
-      ozon: user.tabs?.ozon !== false,
-      ozondrr: user.tabs?.ozondrr !== false,
-      wb: user.tabs?.wb !== false,
-    },
+    tabs: normalizeTabs(user.tabs),
     tabOrder: normalizeTabOrder(user.tabOrder),
   };
 }
@@ -169,48 +147,16 @@ export function ensureAuthReady() {
   }
   for (const user of store.users) {
     if (!user.tabs || typeof user.tabs !== "object") {
-      user.tabs = { hours: true, activity: true, pnl: true, pnlecotidy: true, units: true, plan: true, budget: true, bitrix: true, bitrixfreq: true, ozon: true, ozondrr: true, wb: true };
+      // Старые учётки без tabs — сохраняем прежний полный доступ один раз.
+      user.tabs = Object.fromEntries(TABS.map((key) => [key, true]));
       changed = true;
     }
-    if (user.tabs.pnl == null) {
-      user.tabs.pnl = true;
-      changed = true;
-    }
-    if (user.tabs.pnlecotidy == null) {
-      user.tabs.pnlecotidy = true;
-      changed = true;
-    }
-    if (user.tabs.units == null) {
-      user.tabs.units = true;
-      changed = true;
-    }
-    if (user.tabs.plan == null) {
-      user.tabs.plan = true;
-      changed = true;
-    }
-    if (user.tabs.budget == null) {
-      user.tabs.budget = true;
-      changed = true;
-    }
-    if (user.tabs.bitrix == null) {
-      user.tabs.bitrix = true;
-      changed = true;
-    }
-    if (user.tabs.bitrixfreq == null) {
-      user.tabs.bitrixfreq = true;
-      changed = true;
-    }
-    if (user.tabs.ozon == null) {
-      user.tabs.ozon = true;
-      changed = true;
-    }
-    if (user.tabs.ozondrr == null) {
-      user.tabs.ozondrr = true;
-      changed = true;
-    }
-    if (user.tabs.wb == null) {
-      user.tabs.wb = true;
-      changed = true;
+    // Новые доски (ключ отсутствует) — выключены, включает только администратор.
+    for (const key of TABS) {
+      if (user.tabs[key] == null) {
+        user.tabs[key] = false;
+        changed = true;
+      }
     }
     const nextOrder = normalizeTabOrder(user.tabOrder);
     if (!Array.isArray(user.tabOrder) || JSON.stringify(user.tabOrder) !== JSON.stringify(nextOrder)) {
@@ -283,7 +229,7 @@ export function createUser({ login, password, admin, tabs, tabOrder }) {
     salt,
     hash,
     admin: isAdmin,
-    tabs: normalizeTabs(tabs, isAdmin),
+    tabs: normalizeTabs(tabs),
     tabOrder: normalizeTabOrder(tabOrder),
   };
   store.users.push(user);
@@ -317,7 +263,7 @@ export function updateUser(id, patch) {
     }
     user.admin = nextAdmin;
   }
-  if (patch.tabs) user.tabs = normalizeTabs({ ...user.tabs, ...patch.tabs }, user.admin);
+  if (patch.tabs) user.tabs = normalizeTabs({ ...user.tabs, ...patch.tabs });
   if (patch.tabOrder) user.tabOrder = normalizeTabOrder(patch.tabOrder);
   saveStore(store);
   return publicUser(user);
