@@ -1,0 +1,25 @@
+---
+description: Webhook Bitrix24 для дашбордов (alsn.bitrix24.ru)
+alwaysApply: true
+---
+
+# Bitrix24 в этом проекте
+
+Подключён входящий webhook портала **alsn.bitrix24.ru**. По нему строим дашборды (CRM, задачи и т.д. — по мере добавления вкладок).
+
+## Доступ
+
+- Переменная: `BITRIX24_WEBHOOK_URL` в `dashboard/.env` (не в git).
+- Формат: `https://alsn.bitrix24.ru/rest/{user_id}/{code}/`
+- Клиент: `dashboard/lib/bitrix.mjs` — `bitrixCall`, `bitrixAll`, `bitrixHealth`.
+- Образец ключей: `dashboard/.env.example`.
+
+## Как работать
+
+- Секрет webhook — часть URL; не писать в README, коммиты, правила и ответы пользователю целиком.
+- Сначала проверять доступ через `bitrixHealth` / метод `profile`.
+- Списки — через `bitrixAll` (учёт `next`), не выдумывать сделки и задачи.
+- Права ограничены правами пользователя, от имени которого создан webhook.
+- Вкладка дашборда **Bitrix**: `dashboard/lib/load-bitrix.mjs`, API `/api/bitrix`, право `tabs.bitrix`.
+- Вкладка **Чистота ведения Битрикс**: `dashboard/lib/load-bitrix-freq.mjs`, API `/api/bitrixfreq`, право `tabs.bitrixfreq` (заполненность сделок, лиды без активности / недозвоны, сделки без задачи, просроченные задачи).
+- Воронка сделок **«Архив»** в оба отчёта не входит.

@@ -7,7 +7,22 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const USERS_FILE = join(root, "users.json");
 const COOKIE = "dash_session";
 const SESSION_MS = 14 * 24 * 60 * 60 * 1000;
-const TABS = ["hours", "activity", "pnl"];
+const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb"];
+
+const TAB_LABELS = {
+  hours: "Часы",
+  activity: "Активность",
+  pnl: "Доходы и расходы",
+  pnlecotidy: "ДИР Первый интегратор",
+  units: "Сводка юнитов",
+  plan: "Исполнение плана",
+  budget: "Бюджет план-факт",
+  bitrix: "Bitrix",
+  bitrixfreq: "Чистота ведения Битрикс",
+  ozon: "Озон себестоимость",
+  ozondrr: "Озон ДРР",
+  wb: "WB рентабельность",
+};
 
 function envValues() {
   const values = { ...process.env };
@@ -58,6 +73,42 @@ function verifyPassword(password, salt, hash) {
   return timingSafeEqual(next, prev);
 }
 
+function normalizeTabs(tabs, admin) {
+  const src = tabs && typeof tabs === "object" ? tabs : {};
+  const out = {
+    hours: src.hours !== false,
+    activity: src.activity !== false,
+    pnl: src.pnl !== false,
+    pnlecotidy: src.pnlecotidy !== false,
+    units: src.units !== false,
+    plan: src.plan !== false,
+    budget: src.budget !== false,
+    bitrix: src.bitrix !== false,
+    bitrixfreq: src.bitrixfreq !== false,
+    ozon: src.ozon !== false,
+    ozondrr: src.ozondrr !== false,
+    wb: src.wb !== false,
+  };
+  if (admin) return out;
+  return out;
+}
+
+/** Порядок вкладок: известные id без дублей, недостающие — в конец по умолчанию. */
+function normalizeTabOrder(order) {
+  const seen = new Set();
+  const out = [];
+  for (const raw of Array.isArray(order) ? order : []) {
+    const name = String(raw || "").trim();
+    if (!TABS.includes(name) || seen.has(name)) continue;
+    seen.add(name);
+    out.push(name);
+  }
+  for (const name of TABS) {
+    if (!seen.has(name)) out.push(name);
+  }
+  return out;
+}
+
 function publicUser(user) {
   return {
     id: user.id,
@@ -67,19 +118,18 @@ function publicUser(user) {
       hours: user.tabs?.hours !== false,
       activity: user.tabs?.activity !== false,
       pnl: user.tabs?.pnl !== false,
+      pnlecotidy: user.tabs?.pnlecotidy !== false,
+      units: user.tabs?.units !== false,
+      plan: user.tabs?.plan !== false,
+      budget: user.tabs?.budget !== false,
+      bitrix: user.tabs?.bitrix !== false,
+      bitrixfreq: user.tabs?.bitrixfreq !== false,
+      ozon: user.tabs?.ozon !== false,
+      ozondrr: user.tabs?.ozondrr !== false,
+      wb: user.tabs?.wb !== false,
     },
+    tabOrder: normalizeTabOrder(user.tabOrder),
   };
-}
-
-function normalizeTabs(tabs, admin) {
-  const src = tabs && typeof tabs === "object" ? tabs : {};
-  const out = {
-    hours: src.hours !== false,
-    activity: src.activity !== false,
-    pnl: src.pnl !== false,
-  };
-  if (admin) return out;
-  return out;
 }
 
 export function cookieName() {
@@ -109,7 +159,8 @@ export function ensureAuthReady() {
       salt,
       hash,
       admin: true,
-      tabs: { hours: true, activity: true, pnl: true },
+      tabs: { hours: true, activity: true, pnl: true, pnlecotidy: true, units: true, plan: true, budget: true, bitrix: true, bitrixfreq: true, ozon: true, ozondrr: true, wb: true },
+      tabOrder: [...TABS],
     });
     changed = true;
     console.log(`First admin login: ${login}`);
@@ -118,12 +169,52 @@ export function ensureAuthReady() {
   }
   for (const user of store.users) {
     if (!user.tabs || typeof user.tabs !== "object") {
-      user.tabs = { hours: true, activity: true, pnl: true };
+      user.tabs = { hours: true, activity: true, pnl: true, pnlecotidy: true, units: true, plan: true, budget: true, bitrix: true, bitrixfreq: true, ozon: true, ozondrr: true, wb: true };
       changed = true;
-      continue;
     }
     if (user.tabs.pnl == null) {
       user.tabs.pnl = true;
+      changed = true;
+    }
+    if (user.tabs.pnlecotidy == null) {
+      user.tabs.pnlecotidy = true;
+      changed = true;
+    }
+    if (user.tabs.units == null) {
+      user.tabs.units = true;
+      changed = true;
+    }
+    if (user.tabs.plan == null) {
+      user.tabs.plan = true;
+      changed = true;
+    }
+    if (user.tabs.budget == null) {
+      user.tabs.budget = true;
+      changed = true;
+    }
+    if (user.tabs.bitrix == null) {
+      user.tabs.bitrix = true;
+      changed = true;
+    }
+    if (user.tabs.bitrixfreq == null) {
+      user.tabs.bitrixfreq = true;
+      changed = true;
+    }
+    if (user.tabs.ozon == null) {
+      user.tabs.ozon = true;
+      changed = true;
+    }
+    if (user.tabs.ozondrr == null) {
+      user.tabs.ozondrr = true;
+      changed = true;
+    }
+    if (user.tabs.wb == null) {
+      user.tabs.wb = true;
+      changed = true;
+    }
+    const nextOrder = normalizeTabOrder(user.tabOrder);
+    if (!Array.isArray(user.tabOrder) || JSON.stringify(user.tabOrder) !== JSON.stringify(nextOrder)) {
+      user.tabOrder = nextOrder;
       changed = true;
     }
   }
@@ -176,7 +267,7 @@ export function readSession(token) {
   }
 }
 
-export function createUser({ login, password, admin, tabs }) {
+export function createUser({ login, password, admin, tabs, tabOrder }) {
   const store = ensureAuthReady();
   const name = String(login || "").trim();
   if (!name || name.length < 2) throw new Error("Логин слишком короткий");
@@ -193,6 +284,7 @@ export function createUser({ login, password, admin, tabs }) {
     hash,
     admin: isAdmin,
     tabs: normalizeTabs(tabs, isAdmin),
+    tabOrder: normalizeTabOrder(tabOrder),
   };
   store.users.push(user);
   saveStore(store);
@@ -226,6 +318,7 @@ export function updateUser(id, patch) {
     user.admin = nextAdmin;
   }
   if (patch.tabs) user.tabs = normalizeTabs({ ...user.tabs, ...patch.tabs }, user.admin);
+  if (patch.tabOrder) user.tabOrder = normalizeTabOrder(patch.tabOrder);
   saveStore(store);
   return publicUser(user);
 }
@@ -257,7 +350,16 @@ export function filterDashboardData(data, user) {
   }
   if (!tabs.activity) out.activity = [];
   if (!tabs.pnl) out.pnl = null;
+  if (!tabs.pnlecotidy) out.pnlecotidy = null;
+  if (!tabs.units) out.units = null;
+  if (!tabs.plan) out.plan = null;
+  if (!tabs.budget) out.budget = null;
+  if (!tabs.bitrix) out.bitrix = null;
+  if (!tabs.bitrixfreq) out.bitrixfreq = null;
+  if (!tabs.ozon) out.ozon = null;
+  if (!tabs.ozondrr) out.ozondrr = null;
+  if (!tabs.wb) out.wb = null;
   return out;
 }
 
-export { publicUser, TABS };
+export { publicUser, TABS, TAB_LABELS, normalizeTabOrder };

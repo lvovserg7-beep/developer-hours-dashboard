@@ -1,10 +1,19 @@
 import { createServer } from "node:http";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderChartParts } from "./lib/render-charts.mjs";
 import { loadActiveEmployees } from "./load-employees.mjs";
-import { loadPnl, defaultPnlRange } from "./lib/load-pnl.mjs";
+import { loadPnl, defaultPnlRange, normalizePnlGroup } from "./lib/load-pnl.mjs";
+import { loadPnlEcotidy } from "./lib/load-pnl-ecotidy.mjs";
+import { loadUnitsReport, defaultUnitsRange } from "./lib/load-units.mjs";
+import { loadPlan, defaultPlanRange } from "./lib/load-plan.mjs";
+import { loadBudget, defaultBudgetRange } from "./lib/load-budget.mjs";
+import { loadBitrixAnalytics, defaultBitrixRange } from "./lib/load-bitrix.mjs";
+import { loadBitrixFrequency } from "./lib/load-bitrix-freq.mjs";
+import { loadOzonCost, defaultOzonRange } from "./lib/load-ozon.mjs";
+import { loadOzonDrr, defaultOzonDrrRange } from "./lib/load-ozon-drr.mjs";
+import { loadWbProfit, defaultWbRange } from "./lib/load-wb.mjs";
 import {
   cookieName,
   ensureAuthReady,
@@ -194,6 +203,25 @@ const server = createServer(async (req, res) => {
       return send(res, 200, html, "text/html; charset=utf-8");
     }
 
+    if (path.startsWith("/assets/")) {
+      const rel = path.slice("/assets/".length).replace(/\.\./g, "");
+      const assetsRoot = resolve(root, "public", "assets");
+      const file = resolve(assetsRoot, rel);
+      if (!file.startsWith(assetsRoot) || !existsSync(file)) {
+        return send(res, 404, "Not found", "text/plain; charset=utf-8");
+      }
+      const ext = file.slice(file.lastIndexOf(".")).toLowerCase();
+      const types = {
+        ".svg": "image/svg+xml; charset=utf-8",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".webp": "image/webp",
+        ".ico": "image/x-icon",
+      };
+      return send(res, 200, readFileSync(file), types[ext] || "application/octet-stream");
+    }
+
     if (path === "/api/login" && req.method === "POST") {
       const body = await readJson(req);
       const user = checkLogin(body.login, body.password);
@@ -243,8 +271,174 @@ const server = createServer(async (req, res) => {
       const range = defaultPnlRange();
       const from = String(url.searchParams.get("from") || range.from);
       const to = String(url.searchParams.get("to") || range.to);
+      const group = normalizePnlGroup(url.searchParams.get("group"));
       try {
-        const data = await loadPnl(from, to);
+        const data = await loadPnl(from, to, group);
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /период/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/pnlecotidy") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "pnlecotidy")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Доходы и расходы ПИ»." });
+      }
+      const range = defaultPnlRange();
+      const from = String(url.searchParams.get("from") || range.from);
+      const to = String(url.searchParams.get("to") || range.to);
+      const group = normalizePnlGroup(url.searchParams.get("group"));
+      try {
+        const data = await loadPnlEcotidy(from, to, group);
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /период/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/units") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "units")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Сводка юнитов»." });
+      }
+      const range = defaultUnitsRange();
+      const from = String(url.searchParams.get("from") || range.from);
+      const to = String(url.searchParams.get("to") || range.to);
+      try {
+        const data = await loadUnitsReport(from, to);
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /период|настроек/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/plan") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "plan")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Исполнение плана»." });
+      }
+      const range = defaultPlanRange();
+      const from = String(url.searchParams.get("from") || range.from);
+      const to = String(url.searchParams.get("to") || range.to);
+      try {
+        const data = await loadPlan(from, to);
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /период/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/budget") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "budget")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Бюджет план-факт»." });
+      }
+      const range = defaultBudgetRange();
+      const from = String(url.searchParams.get("from") || range.from);
+      const to = String(url.searchParams.get("to") || range.to);
+      const group = normalizePnlGroup(url.searchParams.get("group"));
+      try {
+        const data = await loadBudget(from, to, group);
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /период|файл плана/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/bitrix") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "bitrix")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Bitrix»." });
+      }
+      const preset = String(url.searchParams.get("preset") || "week");
+      const from = String(url.searchParams.get("from") || "");
+      const to = String(url.searchParams.get("to") || "");
+      try {
+        const data = await loadBitrixAnalytics({ preset, from, to });
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /период|webhook|Bitrix24/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/bitrixfreq") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "bitrixfreq")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Чистота ведения Битрикс»." });
+      }
+      try {
+        const data = await loadBitrixFrequency();
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /webhook|Bitrix24/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/ozon") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "ozon")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Озон»." });
+      }
+      const range = defaultOzonRange();
+      const from = String(url.searchParams.get("from") || range.from);
+      const to = String(url.searchParams.get("to") || range.to);
+      try {
+        // По умолчанию без тяжёлых регистров себестоимости/рекламы (?cost=1&registers=1 — полный режим)
+        const skipCost = url.searchParams.get("cost") !== "1";
+        const skipRegisters = url.searchParams.get("registers") !== "1";
+        const data = await loadOzonCost(from, to, { skipCost, skipRegisters });
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /период/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/ozondrr") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "ozondrr")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Озон ДРР»." });
+      }
+      const range = defaultOzonDrrRange();
+      const from = String(url.searchParams.get("from") || range.from);
+      const to = String(url.searchParams.get("to") || range.to);
+      try {
+        const data = await loadOzonDrr(from, to);
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /период/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/wb") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "wb")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «WB»." });
+      }
+      const range = defaultWbRange();
+      const from = String(url.searchParams.get("from") || range.from);
+      const to = String(url.searchParams.get("to") || range.to);
+      try {
+        const skipCost = url.searchParams.get("cost") === "0";
+        const data = await loadWbProfit(from, to, { skipCost });
         return json(res, 200, data);
       } catch (err) {
         const msg = String(err.message || err);
@@ -270,6 +464,7 @@ const server = createServer(async (req, res) => {
       return send(res, 200, renderHtml(snap.data, user), "text/html; charset=utf-8");
     }
 
+    if (path.startsWith("/api/")) return json(res, 404, { error: "Нет такого адреса: " + path });
     send(res, 404, "Not found", "text/plain; charset=utf-8");
   } catch (err) {
     console.error(err);

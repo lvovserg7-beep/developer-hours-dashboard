@@ -49,30 +49,63 @@ export function defaultPnlRange() {
   return { from: isoDay(from), to: isoDay(to) };
 }
 
-export function monthColumns(fromText, toText) {
+export function normalizePnlGroup(value) {
+  const group = String(value || "month");
+  return group === "quarter" || group === "year" ? group : "month";
+}
+
+function periodKeyFromYmd(year, month0, group) {
+  if (group === "year") return String(year);
+  if (group === "quarter") return `${year}-Q${Math.floor(month0 / 3) + 1}`;
+  return `${year}-${String(month0 + 1).padStart(2, "0")}`;
+}
+
+function periodLabel(year, month0, group) {
+  if (group === "year") return String(year);
+  if (group === "quarter") return `${Math.floor(month0 / 3) + 1} кв. ${year}`;
+  return `${MONTHS_RU[month0]} ${year}`;
+}
+
+export function periodColumns(fromText, toText, groupBy = "month") {
   const from = parseDay(fromText);
   const to = parseDay(toText);
   if (!from || !to || from > to) throw new Error("Некорректный период");
-  const months = [];
+  const spanMonths = (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth()) + 1;
+  if (spanMonths > 24) throw new Error("Период слишком длинный (больше 24 месяцев)");
+  const group = normalizePnlGroup(groupBy);
+  const columns = [];
+  const seen = new Set();
   const cur = new Date(from.getFullYear(), from.getMonth(), 1);
   const last = new Date(to.getFullYear(), to.getMonth(), 1);
   while (cur <= last) {
-    months.push({
-      key: `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}`,
-      label: `${MONTHS_RU[cur.getMonth()]} ${cur.getFullYear()}`,
-      year: cur.getFullYear(),
-      month: cur.getMonth(),
-    });
+    const key = periodKeyFromYmd(cur.getFullYear(), cur.getMonth(), group);
+    if (!seen.has(key)) {
+      seen.add(key);
+      columns.push({
+        key,
+        label: periodLabel(cur.getFullYear(), cur.getMonth(), group),
+        year: cur.getFullYear(),
+        month: cur.getMonth(),
+      });
+    }
     cur.setMonth(cur.getMonth() + 1);
   }
-  if (months.length > 24) throw new Error("Период слишком длинный (больше 24 месяцев)");
-  return months;
+  return columns;
 }
 
-function monthKeyOf(iso) {
+export function monthColumns(fromText, toText) {
+  return periodColumns(fromText, toText, "month");
+}
+
+function periodKeyOf(iso, group) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return periodKeyFromYmd(d.getFullYear(), d.getMonth(), group);
+}
+
+function periodIndex(columns, iso, group) {
+  const key = periodKeyOf(iso, group);
+  return columns.findIndex((col) => col.key === key);
 }
 
 function zeros(n) {
@@ -339,11 +372,6 @@ async function findMarketingKey() {
   return rowsOf(data)[0]?.Ref_Key || "";
 }
 
-function monthIndex(months, iso) {
-  const key = monthKeyOf(iso);
-  return months.findIndex((m) => m.key === key);
-}
-
 function rowMoney(name, values) {
   return rowFromValues(name, values, "line");
 }
@@ -387,11 +415,12 @@ export function avgHourMetrics({
   return { hoursNet, avgPrice, avgCost, hourRent, hourYield, priceTotal, costTotal, hoursNetSum };
 }
 
-export async function loadPnl(fromText, toText) {
+export async function loadPnl(fromText, toText, groupBy = "month") {
   const from = parseDay(fromText);
   const to = parseDay(toText);
   if (!from || !to) throw new Error("Укажите период с и по");
-  const months = monthColumns(fromText, toText);
+  const group = normalizePnlGroup(groupBy);
+  const months = periodColumns(fromText, toText, group);
   const n = months.length;
   const warnings = [];
   let org = "";
@@ -448,7 +477,7 @@ export async function loadPnl(fromText, toText) {
 
   for (const row of salesRowsRaw) {
     const partnerKey = refKey(row, "АналитикаУчетаПоПартнерам");
-    const i = monthIndex(months, row.Period);
+    const i = periodIndex(months, row.Period, group);
     if (i < 0) continue;
     const analyticsNomen = nomenKeysMap.get(refKey(row, "АналитикаУчетаНоменклатуры"));
     const nomenKey = refKey(analyticsNomen || {}, "Номенклатура") || refKey(row, "Номенклатура");
@@ -505,7 +534,7 @@ export async function loadPnl(fromText, toText) {
   );
   const expenseSections = new Map();
   for (const row of expenseRowsRaw) {
-    const i = monthIndex(months, row.Period);
+    const i = periodIndex(months, row.Period, group);
     if (i < 0) continue;
     const articleKey = refKey(row, "СтатьяРасходов");
     const article = articles.get(articleKey);
@@ -543,7 +572,7 @@ export async function loadPnl(fromText, toText) {
   const incomeArticles = await resolveByKeys("ChartOfCharacteristicTypes_СтатьиДоходов", incomeArticleKeys, "Ref_Key,Description");
   const incomeMap = new Map();
   for (const row of incomeRowsRaw) {
-    const i = monthIndex(months, row.Period);
+    const i = periodIndex(months, row.Period, group);
     if (i < 0) continue;
     const name = String(incomeArticles.get(refKey(row, "СтатьяДоходов"))?.Description || "Без статьи").trim() || "Без статьи";
     addInto(incomeMap, name, i, firstNumber(row, ["СуммаПриход", "Сумма", "СуммаУпр", "СуммаРегл"]), n);
@@ -620,6 +649,7 @@ export async function loadPnl(fromText, toText) {
   return {
     from: fromText,
     to: toText,
+    group,
     organization: ORG_NAME,
     months: months.map((m) => ({ key: m.key, label: m.label })),
     sections: [salesBlock, cogsBlock, ...expenseBlocks, incomeBlock, refBlock],

@@ -19,6 +19,6 @@ node server.mjs 2>&1
 if errorlevel 1 (
   echo.
   echo Start failed. Code 401 means OData login or password was rejected.
-  echo Set ODATA_DB_TRADE_USERNAME and ODATA_DB_TRADE_PASSWORD in dashboard\.env
+  echo Set ODATA_DB_TRADE_* and ODATA_DB_ECOTIDY_* in dashboard\.env
   pause
 )

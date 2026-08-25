@@ -4,34 +4,114 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="refresh" content="600">
-  <title>Задачи разработчика</title>
+  <title>Центр управления корпорации</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f6f5f2;
+      --bg: #f4f2ed;
       --ink: #1c1b18;
       --muted: #5c5a54;
       --line: #ddd9d0;
       --card: #fff;
       --accent: #8a5a12;
+      --accent-soft: #f3ead3;
+      --th: #f7f4ee;
+      --row-group: #f3ead3;
+      --row-total: #efe2d4;
+      --ok: #2f6b3a;
+      --bad: #9b2c2c;
       --low: #9b2c2c;
       --mid: #5c6b4a;
       --high: #c4922a;
+      --font: "Manrope", "Segoe UI", system-ui, sans-serif;
+      --fs: 14px;
+      --fs-sm: 12px;
+      --fs-xs: 11px;
+      --fs-kpi: 22px;
+      --pad-cell: 8px 10px;
+      --radius: 0;
+      --weight: 600;
+      --weight-strong: 700;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font: 14px/1.4 "Segoe UI", system-ui, sans-serif;
+      font: var(--fs)/1.45 var(--font);
       color: var(--ink);
       background: var(--bg);
+      -webkit-font-smoothing: antialiased;
     }
     header {
       border-bottom: 1px solid var(--line);
       background: var(--card);
-      padding: 18px 24px 14px;
+      padding: 16px 24px 12px;
     }
     header .wrap, main { max-width: 1360px; margin: 0 auto; min-width: 0; }
-    h1 { font-size: 22px; font-weight: 650; margin: 0 0 6px; }
-    h2 { font-size: 14px; font-weight: 650; margin: 0 0 10px; }
+    .brand-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 16px 28px;
+      margin-bottom: 8px;
+    }
+    .brand-logos {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 18px;
+      flex: 0 0 auto;
+    }
+    .brand-logos img {
+      display: block;
+      height: 48px;
+      width: auto;
+      max-width: 240px;
+      object-fit: contain;
+    }
+    .brand-logos img[alt="Аллсан Интеграция"],
+    .brand-logos img[alt="Экотайди"] {
+      height: 56px;
+    }
+    .brand-text {
+      flex: 1 1 280px;
+      min-width: 0;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0 0 6px;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+    h2 {
+      font-size: 15px;
+      font-weight: var(--weight-strong);
+      margin: 0 0 10px;
+      letter-spacing: -0.01em;
+    }
+    .tab-intro {
+      margin: 0 0 6px;
+    }
+    h2.tab-intro {
+      font-size: 18px;
+      font-weight: var(--weight-strong);
+      margin: 0 0 6px;
+    }
+    p.lead.tab-intro {
+      margin: 0 0 14px;
+      max-width: 78ch;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .mission {
+      margin: 0;
+      max-width: 62ch;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
     .lead, .meta, footer { color: var(--muted); }
     .lead { margin: 0; max-width: 90ch; }
     .meta { font-size: 12px; margin: 8px 0 0; }
@@ -50,6 +130,67 @@
       gap: 14px;
       margin-bottom: 16px;
     }
+    #tab-bitrix .board {
+      grid-template-columns: 1fr 1fr;
+    }
+    #tab-bitrix .bottom {
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+    }
+    #bitrix-kpis.bitrix-totals,
+    .kpi-strip {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 8px 16px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      overflow-x: auto;
+      background: var(--card);
+      border: 1px solid var(--line);
+    }
+    #bitrix-kpis.bitrix-totals .bt,
+    .kpi-strip .bt {
+      flex: 1 1 0;
+      min-width: 88px;
+      text-align: center;
+    }
+    #bitrix-kpis.bitrix-totals .bt .lab,
+    .kpi-strip .bt .lab {
+      font-size: var(--fs-xs);
+      color: var(--muted);
+      line-height: 1.25;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    #bitrix-kpis.bitrix-totals .bt .val,
+    .kpi-strip .bt .val {
+      font-size: var(--fs-kpi);
+      font-weight: var(--weight-strong);
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+    #bitrix-kpis.bitrix-totals .bt-warn,
+    .kpi-strip .bt-warn {
+      flex: 1 1 100%;
+      margin: 0;
+      text-align: left;
+    }
+    .units-detail {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .report-rules {
+      margin: 8px 0 0;
+      padding-left: 18px;
+      font-size: var(--fs-sm);
+      color: var(--muted);
+      line-height: 1.45;
+    }
     .panel {
       background: var(--card);
       border: 1px solid var(--line);
@@ -65,12 +206,12 @@
       gap: 8px;
     }
     .kpi { font-size: 13px; color: var(--muted); }
-    .kpi b { color: var(--ink); font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
-    .gauge-value { font-size: 28px; font-weight: 650; font-variant-numeric: tabular-nums; margin-top: -8px; }
-    .gauge-caption { font-size: 12px; color: var(--muted); }
+    .kpi b { color: var(--ink); font-size: var(--fs-kpi); font-weight: var(--weight-strong); font-variant-numeric: tabular-nums; }
+    .gauge-value { font-size: 28px; font-weight: var(--weight-strong); font-variant-numeric: tabular-nums; margin-top: -8px; }
+    .gauge-caption { font-size: var(--fs-sm); color: var(--muted); }
     .bar-row { display: grid; grid-template-columns: 132px 1fr 42px; gap: 8px; align-items: center; margin: 5px 0; }
-    .bar-row .lab { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .bar-row .num { font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; color: var(--muted); }
+    .bar-row .lab { font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-row .num { font-size: var(--fs-sm); font-variant-numeric: tabular-nums; text-align: right; color: var(--muted); }
     .track { display: flex; height: 16px; background: #ece8df; min-width: 0; }
     .seg { height: 16px; min-width: 0; }
     .legend { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 10px; font-size: 11px; color: var(--muted); }
@@ -85,10 +226,21 @@
       height: 100dvh;
     }
     body.is-full header h1,
-    body.is-full header .lead,
+    body.is-full header .mission,
     body.is-full header #meta,
     body.is-full .tab-intro,
     body.is-full footer { display: none; }
+    body.is-full header .brand-bar {
+      margin-bottom: 0;
+      align-items: center;
+    }
+    body.is-full header .brand-logos img {
+      height: 28px;
+    }
+    body.is-full header .brand-logos img[alt="Аллсан Интеграция"],
+    body.is-full header .brand-logos img[alt="Экотайди"] {
+      height: 40px;
+    }
     body.is-full header {
       flex: 0 0 auto;
       padding: 4px 12px 0;
@@ -119,6 +271,13 @@
       width: 100%;
       height: 100%;
     }
+    body.is-full #tab-bitrix:not([hidden]) {
+      position: relative;
+      display: block;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+    }
     body.is-full #tab-hours .hours-stage {
       position: absolute;
       left: 50%;
@@ -126,18 +285,34 @@
       width: 1360px;
       transform-origin: center center;
     }
+    body.is-full #tab-bitrix .bitrix-stage {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 1360px;
+      transform-origin: center center;
+    }
     body.is-full #tab-hours .board,
-    body.is-full #tab-hours .bottom {
+    body.is-full #tab-hours .bottom,
+    body.is-full #tab-bitrix .board,
+    body.is-full #tab-bitrix .bottom {
       display: grid !important;
       width: 100%;
       margin: 0 0 14px;
       height: auto;
     }
-    body.is-full #tab-hours .board {
+    body.is-full #tab-hours .board,
+    body.is-full #tab-bitrix .board {
       grid-template-columns: minmax(0, 1.15fr) 240px minmax(0, 1.15fr) !important;
+    }
+    body.is-full #tab-bitrix .board {
+      grid-template-columns: 1fr 1fr !important;
     }
     body.is-full #tab-hours .bottom {
       grid-template-columns: 1fr 1fr 1fr !important;
+    }
+    body.is-full #tab-bitrix .bottom {
+      grid-template-columns: 1fr 1fr 1fr 1fr !important;
     }
     body.is-full #tab-activity .panel {
       flex: 1;
@@ -147,7 +322,15 @@
       overflow: hidden;
     }
     body.is-full #tab-admin .panel,
-    body.is-full #tab-pnl .panel {
+    body.is-full #tab-pnl .panel,
+    body.is-full #tab-pnlecotidy .panel,
+    body.is-full #tab-units .panel,
+    body.is-full #tab-plan .panel,
+    body.is-full #tab-budget .panel,
+    body.is-full #tab-bitrixfreq .panel,
+    body.is-full #tab-ozon .panel,
+    body.is-full #tab-ozondrr .panel,
+    body.is-full #tab-wb .panel {
       flex: 1;
       min-height: 0;
       overflow: auto;
@@ -182,6 +365,37 @@
       white-space: nowrap;
     }
     .who { font-size: 12px; color: var(--muted); padding: 8px 8px 10px; white-space: nowrap; }
+    .slide-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+      padding: 2px 0 6px;
+      margin-right: 4px;
+    }
+    .slide-bar[hidden] { display: none; }
+    .slide-bar button,
+    .slide-bar select {
+      appearance: none;
+      font: inherit;
+      font-size: var(--fs-sm);
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 4px 8px;
+      cursor: pointer;
+      line-height: 1.2;
+    }
+    .slide-bar button:hover,
+    .slide-bar select:hover { background: #ebe0c4; }
+    .slide-bar select { color: var(--ink); cursor: pointer; padding-right: 4px; }
+    .slide-bar .slide-label {
+      font-size: var(--fs-xs);
+      color: var(--muted);
+      margin-left: 4px;
+      white-space: nowrap;
+    }
     .tab {
       appearance: none;
       background: none;
@@ -198,7 +412,7 @@
     .tab.is-on {
       color: var(--ink);
       border-bottom-color: var(--accent);
-      font-weight: 650;
+      font-weight: var(--weight);
     }
     .tab-panel { min-width: 0; }
     .tab-panel[hidden] { display: none; }
@@ -211,19 +425,21 @@
       width: 100%;
       min-width: 960px;
       border-collapse: collapse;
+      font-size: var(--fs-sm);
     }
     table.activity th, table.activity td {
       text-align: left;
       vertical-align: top;
-      padding: 10px 12px;
+      padding: var(--pad-cell);
       border-bottom: 1px solid var(--line);
       overflow-wrap: break-word;
     }
     table.activity th {
-      font-size: 12px;
+      font-size: var(--fs-xs);
       color: var(--muted);
-      font-weight: 600;
-      background: #faf9f6;
+      font-weight: var(--weight);
+      background: var(--th);
+      letter-spacing: 0.01em;
     }
     table.activity th.num, table.activity td.num {
       width: 118px;
@@ -235,7 +451,8 @@
     table.activity th.client, table.activity td.client { min-width: 140px; }
     table.activity th.status, table.activity td.status { min-width: 130px; }
     table.activity th.comment, table.activity td.comment { min-width: 240px; }
-    .activity-filters {
+    .activity-filters,
+    .pnl-toolbar {
       display: flex;
       flex-wrap: wrap;
       gap: 10px 14px;
@@ -247,7 +464,8 @@
       min-width: 150px;
       max-width: 220px;
     }
-    .activity-filters .filter-dates {
+    .activity-filters .filter-dates,
+    .pnl-toolbar .filter-dates {
       flex: 1 1 280px;
       min-width: 280px;
       max-width: 340px;
@@ -257,32 +475,74 @@
       min-width: 0;
       max-width: none;
     }
-    .activity-filters label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    .activity-filters label,
+    .pnl-toolbar label {
+      display: block;
+      font-size: var(--fs-sm);
+      color: var(--muted);
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
     .activity-filters input,
-    .activity-filters select {
+    .activity-filters select,
+    .pnl-toolbar input[type="date"],
+    .pnl-toolbar select {
       width: 100%;
       min-width: 0;
-      padding: 6px 8px;
+      padding: 7px 10px;
       font: inherit;
+      font-size: var(--fs-sm);
       border: 1px solid var(--line);
       background: #fff;
+      color: var(--ink);
+      border-radius: var(--radius);
     }
-    .activity-filters .dates {
+    .pnl-toolbar select { width: auto; min-width: 180px; }
+    .activity-filters .dates,
+    .pnl-toolbar .dates {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 8px;
     }
-    .activity-filters .dates span { display: block; font-size: 11px; color: var(--muted); margin-bottom: 2px; }
-    .activity-filters button {
+    .activity-filters .dates span,
+    .pnl-toolbar .dates span {
+      display: block;
+      font-size: var(--fs-xs);
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+    .activity-filters button,
+    .btn-secondary {
       appearance: none;
       padding: 7px 12px;
       font: inherit;
+      font-size: var(--fs-sm);
+      font-weight: var(--weight);
       color: var(--accent);
       background: #fff;
       border: 1px solid var(--line);
       cursor: pointer;
       white-space: nowrap;
+      border-radius: var(--radius);
     }
+    .activity-filters button:hover,
+    .btn-secondary:hover { background: var(--accent-soft); }
+    .pnl-toolbar button,
+    .btn-primary {
+      appearance: none;
+      padding: 7px 14px;
+      font: inherit;
+      font-size: var(--fs-sm);
+      font-weight: var(--weight);
+      color: #fff;
+      background: var(--accent);
+      border: 1px solid var(--accent);
+      cursor: pointer;
+      white-space: nowrap;
+      border-radius: var(--radius);
+    }
+    .pnl-toolbar button:hover,
+    .btn-primary:hover { filter: brightness(0.96); }
     .comment-body { white-space: pre-wrap; word-break: break-word; max-height: 9em; overflow: auto; }
     table.activity th.when, table.activity td.when {
       width: 140px;
@@ -292,47 +552,8 @@
       font-variant-numeric: tabular-nums;
     }
     table.activity thead th { position: sticky; top: 0; z-index: 1; }
-    .pnl-toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px 14px;
-      align-items: flex-end;
-      margin: 0 0 14px;
-    }
-    .pnl-toolbar .filter-dates {
-      flex: 1 1 280px;
-      min-width: 280px;
-      max-width: 340px;
-    }
-    .pnl-toolbar label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
-    .pnl-toolbar .dates {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 8px;
-    }
-    .pnl-toolbar .dates span { display: block; font-size: 11px; color: var(--muted); margin-bottom: 2px; }
-    .pnl-toolbar input[type="date"] {
-      width: 100%;
-      min-width: 0;
-      padding: 6px 8px;
-      font: inherit;
-      border: 1px solid var(--line);
-      background: #fff;
-    }
-    .pnl-toolbar button {
-      appearance: none;
-      padding: 7px 14px;
-      font: inherit;
-      font-weight: 650;
-      color: #fff;
-      background: var(--accent);
-      border: 0;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .pnl-toolbar button:disabled { opacity: 0.6; cursor: wait; }
-    .pnl-note, .pnl-warn { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
-    .pnl-warn { color: #9b2c2c; }
+    .pnl-note, .pnl-warn { font-size: var(--fs-sm); color: var(--muted); margin: 0 0 12px; }
+    .pnl-warn { color: var(--bad); }
     .pnl-section { margin-bottom: 18px; }
     .pnl-section h2 { margin: 0 0 8px; }
     .pnl-scroll {
@@ -340,39 +561,142 @@
       -webkit-overflow-scrolling: touch;
       max-width: 100%;
     }
-    table.pnl {
-      width: 100%;
-      min-width: 720px;
+
+    /* Единая база отчётных таблиц */
+    table.pnl,
+    table.budget,
+    table.plan,
+    table.ozon,
+    table.admin {
       border-collapse: collapse;
+      font-size: var(--fs-sm);
+      color: var(--ink);
     }
-    table.pnl th, table.pnl td {
-      text-align: left;
+    table.pnl,
+    table.admin { width: 100%; }
+    table.pnl { min-width: 720px; }
+    table.budget,
+    table.plan,
+    table.ozon {
+      width: max-content;
+      min-width: 100%;
+    }
+    table.pnl th, table.pnl td,
+    table.budget th, table.budget td,
+    table.plan th, table.plan td,
+    table.ozon th, table.ozon td,
+    table.admin th, table.admin td {
+      padding: var(--pad-cell);
       vertical-align: top;
-      padding: 8px 10px;
+      font-variant-numeric: tabular-nums;
+    }
+    table.pnl th, table.pnl td,
+    table.budget th, table.budget td,
+    table.admin th, table.admin td {
+      text-align: left;
       border-bottom: 1px solid var(--line);
     }
-    table.pnl th {
-      font-size: 12px;
-      color: var(--muted);
-      font-weight: 600;
-      background: #faf9f6;
+    table.plan th, table.plan td,
+    table.ozon th, table.ozon td {
+      border: 1px solid var(--line);
       white-space: nowrap;
     }
-    table.pnl th.num, table.pnl td.num {
+    table.pnl th,
+    table.budget th,
+    table.plan th,
+    table.ozon th,
+    table.admin th,
+    table.activity th {
+      font-size: var(--fs-xs);
+      font-weight: var(--weight);
+      color: var(--muted);
+      background: var(--th);
+      letter-spacing: 0.01em;
+    }
+    table.plan th,
+    table.ozon th {
+      background: var(--accent-soft);
+      color: var(--ink);
+      text-align: center;
+    }
+    table.budget th { text-align: center; white-space: nowrap; }
+    table.pnl th { white-space: nowrap; }
+    table.pnl th.num, table.pnl td.num,
+    table.budget td.num,
+    table.plan td.num, table.plan th.num,
+    table.ozon td.num {
       text-align: right;
-      font-variant-numeric: tabular-nums;
       white-space: nowrap;
-      min-width: 92px;
+      min-width: 88px;
     }
     table.pnl td.name { min-width: 180px; }
-    table.pnl thead th { position: sticky; top: 0; z-index: 1; }
-    table.pnl tr.total td {
-      font-weight: 700;
+    table.budget td.name { text-align: left; min-width: 220px; }
+    table.plan td.name { text-align: left; min-width: 200px; max-width: 280px; white-space: normal; }
+    table.ozon td.name { text-align: left; min-width: 180px; max-width: 280px; white-space: normal; }
+    table.plan td.name.plan-child,
+    table.ozon td.name.ozon-child { padding-left: 1.25rem; font-weight: 500; }
+    table.pnl thead th,
+    table.budget thead th,
+    table.plan thead th,
+    table.ozon thead th,
+    table.activity thead th { position: sticky; top: 0; z-index: 1; }
+    table.pnl tr.total td,
+    table.budget tr.total td {
+      font-weight: var(--weight-strong);
       border-top: 1px solid var(--ink);
     }
-    table.pnl tr.pct td { font-weight: 650; }
+    table.pnl tr.pct td,
+    table.budget tr.pct td { font-weight: var(--weight); }
+    table.plan tr.group td,
+    table.ozon tr.group td {
+      background: var(--row-group);
+      font-weight: var(--weight);
+    }
+    table.plan tr.total td,
+    table.ozon tr.total td {
+      background: var(--row-total);
+      font-weight: var(--weight);
+    }
+    table.budget th.period { border-left: 1px solid var(--line); }
+    table.pnl td.diff-ok,
+    table.budget td.diff-ok { color: var(--ok); font-weight: var(--weight); }
+    table.pnl td.diff-bad,
+    table.budget td.diff-bad { color: var(--bad); font-weight: var(--weight); }
+    table.plan th.money, table.plan td.money { background: #cfe8a8; }
+    table.plan th.mark, table.plan td.mark { background: #f5e6a3; }
+    table.plan tr.group td.money,
+    table.plan tr.total td.money { background: #cfe8a8; }
+    table.plan tr.group td.mark,
+    table.plan tr.total td.mark { background: #f5e6a3; }
+
+    .plan-variant,
+    .bitrix-preset {
+      display: inline-flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .plan-variant button,
+    .bitrix-preset button {
+      appearance: none;
+      padding: 7px 12px;
+      font: inherit;
+      font-size: var(--fs-sm);
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      border-radius: var(--radius);
+    }
+    .plan-variant button.is-on,
+    .bitrix-preset button.is-on {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: var(--weight);
+    }
+    .bitrix-stage .pnl-toolbar { margin-bottom: 12px; }
     .task-link {
-      font-weight: 650;
+      font-weight: var(--weight);
       color: var(--accent);
       text-decoration: none;
       border-bottom: 1px dotted var(--accent);
@@ -390,15 +714,8 @@
       z-index: 20;
     }
     .copy-toast[hidden] { display: none; }
-    table.admin {
-      width: 100%;
-      border-collapse: collapse;
-    }
     table.admin th, table.admin td {
-      text-align: left;
       vertical-align: middle;
-      padding: 8px 10px;
-      border-bottom: 1px solid var(--line);
     }
     .admin-form {
       display: grid;
@@ -407,12 +724,14 @@
       align-items: end;
       margin-bottom: 18px;
     }
-    .admin-form label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    .admin-form label { display: block; font-size: var(--fs-sm); color: var(--muted); margin-bottom: 4px; font-weight: 500; }
     .admin-form input:not([type="checkbox"]) {
       width: 100%;
-      padding: 8px 10px;
+      padding: 7px 10px;
       font: inherit;
+      font-size: var(--fs-sm);
       border: 1px solid var(--line);
+      background: #fff;
     }
     .admin-checks { display: flex; flex-wrap: wrap; gap: 10px 14px; padding-bottom: 6px; }
     .admin-checks label { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; color: var(--ink); }
@@ -420,10 +739,11 @@
       appearance: none;
       padding: 8px 12px;
       font: inherit;
-      font-weight: 650;
+      font-size: var(--fs-sm);
+      font-weight: var(--weight);
       color: #fff;
       background: var(--accent);
-      border: 0;
+      border: 1px solid var(--accent);
       cursor: pointer;
     }
     table.admin label { display: flex; align-items: center; gap: 6px; margin: 0; }
@@ -434,18 +754,98 @@
       background: none;
       border: 0;
       color: var(--accent);
-      cursor: pointer;
       font: inherit;
+      font-weight: var(--weight);
+      cursor: pointer;
       padding: 0;
+    }
+    .admin-users { display: flex; flex-direction: column; gap: 14px; }
+    .admin-user {
+      border: 1px solid var(--line);
+      padding: 12px 14px;
+      background: #fff;
+    }
+    .admin-user-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .admin-user-head .login { font-weight: 700; }
+    .admin-user-actions { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+    .admin-user-actions button {
+      appearance: none;
+      background: none;
+      border: 0;
+      color: var(--accent);
+      font: inherit;
+      font-weight: var(--weight);
+      cursor: pointer;
+      padding: 0;
+    }
+    .admin-user-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      margin-bottom: 10px;
+    }
+    .admin-user-tabs label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0;
+      font-size: 13px;
+    }
+    .admin-user-order-title {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0 0 6px;
+    }
+    .admin-tab-order {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .admin-tab-order li {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid var(--line);
+      padding: 4px 6px;
+      font-size: 13px;
+      background: var(--th);
+    }
+    .admin-tab-order li.is-off {
+      opacity: 0.45;
+    }
+    .admin-tab-order .ord-label { min-width: 4.5em; }
+    .admin-tab-order button {
+      min-width: 22px;
+      padding: 0 4px;
+      line-height: 1.2;
+    }
+    .admin-tab-order button:disabled {
+      opacity: 0.3;
+      cursor: default;
     }
     @media (max-width: 1100px) {
       body:not(.is-full) .board,
       body:not(.is-full) .bottom { grid-template-columns: 1fr; }
+      body:not(.is-full) #tab-bitrix .bottom { grid-template-columns: 1fr; }
     }
     @media (max-width: 700px) {
       header { padding: 12px 12px 8px; }
       main { padding: 12px 12px 40px; }
-      h1 { font-size: 18px; }
+      h1 { font-size: 20px; }
+      .brand-logos img { height: 36px; }
+      .brand-logos img[alt="Аллсан Интеграция"],
+      .brand-logos img[alt="Экотайди"] { height: 44px; }
+      .mission { font-size: 13px; }
       .lead { font-size: 13px; }
       .tabs { flex-wrap: wrap; gap: 0 4px; }
       .tab { padding: 8px 10px 10px; }
@@ -474,15 +874,46 @@
 <body>
   <header>
     <div class="wrap">
-      <h1>Задачи разработчика</h1>
-      <p class="lead">Данные из 1С Аллсан Интеграция. Статусы — по порядковому номеру: в работе 1–6, выполненные 7 и выше. Комментарии — из чата, привязанного к задаче.</p>
+      <div class="brand-bar">
+        <div class="brand-logos">
+          <img src="/assets/logo-allsan.png" alt="Аллсан Интеграция" width="70" height="56">
+          <img src="/assets/logo-ecotidy.jpg" alt="Экотайди" width="66" height="48">
+        </div>
+        <div class="brand-text">
+          <h1>Центр управления корпорации</h1>
+          <p class="mission">Собираем достоверные данные в понятный и быстрый формат — чтобы вся компания принимала управленческие решения вовремя, уверенно и по существу.</p>
+        </div>
+      </div>
       <p class="meta" id="meta">__META__</p>
       <nav class="tabs" role="tablist">
         <button type="button" class="tab is-on" data-tab="hours" role="tab" aria-selected="true">Часы</button>
         <button type="button" class="tab" data-tab="activity" role="tab" aria-selected="false">Активность</button>
         <button type="button" class="tab" data-tab="pnl" role="tab" aria-selected="false">Доходы и расходы</button>
+        <button type="button" class="tab" data-tab="pnlecotidy" role="tab" aria-selected="false">ДИР Первый интегратор</button>
+        <button type="button" class="tab" data-tab="units" role="tab" aria-selected="false">Сводка юнитов</button>
+        <button type="button" class="tab" data-tab="budget" role="tab" aria-selected="false">Бюджет план-факт</button>
+        <button type="button" class="tab" data-tab="plan" role="tab" aria-selected="false">Исполнение плана</button>
+        <button type="button" class="tab" data-tab="bitrix" role="tab" aria-selected="false">Bitrix</button>
+        <button type="button" class="tab" data-tab="bitrixfreq" role="tab" aria-selected="false">Чистота ведения Битрикс</button>
+        <button type="button" class="tab" data-tab="ozon" role="tab" aria-selected="false">Озон себестоимость</button>
+        <button type="button" class="tab" data-tab="ozondrr" role="tab" aria-selected="false">Озон ДРР</button>
+        <button type="button" class="tab" data-tab="wb" role="tab" aria-selected="false">WB рентабельность</button>
         <button type="button" class="tab" data-tab="admin" id="tab-btn-admin" role="tab" aria-selected="false" hidden>Админка</button>
         <span class="tab-spacer"></span>
+        <span class="slide-bar" id="slide-bar" hidden aria-label="Перелистывание экранов">
+          <button type="button" id="slide-prev" title="Предыдущий экран (←)">◀</button>
+          <button type="button" id="slide-pause" title="Пауза">Пауза</button>
+          <button type="button" id="slide-next" title="Следующий экран (→)">▶</button>
+          <span class="slide-label">интервал</span>
+          <select id="slide-sec" title="Интервал перелистывания" aria-label="Интервал перелистывания">
+            <option value="10">10 с</option>
+            <option value="15">15 с</option>
+            <option value="30">30 с</option>
+            <option value="60">60 с</option>
+            <option value="90">90 с</option>
+            <option value="120">2 мин</option>
+          </select>
+        </span>
         <span class="who" id="who"></span>
         <button type="button" class="tab-full" id="btn-logout">Выйти</button>
         <button type="button" class="tab-full" id="btn-full">На весь экран</button>
@@ -512,7 +943,7 @@
     <div id="tab-admin" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Пользователи и права</h2>
-        <p class="lead tab-intro">Администратор создаёт учётки, включает вкладки и выдаёт права администратора.</p>
+        <p class="lead tab-intro">Администратор создаёт учётки, включает вкладки, задаёт их порядок для каждого пользователя и выдаёт права администратора.</p>
         <form class="admin-form" id="user-create">
           <div>
             <label for="new-login">Логин</label>
@@ -526,6 +957,15 @@
             <label><input type="checkbox" id="new-hours" checked> Часы</label>
             <label><input type="checkbox" id="new-activity" checked> Активность</label>
             <label><input type="checkbox" id="new-pnl" checked> Доходы и расходы</label>
+            <label><input type="checkbox" id="new-pnlecotidy" checked> ДИР Первый интегратор</label>
+            <label><input type="checkbox" id="new-units" checked> Сводка юнитов</label>
+            <label><input type="checkbox" id="new-budget" checked> Бюджет план-факт</label>
+            <label><input type="checkbox" id="new-plan" checked> Исполнение плана</label>
+            <label><input type="checkbox" id="new-bitrix" checked> Bitrix</label>
+            <label><input type="checkbox" id="new-bitrixfreq" checked> Чистота ведения Битрикс</label>
+            <label><input type="checkbox" id="new-ozon" checked> Озон себестоимость</label>
+            <label><input type="checkbox" id="new-ozondrr" checked> Озон ДРР</label>
+            <label><input type="checkbox" id="new-wb" checked> WB рентабельность</label>
             <label><input type="checkbox" id="new-admin"> Администратор</label>
           </div>
           <button type="submit">Создать</button>
@@ -597,10 +1037,259 @@
               </div>
             </div>
           </div>
+          <div>
+            <label for="pnl-group">Группировка колонок</label>
+            <select id="pnl-group">
+              <option value="month">По месяцам</option>
+              <option value="quarter">По кварталам</option>
+              <option value="year">По годам</option>
+            </select>
+          </div>
           <button type="submit" id="pnl-run">Сформировать</button>
         </form>
         <div id="pnl-err" class="err" hidden></div>
         <div id="pnl-report"></div>
+      </section>
+    </div>
+    <div id="tab-pnlecotidy" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Доходы и расходы — Первый интегратор</h2>
+        <p class="lead tab-intro">Типовой отчёт 1С «Доходы и расходы предприятия»: продажи, прочие доходы и расходы по статьям. База — ecotidy, организация ПЕРВЫЙ ИНТЕГРАТОР ООО.</p>
+        <form class="pnl-toolbar" id="pnlecotidy-form">
+          <div class="filter-dates">
+            <label>Период</label>
+            <div class="dates">
+              <div>
+                <span>с</span>
+                <input id="pnlecotidy-from" type="date" required>
+              </div>
+              <div>
+                <span>по</span>
+                <input id="pnlecotidy-to" type="date" required>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label for="pnlecotidy-group">Группировка колонок</label>
+            <select id="pnlecotidy-group">
+              <option value="month" selected>По месяцам</option>
+              <option value="quarter">По кварталам</option>
+              <option value="year">По годам</option>
+            </select>
+          </div>
+          <button type="submit" id="pnlecotidy-run">Сформировать</button>
+        </form>
+        <div id="pnlecotidy-err" class="err" hidden></div>
+        <div id="pnlecotidy-report"></div>
+      </section>
+    </div>
+    <div id="tab-units" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Сводка юнитов</h2>
+        <p class="lead tab-intro">Аллсан Интеграция + Первый интегратор (Экотайди) + УК. УК — доли расходов, вынесенные из юнитов на общие. Настройки — <code>units/units-config.json</code>.</p>
+        <form class="pnl-toolbar" id="units-form">
+          <div class="filter-dates">
+            <label>Месяц</label>
+            <div class="dates">
+              <div>
+                <span>с</span>
+                <input id="units-from" type="date" required>
+              </div>
+              <div>
+                <span>по</span>
+                <input id="units-to" type="date" required>
+              </div>
+            </div>
+          </div>
+          <button type="submit" id="units-run">Сформировать</button>
+        </form>
+        <div id="units-err" class="err" hidden></div>
+        <div id="units-report"></div>
+      </section>
+    </div>
+    <div id="tab-budget" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Бюджет план-факт</h2>
+        <p class="lead tab-intro">План — из Google Sheet (файл в проекте). Факт — из отчёта «Доходы и расходы» 1С. Отклонение = факт − план: зелёный, если не хуже плана; красный — если хуже.</p>
+        <form class="pnl-toolbar" id="budget-form">
+          <div class="filter-dates">
+            <label>Период</label>
+            <div class="dates">
+              <div>
+                <span>с</span>
+                <input id="budget-from" type="date" required>
+              </div>
+              <div>
+                <span>по</span>
+                <input id="budget-to" type="date" required>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label for="budget-group">Группировка колонок</label>
+            <select id="budget-group">
+              <option value="month">По месяцам</option>
+              <option value="quarter">По кварталам</option>
+              <option value="year">По годам</option>
+            </select>
+          </div>
+          <button type="submit" id="budget-run">Сформировать</button>
+        </form>
+        <div id="budget-err" class="err" hidden></div>
+        <div id="budget-report"></div>
+      </section>
+    </div>
+    <div id="tab-plan" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Исполнение плана</h2>
+        <p class="lead tab-intro">Как отчёт 1С «Исполнение плана»: план продаж на выбранные месяцы и факт по задачам в Трелло. Два варианта — по РП и по партнёрам. Поддержка — отдельная таблица.</p>
+        <form class="pnl-toolbar" id="plan-form">
+          <div class="filter-dates">
+            <label>Период плана</label>
+            <div class="dates">
+              <div>
+                <span>с</span>
+                <input id="plan-from" type="date" required>
+              </div>
+              <div>
+                <span>по</span>
+                <input id="plan-to" type="date" required>
+              </div>
+            </div>
+          </div>
+          <div class="plan-variant" role="group" aria-label="Вариант отчёта">
+            <button type="button" class="is-on" data-plan-variant="rp">По РП</button>
+            <button type="button" data-plan-variant="partner">По партнёрам</button>
+          </div>
+          <button type="submit" id="plan-run">Сформировать</button>
+        </form>
+        <div id="plan-err" class="err" hidden></div>
+        <div id="plan-report"></div>
+      </section>
+    </div>
+    <div id="tab-bitrix" class="tab-panel" hidden>
+      <div class="bitrix-stage">
+        <h2 class="tab-intro">Аналитика Bitrix24</h2>
+        <p class="lead tab-intro">Звонки, лиды и сделки по менеджерам. Сверху — итоговые цифры. По умолчанию — последняя неделя. Данные с портала alsn.bitrix24.ru.</p>
+        <form class="pnl-toolbar" id="bitrix-form">
+          <div class="bitrix-preset" role="group" aria-label="Быстрый период">
+            <button type="button" data-bitrix-preset="yesterday">Вчера</button>
+            <button type="button" class="is-on" data-bitrix-preset="week">Неделя</button>
+            <button type="button" data-bitrix-preset="month">Месяц</button>
+            <button type="button" data-bitrix-preset="custom">Период</button>
+          </div>
+          <div class="filter-dates" id="bitrix-dates" hidden>
+            <label>Даты</label>
+            <div class="dates">
+              <div>
+                <span>с</span>
+                <input id="bitrix-from" type="date">
+              </div>
+              <div>
+                <span>по</span>
+                <input id="bitrix-to" type="date">
+              </div>
+            </div>
+          </div>
+          <button type="submit" id="bitrix-run">Сформировать</button>
+        </form>
+        <div id="bitrix-err" class="err" hidden></div>
+        <div id="bitrix-meta" class="pnl-note"></div>
+        <section class="panel bitrix-totals" id="bitrix-kpis"></section>
+        <div class="board">
+          <section class="panel" id="bitrix-calls"></section>
+          <section class="panel" id="bitrix-deals"></section>
+        </div>
+        <div class="bottom">
+          <section class="panel" id="bitrix-leads"></section>
+          <section class="panel" id="bitrix-converted"></section>
+          <section class="panel" id="bitrix-closed"></section>
+          <section class="panel" id="bitrix-pipeline"></section>
+        </div>
+        <footer>Звонки — статистика телефонии. Сделки и лиды — по дате создания. Выигранные лиды — конвертация в сделку по дате закрытия. Выигранные и проигранные сделки — по дате закрытия. Сделки в работе (шт и ₽) — текущий снимок открытой воронки.</footer>
+      </div>
+    </div>
+    <div id="tab-bitrixfreq" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Чистота ведения Битрикс</h2>
+        <p class="lead tab-intro">Снимок качества CRM по менеджерам: заполненность сделок (ИНН, контрагент, телефон, сумма), лиды без активности и с недозвонами, сделки без задачи, просроченные задачи.</p>
+        <form class="pnl-toolbar" id="bitrixfreq-form">
+          <button type="submit" id="bitrixfreq-run">Обновить</button>
+        </form>
+        <div id="bitrixfreq-err" class="err" hidden></div>
+        <div id="bitrixfreq-report"></div>
+      </section>
+    </div>
+    <div id="tab-ozon" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Расчёт себестоимости Озон</h2>
+        <p class="lead tab-intro">Как отчёт 1С: продажи и комиссия из начислений Ozon, доп. услуги и реклама из регистров ALSN, себестоимость из регистра «Себестоимость товаров». База — Первый интегратор (ecotidy).</p>
+        <form class="pnl-toolbar" id="ozon-form">
+          <div class="filter-dates">
+            <label>Период</label>
+            <div class="dates">
+              <div>
+                <span>с</span>
+                <input id="ozon-from" type="date" required>
+              </div>
+              <div>
+                <span>по</span>
+                <input id="ozon-to" type="date" required>
+              </div>
+            </div>
+          </div>
+          <button type="submit" id="ozon-run">Сформировать</button>
+        </form>
+        <div id="ozon-err" class="err" hidden></div>
+        <div id="ozon-report"></div>
+      </section>
+    </div>
+    <div id="tab-ozondrr" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Расчет доли рекламных расходов</h2>
+        <p class="lead tab-intro">Как отчёт 1С «ДИР озон»: продажи из документов Alsn_Продажи, расходы поиск / трафарет / заказ из регистра рекламы. ДРР = (все расходы рекламы) / сумма продаж × 100. База — Первый интегратор (ecotidy).</p>
+        <form class="pnl-toolbar" id="ozondrr-form">
+          <div class="filter-dates">
+            <label>Период</label>
+            <div class="dates">
+              <div>
+                <span>с</span>
+                <input id="ozondrr-from" type="date" required>
+              </div>
+              <div>
+                <span>по</span>
+                <input id="ozondrr-to" type="date" required>
+              </div>
+            </div>
+          </div>
+          <button type="submit" id="ozondrr-run">Сформировать</button>
+        </form>
+        <div id="ozondrr-err" class="err" hidden></div>
+        <div id="ozondrr-report"></div>
+      </section>
+    </div>
+    <div id="tab-wb" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Расчет рентабельности WB</h2>
+        <p class="lead tab-intro">Как отчёт 1С: реализация Wildberries по дням, налог из константы ALSN_WB_НалогНаПрибыль, себестоимость — средняя по расходу регистра. База — Первый интегратор (ecotidy).</p>
+        <form class="pnl-toolbar" id="wb-form">
+          <div class="filter-dates">
+            <label>Период</label>
+            <div class="dates">
+              <div>
+                <span>с</span>
+                <input id="wb-from" type="date" required>
+              </div>
+              <div>
+                <span>по</span>
+                <input id="wb-to" type="date" required>
+              </div>
+            </div>
+          </div>
+          <button type="submit" id="wb-run">Сформировать</button>
+        </form>
+        <div id="wb-err" class="err" hidden></div>
+        <div id="wb-report"></div>
       </section>
     </div>
   </main>
@@ -678,6 +1367,39 @@
           <div class="lab" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</div>
           <div class="track">${segs}</div>
           <div class="num">${row.total}</div>
+        </div>`;
+      }).join("");
+      return `<h2>${escapeHtml(heading)}</h2><div class="bars">${body}</div><div class="legend">${legend}</div>`;
+    }
+
+    function formatRub(v) {
+      const n = Number(v) || 0;
+      return n.toLocaleString("ru-RU", { maximumFractionDigits: 0 }) + " ₽";
+    }
+
+    function moneyChart(title, rows, emptyText) {
+      const total = hoursTotal(rows);
+      const heading = `${title}: ${formatRub(total)}`;
+      if (!rows || !rows.length) {
+        return `<h2>${escapeHtml(heading)}</h2><p class="meta">${escapeHtml(emptyText)}</p>`;
+      }
+      const list = rows;
+      const keys = legendKeys(list);
+      const max = Math.max(...list.map((r) => r.total), 1);
+      const legend = keys.map((k) =>
+        `<span><i style="background:${colorOf(k, keys)}"></i>${escapeHtml(k)}</span>`
+      ).join("");
+      const body = list.map((row) => {
+        const segs = keys.map((k) => {
+          const v = row.segments[k] || 0;
+          if (v <= 0) return "";
+          const w = (v / max) * 100;
+          return `<span class="seg" style="width:${w}%;background:${colorOf(k, keys)}" title="${escapeHtml(k)}: ${formatRub(v)}"></span>`;
+        }).join("");
+        return `<div class="bar-row">
+          <div class="lab" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</div>
+          <div class="track">${segs}</div>
+          <div class="num">${formatRub(row.total)}</div>
         </div>`;
       }).join("");
       return `<h2>${escapeHtml(heading)}</h2><div class="bars">${body}</div><div class="legend">${legend}</div>`;
@@ -929,6 +1651,7 @@
       if (USER.tabs?.pnl === false || pnlInflight) return;
       const from = document.getElementById("pnl-from").value;
       const to = document.getElementById("pnl-to").value;
+      const group = document.getElementById("pnl-group")?.value || "month";
       if (!from || !to) {
         pnlErr("Укажите период с и по");
         return;
@@ -939,9 +1662,12 @@
       pnlErr("");
       document.getElementById("pnl-report").innerHTML = `<p class="pnl-note">Считаем отчёт из 1С…</p>`;
       try {
-        const report = await api("/api/pnl?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to), {
-          signal: AbortSignal.timeout(180000),
-        });
+        const report = await api(
+          "/api/pnl?from=" + encodeURIComponent(from)
+            + "&to=" + encodeURIComponent(to)
+            + "&group=" + encodeURIComponent(group),
+          { signal: AbortSignal.timeout(180000) }
+        );
         pnlLoaded = true;
         renderPnl(report);
       } catch (e) {
@@ -959,22 +1685,1410 @@
       loadPnlReport();
     }
 
+    let pnlecotidyLoaded = false;
+    let pnlecotidyInflight = false;
+
+    function initPnlEcotidyDates() {
+      const from = document.getElementById("pnlecotidy-from");
+      const to = document.getElementById("pnlecotidy-to");
+      if (!from || !to || from.value) return;
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const p = (n) => String(n).padStart(2, "0");
+      const ymd = (d) => d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+      from.value = ymd(start);
+      to.value = ymd(end);
+    }
+
+    function pnlecotidyErr(text) {
+      const el = document.getElementById("pnlecotidy-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function renderPnlEcotidy(report) {
+      const box = document.getElementById("pnlecotidy-report");
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      const months = report.months || [];
+      const head = ["<th>Вид дохода / расхода</th>"]
+        .concat(months.map((m) => `<th class="num">${escapeHtml(m.label)}</th>`))
+        .concat(['<th class="num">Итого</th>'])
+        .join("");
+      const sections = (report.sections || []).map((section) => {
+        const rows = (section.rows || []).map((row) => {
+          const kind = row.kind === "total" ? "total" : row.kind === "pct" ? "pct" : "";
+          const cells = (row.values || []).map((v) => `<td class="num">${formatPnlNumber(v, row.kind)}</td>`).join("");
+          return `<tr class="${kind}"><td class="name">${escapeHtml(row.name)}</td>${cells}<td class="num">${formatPnlNumber(row.total, row.kind)}</td></tr>`;
+        }).join("");
+        return `<div class="pnl-section">
+          <h2>${escapeHtml(section.title)}</h2>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead><tr>${head}</tr></thead>
+            <tbody>${rows || `<tr><td colspan="${months.length + 2}">Нет сумм за период</td></tr>`}</tbody>
+          </table></div>
+        </div>`;
+      }).join("");
+      const warn = (report.warnings || []).length
+        ? `<p class="pnl-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
+        : "";
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      const org = report.organization
+        ? `<p class="pnl-note">${escapeHtml(report.organization)} · ${escapeHtml(report.source || "")}</p>`
+        : "";
+      box.innerHTML = warn + org + note + sections;
+    }
+
+    async function loadPnlEcotidyReport() {
+      if (USER.tabs?.pnlecotidy === false || pnlecotidyInflight) return;
+      const from = document.getElementById("pnlecotidy-from").value;
+      const to = document.getElementById("pnlecotidy-to").value;
+      const group = document.getElementById("pnlecotidy-group")?.value || "month";
+      if (!from || !to) {
+        pnlecotidyErr("Укажите период с и по");
+        return;
+      }
+      pnlecotidyInflight = true;
+      const btn = document.getElementById("pnlecotidy-run");
+      if (btn) btn.disabled = true;
+      pnlecotidyErr("");
+      document.getElementById("pnlecotidy-report").innerHTML = `<p class="pnl-note">Считаем ДИР из 1С (ecotidy)…</p>`;
+      try {
+        const report = await api(
+          "/api/pnlecotidy?from=" + encodeURIComponent(from)
+            + "&to=" + encodeURIComponent(to)
+            + "&group=" + encodeURIComponent(group),
+          { signal: AbortSignal.timeout(300000) }
+        );
+        pnlecotidyLoaded = true;
+        renderPnlEcotidy(report);
+      } catch (e) {
+        pnlecotidyLoaded = false;
+        renderPnlEcotidy(null);
+        pnlecotidyErr(e.message || String(e));
+      } finally {
+        pnlecotidyInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function loadPnlEcotidyIfNeeded() {
+      if (pnlecotidyLoaded || pnlecotidyInflight) return;
+      loadPnlEcotidyReport();
+    }
+
+    let unitsLoaded = false;
+    let unitsInflight = false;
+
+    function initUnitsDates() {
+      const from = document.getElementById("units-from");
+      const to = document.getElementById("units-to");
+      if (!from || !to || from.value) return;
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const p = (n) => String(n).padStart(2, "0");
+      const ymd = (d) => d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+      from.value = ymd(start);
+      to.value = ymd(end);
+    }
+
+    function unitsErr(text) {
+      const el = document.getElementById("units-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function formatUnitsMoney(value) {
+      const n = Number(value) || 0;
+      return new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+    }
+
+    function renderUnits(report) {
+      const box = document.getElementById("units-report");
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      const u = report.units || {};
+      const cols = [
+        { key: "allsan", title: "Аллсан" },
+        { key: "ecotidy", title: "Экотайди" },
+        { key: "uk", title: "УК" },
+        { key: "total", title: "Итого" },
+      ];
+      const money = (unit, field) => formatUnitsMoney(unit?.[field] || 0);
+      const topRows = [
+        ["Выручка+кр+излишки", "revenue"],
+        ["Себестоимость", "cogs"],
+        ["Расходы", "expenses"],
+        ["Итого", "net"],
+      ].map(([label, field]) => {
+        const cls = field === "net" ? "total" : "";
+        const cells = cols.map((c) => `<td class="num">${money(u[c.key], field)}</td>`).join("");
+        return `<tr class="${cls}"><td class="name">${escapeHtml(label)}</td>${cells}</tr>`;
+      }).join("");
+
+      const expenseRows = (report.expenseRows || []).map((name) => {
+        const cells = cols.map((c) => {
+          const lines = u[c.key]?.expenseLines || {};
+          return `<td class="num">${formatUnitsMoney(lines[name] || 0)}</td>`;
+        }).join("");
+        return `<tr><td class="name">${escapeHtml(name)}</td>${cells}</tr>`;
+      }).join("");
+
+      const head = ["<th>Доход/расход</th>"]
+        .concat(cols.map((c) => `<th class="num">${escapeHtml(c.title)}</th>`))
+        .join("");
+
+      let detailHtml = "";
+      const detail = report.detail;
+      if (detail) {
+        const block = (title, rows) => {
+          if (!rows?.length) return "";
+          const body = rows.map((r) =>
+            `<tr><td class="name">${escapeHtml(r.name)}</td><td class="num">${formatUnitsMoney(r.amount)}</td></tr>`
+          ).join("");
+          return `<div class="pnl-section"><h2>${escapeHtml(title)}</h2>
+            <div class="pnl-scroll"><table class="pnl"><tbody>${body}</tbody></table></div></div>`;
+        };
+        detailHtml = `<div class="units-detail">
+          ${block("УК", detail["ук"] || detail.uk)}
+          ${block("Эко", detail["эко"] || detail.eco)}
+          ${block("Алсн", detail["алсн"] || detail.allsan)}
+        </div>`;
+      }
+
+      let compareHtml = "";
+      if (report.compare) {
+        const cmpCols = ["allsan", "ecotidy", "uk", "total"];
+        const labels = { allsan: "Аллсан", ecotidy: "Экотайди", uk: "УК", total: "Итого" };
+        const metrics = [
+          ["revenue", "Выручка"],
+          ["cogs", "Себестоимость"],
+          ["expenses", "Расходы"],
+          ["net", "Итого"],
+        ];
+        const rows = metrics.map(([key, label]) => {
+          const cells = cmpCols.map((c) => {
+            const cell = report.compare[c]?.[key];
+            if (!cell) return "<td class=\"num\">—</td>";
+            const d = Number(cell.delta) || 0;
+            const cls = Math.abs(d) < 0.005 ? "" : d > 0 ? "diff-bad" : "diff-ok";
+            return `<td class="num ${cls}">${formatUnitsMoney(d)}</td>`;
+          }).join("");
+          return `<tr><td class="name">Δ ${escapeHtml(label)}</td>${cells}</tr>`;
+        }).join("");
+        const chead = ["<th>Сверка со sheet (факт − эталон)</th>"]
+          .concat(cmpCols.map((c) => `<th class="num">${escapeHtml(labels[c])}</th>`))
+          .join("");
+        compareHtml = `<div class="pnl-section"><h2>${escapeHtml(report.compare.source || "Сверка")}</h2>
+          <div class="pnl-scroll"><table class="pnl"><thead><tr>${chead}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
+      }
+
+      const warn = (report.warnings || []).length
+        ? `<p class="pnl-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
+        : "";
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      box.innerHTML = warn + note + `
+        <div class="pnl-section">
+          <h2>Сводка</h2>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead><tr>${head}</tr></thead>
+            <tbody>${topRows}</tbody>
+          </table></div>
+        </div>
+        <div class="pnl-section">
+          <h2>Расходы по статьям</h2>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead><tr>${head}</tr></thead>
+            <tbody>${expenseRows}</tbody>
+          </table></div>
+        </div>
+        ${detailHtml}
+        ${compareHtml}`;
+    }
+
+    async function loadUnitsReport() {
+      if (USER.tabs?.units === false || unitsInflight) return;
+      const from = document.getElementById("units-from").value;
+      const to = document.getElementById("units-to").value;
+      if (!from || !to) {
+        unitsErr("Укажите период с и по");
+        return;
+      }
+      unitsInflight = true;
+      const btn = document.getElementById("units-run");
+      if (btn) btn.disabled = true;
+      unitsErr("");
+      document.getElementById("units-report").innerHTML = `<p class="pnl-note">Считаем сводку юнитов из 1С…</p>`;
+      try {
+        const report = await api(
+          "/api/units?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to),
+          { signal: AbortSignal.timeout(300000) }
+        );
+        unitsLoaded = true;
+        renderUnits(report);
+      } catch (e) {
+        unitsLoaded = false;
+        renderUnits(null);
+        unitsErr(e.message || String(e));
+      } finally {
+        unitsInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function loadUnitsIfNeeded() {
+      if (unitsLoaded || unitsInflight) return;
+      loadUnitsReport();
+    }
+
+    let budgetLoaded = false;
+    let budgetInflight = false;
+
+    function defaultBudgetRange() {
+      const year = new Date().getFullYear();
+      return { from: year + "-01-01", to: year + "-12-31" };
+    }
+
+    function initBudgetDates() {
+      const range = defaultBudgetRange();
+      const from = document.getElementById("budget-from");
+      const to = document.getElementById("budget-to");
+      if (from && !from.value) from.value = range.from;
+      if (to && !to.value) to.value = range.to;
+    }
+
+    function budgetErr(text) {
+      const el = document.getElementById("budget-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function formatBudgetNumber(value, kind) {
+      const n = Number(value) || 0;
+      if (kind === "pct") {
+        return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(n) + " %";
+      }
+      if (!n) return "—";
+      return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(n);
+    }
+
+    function diffClass(status) {
+      return status === "ok" ? "diff-ok" : "diff-bad";
+    }
+
+    function renderBudget(report) {
+      const box = document.getElementById("budget-report");
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      const months = report.months || [];
+      const headTop = ["<th rowspan=\"2\">Статья</th>"]
+        .concat(months.map((m) => `<th class="period" colspan="3">${escapeHtml(m.label)}</th>`))
+        .concat(['<th class="period" colspan="3">Итого</th>'])
+        .join("");
+      const headSub = months.map(() => "<th>План</th><th>Факт</th><th>Δ</th>").join("")
+        + "<th>План</th><th>Факт</th><th>Δ</th>";
+      const sections = (report.sections || []).map((section) => {
+        const rows = (section.rows || []).map((row) => {
+          const kind = row.kind === "total" ? "total" : row.kind === "pct" ? "pct" : "";
+          const cells = (row.plan || []).map((plan, i) => {
+            const fact = (row.fact || [])[i] || 0;
+            const diff = (row.diff || [])[i] || 0;
+            const st = (row.statuses || [])[i] || "ok";
+            return `<td class="num">${formatBudgetNumber(plan, row.kind)}</td>`
+              + `<td class="num">${formatBudgetNumber(fact, row.kind)}</td>`
+              + `<td class="num ${diffClass(st)}">${formatBudgetNumber(diff, row.kind)}</td>`;
+          }).join("");
+          return `<tr class="${kind}"><td class="name">${escapeHtml(row.name)}</td>${cells}`
+            + `<td class="num">${formatBudgetNumber(row.planTotal, row.kind)}</td>`
+            + `<td class="num">${formatBudgetNumber(row.factTotal, row.kind)}</td>`
+            + `<td class="num ${diffClass(row.status)}">${formatBudgetNumber(row.diffTotal, row.kind)}</td></tr>`;
+        }).join("");
+        return `<div class="pnl-section">
+          <h2>${escapeHtml(section.title)}</h2>
+          <div class="pnl-scroll"><table class="budget">
+            <thead><tr>${headTop}</tr><tr>${headSub}</tr></thead>
+            <tbody>${rows || `<tr><td colspan="${months.length * 3 + 4}">Нет сумм за период</td></tr>`}</tbody>
+          </table></div>
+        </div>`;
+      }).join("");
+      const warn = (report.warnings || []).length
+        ? `<p class="pnl-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
+        : "";
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      const meta = report.planSource
+        ? `<p class="pnl-note">План: ${escapeHtml(report.planSource.sheet || "")} · выгружен ${escapeHtml(report.planSource.extractedAt || "")}</p>`
+        : "";
+      box.innerHTML = warn + note + meta + sections;
+    }
+
+    async function loadBudgetReport() {
+      if (USER.tabs?.budget === false || budgetInflight) return;
+      const from = document.getElementById("budget-from").value;
+      const to = document.getElementById("budget-to").value;
+      const group = document.getElementById("budget-group")?.value || "month";
+      if (!from || !to) {
+        budgetErr("Укажите период с и по");
+        return;
+      }
+      budgetInflight = true;
+      const btn = document.getElementById("budget-run");
+      if (btn) btn.disabled = true;
+      budgetErr("");
+      document.getElementById("budget-report").innerHTML = `<p class="pnl-note">Считаем план-факт…</p>`;
+      try {
+        const report = await api(
+          "/api/budget?from=" + encodeURIComponent(from)
+            + "&to=" + encodeURIComponent(to)
+            + "&group=" + encodeURIComponent(group),
+          { signal: AbortSignal.timeout(180000) }
+        );
+        budgetLoaded = true;
+        renderBudget(report);
+      } catch (e) {
+        budgetLoaded = false;
+        renderBudget(null);
+        budgetErr(e.message || String(e));
+      } finally {
+        budgetInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function loadBudgetIfNeeded() {
+      if (budgetLoaded || budgetInflight) return;
+      loadBudgetReport();
+    }
+
+    let planLoaded = false;
+    let planInflight = false;
+    let planData = null;
+    let planVariant = "rp";
+
+    function defaultPlanRange() {
+      const now = new Date();
+      const from = new Date(now.getFullYear(), now.getMonth(), 1);
+      const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      return { from: isoDay(from), to: isoDay(to) };
+    }
+
+    function initPlanDates() {
+      const range = defaultPlanRange();
+      const from = document.getElementById("plan-from");
+      const to = document.getElementById("plan-to");
+      if (from && !from.value) from.value = range.from;
+      if (to && !to.value) to.value = range.to;
+    }
+
+    function planErr(text) {
+      const el = document.getElementById("plan-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function formatPlanHours(value) {
+      const n = Number(value) || 0;
+      if (!n) return "";
+      const digits = Number.isInteger(n) ? 0 : 1;
+      return new Intl.NumberFormat("ru-RU", { minimumFractionDigits: digits, maximumFractionDigits: 1 }).format(n);
+    }
+
+    function formatPlanMoney(value) {
+      const n = Number(value) || 0;
+      if (!n) return "";
+      return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(n);
+    }
+
+    function formatPlanPct(value) {
+      const n = Number(value) || 0;
+      if (!n) return "";
+      return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(n);
+    }
+
+    function planStageCells(metrics) {
+      const order = ["done", "impl", "sprint", "pause", "pay"];
+      return order.map((id) => {
+        const s = metrics.stages?.[id] || {};
+        return `<td class="num">${formatPlanHours(s.hours)}</td>`
+          + `<td class="num money">${formatPlanMoney(s.cost)}</td>`
+          + `<td class="num">${formatPlanPct(s.percent)}</td>`
+          + `<td class="num mark">${formatPlanHours(s.marketing)}</td>`;
+      }).join("");
+    }
+
+    function planMetricCells(metrics) {
+      return `<td class="num">${formatPlanHours(metrics.planHours)}</td>`
+        + `<td class="num money">${formatPlanMoney(metrics.planAmount)}</td>`
+        + `<td class="num">${formatPlanPct(metrics.planShare)}</td>`
+        + planStageCells(metrics);
+    }
+
+    function renderPlan(report) {
+      const box = document.getElementById("plan-report");
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      const variant = report.variants?.[planVariant] || report.variants?.rp;
+      const byRp = planVariant === "rp";
+      const stageHeads = (report.stages || []).slice().reverse().map((stage) => `
+        <th colspan="4">${escapeHtml(stage.title)}</th>
+      `).join("");
+      const stageSub = (report.stages || []).slice().reverse().map(() => `
+        <th>часы</th><th class="money">стоимость</th><th>%</th><th class="mark">маркетинг</th>
+      `).join("");
+      const head = `
+        <tr>
+          <th rowspan="3">${byRp ? "РП / партнёр" : "Партнёр"}</th>
+          <th colspan="3">План</th>
+          <th colspan="${(report.stages || []).length * 4}">Факт</th>
+        </tr>
+        <tr>
+          <th rowspan="2">часы</th>
+          <th rowspan="2" class="money">сумма</th>
+          <th rowspan="2">доля</th>
+          ${stageHeads}
+        </tr>
+        <tr>${stageSub}</tr>`;
+      const body = [];
+      for (const group of variant?.groups || []) {
+        if (byRp) {
+          body.push(`<tr class="group"><td class="name">${escapeHtml(group.name)}</td>${planMetricCells(group.metrics)}</tr>`);
+          for (const child of group.children || []) {
+            body.push(`<tr><td class="name plan-child">${escapeHtml(child.name)}</td>${planMetricCells(child.metrics)}</tr>`);
+          }
+        } else {
+          body.push(`<tr><td class="name">${escapeHtml(group.name)}</td>${planMetricCells(group.metrics)}</tr>`);
+        }
+      }
+      if (variant?.total) {
+        body.push(`<tr class="total"><td class="name">Итого</td>${planMetricCells(variant.total)}</tr>`);
+      }
+      const supportRows = (report.support?.rows || []).map((row) => `
+        <tr>
+          <td class="name">${escapeHtml(row.client)}</td>
+          <td class="num">${formatPlanMoney(row.supportRate)}</td>
+          <td class="num">${formatPlanMoney(row.extraRate)}</td>
+          <td class="num">${formatPlanHours(row.planHours)}</td>
+          <td class="num money">${formatPlanMoney(row.planAmount)}</td>
+          <td class="num">${formatPlanHours(row.factHours)}</td>
+          <td class="num">${formatPlanHours(row.overrun)}</td>
+          <td class="num money">${formatPlanMoney(row.factAmount)}</td>
+          <td class="num">${formatPlanPct(row.percent)}</td>
+        </tr>`).join("");
+      const st = report.support?.total;
+      const supportTotal = st ? `<tr class="total">
+        <td class="name">Итого</td><td></td><td></td>
+        <td class="num">${formatPlanHours(st.planHours)}</td>
+        <td class="num money">${formatPlanMoney(st.planAmount)}</td>
+        <td class="num">${formatPlanHours(st.factHours)}</td>
+        <td class="num">${formatPlanHours(st.overrun)}</td>
+        <td class="num money">${formatPlanMoney(st.factAmount)}</td>
+        <td class="num">${formatPlanPct(st.percent)}</td>
+      </tr>` : "";
+      const warn = (report.warnings || []).length
+        ? `<p class="pnl-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
+        : "";
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      box.innerHTML = warn + note + `
+        <div class="pnl-section">
+          <h2>${escapeHtml(variant?.title || "Разработка")}</h2>
+          <div class="pnl-scroll"><table class="plan">
+            <thead>${head}</thead>
+            <tbody>${body.join("") || `<tr><td colspan="8">Нет данных за период</td></tr>`}</tbody>
+          </table></div>
+        </div>
+        <div class="pnl-section">
+          <h2>${escapeHtml(report.support?.title || "Поддержка")}</h2>
+          <div class="pnl-scroll"><table class="plan">
+            <thead>
+              <tr>
+                <th rowspan="2">Клиент</th>
+                <th rowspan="2">Ставка поддержки</th>
+                <th rowspan="2">Ставка переподдержки</th>
+                <th colspan="2">План</th>
+                <th colspan="4">Факт</th>
+              </tr>
+              <tr>
+                <th>часы</th><th class="money">сумма</th>
+                <th>часы</th><th>перевыполнено</th><th class="money">сумма</th><th>%</th>
+              </tr>
+            </thead>
+            <tbody>${supportRows || `<tr><td colspan="9">Нет клиентов с поддержкой</td></tr>`}${supportTotal}</tbody>
+          </table></div>
+        </div>`;
+    }
+
+    async function loadPlanReport() {
+      if (USER.tabs?.plan === false || planInflight) return;
+      const from = document.getElementById("plan-from").value;
+      const to = document.getElementById("plan-to").value;
+      if (!from || !to) {
+        planErr("Укажите период с и по");
+        return;
+      }
+      planInflight = true;
+      const btn = document.getElementById("plan-run");
+      if (btn) btn.disabled = true;
+      planErr("");
+      document.getElementById("plan-report").innerHTML = `<p class="pnl-note">Считаем отчёт из 1С…</p>`;
+      try {
+        planData = await api("/api/plan?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to), {
+          signal: AbortSignal.timeout(180000),
+        });
+        planLoaded = true;
+        renderPlan(planData);
+      } catch (e) {
+        planLoaded = false;
+        renderPlan(null);
+        planErr(e.message || String(e));
+      } finally {
+        planInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function loadPlanIfNeeded() {
+      if (planLoaded || planInflight) return;
+      loadPlanReport();
+    }
+
+    let bitrixLoaded = false;
+    let bitrixInflight = false;
+    let bitrixPreset = "week";
+
+    function ymdLocal(date) {
+      const d = date instanceof Date ? date : new Date(date);
+      const p = (n) => String(n).padStart(2, "0");
+      return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+    }
+
+    function applyBitrixPresetDates(preset) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const fromEl = document.getElementById("bitrix-from");
+      const toEl = document.getElementById("bitrix-to");
+      const dates = document.getElementById("bitrix-dates");
+      if (preset === "yesterday") {
+        const y = new Date(today.getTime() - 86400000);
+        fromEl.value = ymdLocal(y);
+        toEl.value = ymdLocal(y);
+      } else if (preset === "month") {
+        const from = new Date(today.getTime() - 29 * 86400000);
+        fromEl.value = ymdLocal(from);
+        toEl.value = ymdLocal(today);
+      } else if (preset === "custom") {
+        if (!fromEl.value || !toEl.value) {
+          const from = new Date(today.getTime() - 6 * 86400000);
+          fromEl.value = ymdLocal(from);
+          toEl.value = ymdLocal(today);
+        }
+      } else {
+        const from = new Date(today.getTime() - 6 * 86400000);
+        fromEl.value = ymdLocal(from);
+        toEl.value = ymdLocal(today);
+      }
+      if (dates) dates.hidden = preset !== "custom";
+    }
+
+    function setBitrixPreset(preset) {
+      bitrixPreset = preset || "week";
+      for (const btn of document.querySelectorAll("[data-bitrix-preset]")) {
+        btn.classList.toggle("is-on", btn.getAttribute("data-bitrix-preset") === bitrixPreset);
+      }
+      applyBitrixPresetDates(bitrixPreset);
+    }
+
+    function bitrixErr(text) {
+      const el = document.getElementById("bitrix-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function renderBitrix(report) {
+      const fmtDate = new Intl.DateTimeFormat("ru-RU", { dateStyle: "short" });
+      const k = report?.kpis || {};
+      const c = report?.charts || {};
+      const kpiBox = document.getElementById("bitrix-kpis");
+      if (!report) {
+        kpiBox.innerHTML = "";
+        document.getElementById("bitrix-calls").innerHTML = "";
+        document.getElementById("bitrix-deals").innerHTML = "";
+        document.getElementById("bitrix-leads").innerHTML = "";
+        document.getElementById("bitrix-converted").innerHTML = "";
+        document.getElementById("bitrix-closed").innerHTML = "";
+        document.getElementById("bitrix-pipeline").innerHTML = "";
+        document.getElementById("bitrix-meta").textContent = "";
+        return;
+      }
+      document.getElementById("bitrix-calls").innerHTML = stackedChart(
+        "Звонки по менеджерам",
+        c.callsByManager,
+        "Нет звонков за период"
+      );
+      document.getElementById("bitrix-deals").innerHTML = stackedChart(
+        "Сделки по менеджерам",
+        c.dealsByManager,
+        "Нет сделок за период"
+      );
+      document.getElementById("bitrix-leads").innerHTML = stackedChart(
+        "Лиды по менеджерам",
+        c.leadsByManager,
+        "Нет лидов за период"
+      );
+      document.getElementById("bitrix-converted").innerHTML = stackedChart(
+        "Выигранные лиды (в сделки)",
+        c.convertedLeadsByManager,
+        "Нет конвертированных лидов"
+      );
+      document.getElementById("bitrix-closed").innerHTML = stackedChart(
+        "Выигранные и проигранные сделки",
+        c.closedDealsByManager,
+        "Нет закрытых сделок"
+      );
+      document.getElementById("bitrix-pipeline").innerHTML = moneyChart(
+        "Сделки в работе, ₽",
+        c.openDealsSumByManager,
+        "Нет открытых сделок"
+      );
+      const warn = (report.warnings || []).length
+        ? `<p class="pnl-warn bt-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
+        : "";
+      const cell = (lab, val) =>
+        `<div class="bt"><div class="lab">${lab}</div><div class="val">${val}</div></div>`;
+      kpiBox.innerHTML =
+        cell("Звонки", k.calls ?? 0) +
+        cell("Сделки", k.deals ?? 0) +
+        cell("Лиды", k.leads ?? 0) +
+        cell("Лиды → сделки", k.convertedLeads ?? 0) +
+        cell("Выиграны / проиграны", `${k.wonDeals ?? 0} / ${k.lostDeals ?? 0}`) +
+        cell("Выиграно, ₽", formatRub(k.wonDealsSum ?? 0)) +
+        cell("В работе, шт", k.openDeals ?? 0) +
+        cell("В работе, ₽", formatRub(k.openDealsSum ?? 0)) +
+        warn;
+      const period = report.period;
+      const when = report.generatedAt ? fmt.format(new Date(report.generatedAt)) : "";
+      const fromLabel = period?.from ? fmtDate.format(new Date(period.from + "T12:00:00")) : "";
+      const toLabel = period?.to ? fmtDate.format(new Date(period.to + "T12:00:00")) : "";
+      document.getElementById("bitrix-meta").textContent = period
+        ? `Период ${fromLabel} – ${toLabel} · обновлено ${when}`
+        : "";
+      fitHoursStage();
+    }
+
+    async function loadBitrixReport() {
+      if (USER.tabs?.bitrix === false || bitrixInflight) return;
+      if (bitrixPreset === "custom") {
+        const from = document.getElementById("bitrix-from").value;
+        const to = document.getElementById("bitrix-to").value;
+        if (!from || !to) {
+          bitrixErr("Укажите период с и по");
+          return;
+        }
+      }
+      bitrixInflight = true;
+      const btn = document.getElementById("bitrix-run");
+      if (btn) btn.disabled = true;
+      bitrixErr("");
+      document.getElementById("bitrix-meta").textContent = "Считаем отчёт из Bitrix24…";
+      try {
+        let url = "/api/bitrix?preset=" + encodeURIComponent(bitrixPreset);
+        if (bitrixPreset === "custom") {
+          url += "&from=" + encodeURIComponent(document.getElementById("bitrix-from").value)
+            + "&to=" + encodeURIComponent(document.getElementById("bitrix-to").value);
+        }
+        const report = await api(url, { method: "GET" });
+        bitrixLoaded = true;
+        renderBitrix(report);
+      } catch (e) {
+        bitrixLoaded = false;
+        renderBitrix(null);
+        bitrixErr(e.message || String(e));
+        document.getElementById("bitrix-meta").textContent = "";
+      } finally {
+        bitrixInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function loadBitrixIfNeeded() {
+      if (bitrixLoaded || bitrixInflight) return;
+      loadBitrixReport();
+    }
+
+    let bitrixfreqLoaded = false;
+    let bitrixfreqInflight = false;
+
+    function bitrixfreqErr(text) {
+      const el = document.getElementById("bitrixfreq-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function formatBitrixFreqNum(v) {
+      return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(Number(v) || 0);
+    }
+
+    function renderBitrixFreq(report) {
+      const box = document.getElementById("bitrixfreq-report");
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      const t = report.totals || {};
+      const kpis = `
+        <div class="kpi-strip">
+          <div class="bt"><div class="lab">Сделок в работе</div><div class="val">${formatBitrixFreqNum(t.dealsOpen)}</div></div>
+          <div class="bt"><div class="lab">Заполнено правильно</div><div class="val">${formatBitrixFreqNum(t.dealsFilledOk)}</div></div>
+          <div class="bt"><div class="lab">Лиды без активности 3+ дн.</div><div class="val">${formatBitrixFreqNum(t.leadsInactive3d)}</div></div>
+          <div class="bt"><div class="lab">Лиды с &gt;3 недозвонами</div><div class="val">${formatBitrixFreqNum(t.leadsMissedCalls3)}</div></div>
+          <div class="bt"><div class="lab">Сделки без задачи</div><div class="val">${formatBitrixFreqNum(t.dealsWithoutTask)}</div></div>
+          <div class="bt"><div class="lab">Просроченные задачи</div><div class="val">${formatBitrixFreqNum(t.tasksOverdue)}</div></div>
+        </div>`;
+      const head = `<tr>
+        <th>Менеджер</th>
+        <th class="num">Сделок в работе</th>
+        <th class="num">Заполнено правильно</th>
+        <th class="num">Лиды без акт. 3+ дн.</th>
+        <th class="num">Лиды &gt;3 недозвона</th>
+        <th class="num">Сделки без задачи</th>
+        <th class="num">Просроч. задачи</th>
+      </tr>`;
+      const rows = (report.managers || []).map((m) => `<tr>
+        <td class="name">${escapeHtml(m.name)}</td>
+        <td class="num">${formatBitrixFreqNum(m.dealsOpen)}</td>
+        <td class="num">${formatBitrixFreqNum(m.dealsFilledOk)}</td>
+        <td class="num">${formatBitrixFreqNum(m.leadsInactive3d)}</td>
+        <td class="num">${formatBitrixFreqNum(m.leadsMissedCalls3)}</td>
+        <td class="num">${formatBitrixFreqNum(m.dealsWithoutTask)}</td>
+        <td class="num">${formatBitrixFreqNum(m.tasksOverdue)}</td>
+      </tr>`).join("");
+      const totalRow = `<tr class="total">
+        <td class="name">Итого</td>
+        <td class="num">${formatBitrixFreqNum(t.dealsOpen)}</td>
+        <td class="num">${formatBitrixFreqNum(t.dealsFilledOk)}</td>
+        <td class="num">${formatBitrixFreqNum(t.leadsInactive3d)}</td>
+        <td class="num">${formatBitrixFreqNum(t.leadsMissedCalls3)}</td>
+        <td class="num">${formatBitrixFreqNum(t.dealsWithoutTask)}</td>
+        <td class="num">${formatBitrixFreqNum(t.tasksOverdue)}</td>
+      </tr>`;
+      const warn = (report.warnings || []).length
+        ? `<p class="pnl-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
+        : "";
+      const rules = report.rules
+        ? `<ul class="report-rules">
+            <li>${escapeHtml(report.rules.filledDeal)}</li>
+            <li>${escapeHtml(report.rules.inactiveLead)}</li>
+            <li>${escapeHtml(report.rules.missedCalls)}</li>
+            <li>${escapeHtml(report.rules.dealWithoutTask)}</li>
+            <li>${escapeHtml(report.rules.overdueTask)}</li>
+          </ul>`
+        : "";
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      const when = report.generatedAt
+        ? `<p class="meta">Обновлено: ${escapeHtml(new Date(report.generatedAt).toLocaleString("ru-RU"))}${report.host ? " · " + escapeHtml(report.host) : ""}</p>`
+        : "";
+      box.innerHTML = warn + when + note + kpis + `
+        <div class="pnl-section">
+          <h2>По менеджерам</h2>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead>${head}</thead>
+            <tbody>${rows || `<tr><td colspan="7">Нет данных</td></tr>`}${totalRow}</tbody>
+          </table></div>
+        </div>${rules}`;
+    }
+
+    async function loadBitrixFreqReport() {
+      if (USER.tabs?.bitrixfreq === false || bitrixfreqInflight) return;
+      bitrixfreqInflight = true;
+      const btn = document.getElementById("bitrixfreq-run");
+      if (btn) btn.disabled = true;
+      bitrixfreqErr("");
+      document.getElementById("bitrixfreq-report").innerHTML =
+        `<p class="pnl-note">Считаем чистоту ведения из Bitrix24… Это может занять 1–3 минуты.</p>`;
+      try {
+        const report = await api("/api/bitrixfreq", { signal: AbortSignal.timeout(360000) });
+        bitrixfreqLoaded = true;
+        renderBitrixFreq(report);
+      } catch (e) {
+        bitrixfreqLoaded = false;
+        renderBitrixFreq(null);
+        bitrixfreqErr(e.message || String(e));
+      } finally {
+        bitrixfreqInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function loadBitrixFreqIfNeeded() {
+      if (bitrixfreqLoaded || bitrixfreqInflight) return;
+      loadBitrixFreqReport();
+    }
+
+    let ozonLoaded = false;
+    let ozonInflight = false;
+
+    function initOzonDates() {
+      const from = document.getElementById("ozon-from");
+      const to = document.getElementById("ozon-to");
+      if (!from || !to || from.value) return;
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const p = (n) => String(n).padStart(2, "0");
+      const ymd = (d) => d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+      from.value = ymd(start);
+      to.value = ymd(end);
+    }
+
+    function ozonErr(text) {
+      const el = document.getElementById("ozon-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function formatOzonNum(v, digits = 2) {
+      const n = Number(v) || 0;
+      return n.toLocaleString("ru-RU", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    }
+
+    function ozonMetricCells(m) {
+      return `<td class="num">${formatOzonNum(m.qty, 0)}</td>`
+        + `<td class="num">${formatOzonNum(m.sale)}</td>`
+        + `<td class="num">${formatOzonNum(m.returns)}</td>`
+        + `<td class="num">${formatOzonNum(m.cost)}</td>`
+        + `<td class="num">${formatOzonNum(m.costPerUnit)}</td>`
+        + `<td class="num">${formatOzonNum(m.commission)}</td>`
+        + `<td class="num">${formatOzonNum(m.acquiring)}</td>`
+        + `<td class="num">${formatOzonNum(m.deliveryOzon)}</td>`
+        + `<td class="num">${formatOzonNum(m.deliveryReturn)}</td>`
+        + `<td class="num">${formatOzonNum(m.deliveryRfbs)}</td>`
+        + `<td class="num">${formatOzonNum(m.crossDock)}</td>`
+        + `<td class="num">${formatOzonNum(m.deliveryBias)}</td>`
+        + `<td class="num">${formatOzonNum(m.deliveryStages)}</td>`
+        + `<td class="num">${formatOzonNum(m.storageOps)}</td>`
+        + `<td class="num">${formatOzonNum(m.storageServices)}</td>`
+        + `<td class="num">${formatOzonNum(m.otherFulfillment)}</td>`
+        + `<td class="num">${formatOzonNum(m.adStencil)}</td>`
+        + `<td class="num">${formatOzonNum(m.adSearch)}</td>`
+        + `<td class="num">${formatOzonNum(m.adMedia)}</td>`
+        + `<td class="num">${formatOzonNum(m.premium)}</td>`
+        + `<td class="num">${formatOzonNum(m.tax)}</td>`
+        + `<td class="num">${formatOzonNum(m.compShortage)}</td>`
+        + `<td class="num">${formatOzonNum(m.compLoss)}</td>`
+        + `<td class="num">${formatOzonNum(m.margin)}</td>`
+        + `<td class="num">${formatOzonNum(m.marginPct)}</td>`
+        + `<td class="num">${formatOzonNum(m.gross)}</td>`
+        + `<td class="num">${formatOzonNum(m.grossPct)}</td>`
+        + `<td class="num">${formatOzonNum(m.roi)}</td>`;
+    }
+
+    function renderOzon(report) {
+      const box = document.getElementById("ozon-report");
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      const head = `
+        <tr>
+          <th rowspan="2">Номенклатура / категория</th>
+          <th rowspan="2">Количество</th>
+          <th colspan="2">Выручка</th>
+          <th colspan="2">Вложения</th>
+          <th colspan="2">Комиссия</th>
+          <th colspan="6">Доставка</th>
+          <th colspan="2">Хранение</th>
+          <th rowspan="2">Прочие</th>
+          <th colspan="4">Реклама</th>
+          <th rowspan="2">Налог</th>
+          <th colspan="2">Компенсация</th>
+          <th colspan="2">Маржа</th>
+          <th colspan="2">Валовая прибыль</th>
+          <th rowspan="2">ROI %</th>
+        </tr>
+        <tr>
+          <th>продажа</th><th>возвраты</th>
+          <th>себестоимость</th><th>за ед.</th>
+          <th>комиссия</th><th>эквайринг</th>
+          <th>озон</th><th>возврат/невыкуп</th><th>rFBS</th><th>кросс-докинг</th><th>перекос</th><th>этапы</th>
+          <th>операции склада</th><th>услуги склада</th>
+          <th>трафарет</th><th>поиск</th><th>медиа</th><th>premium</th>
+          <th>недостача</th><th>утеря</th>
+          <th>руб.</th><th>%</th>
+          <th>руб.</th><th>%</th>
+        </tr>`;
+      const body = [];
+      for (const group of report.groups || []) {
+        body.push(`<tr class="group"><td class="name">${escapeHtml(group.name)}</td>${ozonMetricCells(group.metrics)}</tr>`);
+        for (const child of group.children || []) {
+          body.push(`<tr><td class="name ozon-child">${escapeHtml(child.name)}</td>${ozonMetricCells(child.metrics)}</tr>`);
+        }
+      }
+      if (report.total) {
+        body.push(`<tr class="total"><td class="name">Итого</td>${ozonMetricCells(report.total)}</tr>`);
+      }
+      const warn = (report.warnings || []).length
+        ? `<p class="pnl-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
+        : "";
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      const period = report.period
+        ? `<p class="pnl-note">Период ${escapeHtml(report.period.from)} – ${escapeHtml(report.period.to)} · налог ${escapeHtml(String(report.taxRate || 0))}%</p>`
+        : "";
+      box.innerHTML = warn + note + period + `
+        <div class="pnl-section">
+          <div class="pnl-scroll"><table class="ozon">
+            <thead>${head}</thead>
+            <tbody>${body.join("") || `<tr><td colspan="28">Нет данных за период</td></tr>`}</tbody>
+          </table></div>
+        </div>`;
+    }
+
+    async function loadOzonReport() {
+      if (USER.tabs?.ozon === false || ozonInflight) return;
+      const from = document.getElementById("ozon-from").value;
+      const to = document.getElementById("ozon-to").value;
+      if (!from || !to) {
+        ozonErr("Укажите период с и по");
+        return;
+      }
+      ozonInflight = true;
+      const btn = document.getElementById("ozon-run");
+      if (btn) btn.disabled = true;
+      ozonErr("");
+      document.getElementById("ozon-report").innerHTML = `<p class="pnl-note">Считаем отчёт из 1С (ecotidy). Это может занять несколько минут…</p>`;
+      try {
+        const report = await api(
+          "/api/ozon?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to),
+          { method: "GET" }
+        );
+        ozonLoaded = true;
+        renderOzon(report);
+      } catch (e) {
+        ozonLoaded = false;
+        renderOzon(null);
+        ozonErr(e.message || String(e));
+      } finally {
+        ozonInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function loadOzonIfNeeded() {
+      if (ozonLoaded || ozonInflight) return;
+      loadOzonReport();
+    }
+
+    let ozondrrLoaded = false;
+    let ozondrrInflight = false;
+
+    function initOzonDrrDates() {
+      const from = document.getElementById("ozondrr-from");
+      const to = document.getElementById("ozondrr-to");
+      if (!from || !to || from.value) return;
+      const now = new Date();
+      const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+      const p = (n) => String(n).padStart(2, "0");
+      const ymd = (d) => d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+      const day = ymd(yesterday);
+      from.value = day;
+      to.value = day;
+    }
+
+    function ozondrrErr(text) {
+      const el = document.getElementById("ozondrr-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function ozondrrMetricCells(m) {
+      return `<td class="num">${formatOzonNum(m.sum)}</td>`
+        + `<td class="num">${formatOzonNum(m.qty, 0)}</td>`
+        + `<td class="num">${formatOzonNum(m.search)}</td>`
+        + `<td class="num">${formatOzonNum(m.stencil)}</td>`
+        + `<td class="num">${formatOzonNum(m.order)}</td>`
+        + `<td class="num">${formatOzonNum(m.drr)}</td>`;
+    }
+
+    function renderOzonDrr(report) {
+      const box = document.getElementById("ozondrr-report");
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      const head = `
+        <tr>
+          <th>Номенклатура.Товарная категория / Номенклатура</th>
+          <th>Сумма</th>
+          <th>Количество</th>
+          <th>Расходы поиск</th>
+          <th>Расходы трафарет</th>
+          <th>Расходы заказ</th>
+          <th>ДРР</th>
+        </tr>`;
+      const body = [];
+      for (const group of report.groups || []) {
+        body.push(`<tr class="group"><td class="name">${escapeHtml(group.name)}</td>${ozondrrMetricCells(group.metrics)}</tr>`);
+        for (const child of group.children || []) {
+          body.push(`<tr><td class="name ozon-child">${escapeHtml(child.name)}</td>${ozondrrMetricCells(child.metrics)}</tr>`);
+        }
+      }
+      if (report.total) {
+        body.push(`<tr class="total"><td class="name">Итого</td>${ozondrrMetricCells(report.total)}</tr>`);
+      }
+      const warn = (report.warnings || []).length
+        ? `<p class="pnl-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
+        : "";
+      const period = report.period
+        ? `<p class="pnl-note">Период ${escapeHtml(report.period.from)} – ${escapeHtml(report.period.to)}</p>`
+        : "";
+      box.innerHTML = warn + period + `
+        <div class="pnl-section">
+          <div class="pnl-scroll"><table class="ozon">
+            <thead>${head}</thead>
+            <tbody>${body.join("") || `<tr><td colspan="7">Нет данных за период</td></tr>`}</tbody>
+          </table></div>
+        </div>`;
+    }
+
+    async function loadOzonDrrReport() {
+      if (USER.tabs?.ozondrr === false || ozondrrInflight) return;
+      const from = document.getElementById("ozondrr-from").value;
+      const to = document.getElementById("ozondrr-to").value;
+      if (!from || !to) {
+        ozondrrErr("Укажите период с и по");
+        return;
+      }
+      ozondrrInflight = true;
+      const btn = document.getElementById("ozondrr-run");
+      if (btn) btn.disabled = true;
+      ozondrrErr("");
+      document.getElementById("ozondrr-report").innerHTML = `<p class="pnl-note">Считаем ДРР из 1С (ecotidy)…</p>`;
+      try {
+        const report = await api(
+          "/api/ozondrr?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to),
+          { method: "GET" }
+        );
+        ozondrrLoaded = true;
+        renderOzonDrr(report);
+      } catch (e) {
+        ozondrrLoaded = false;
+        renderOzonDrr(null);
+        ozondrrErr(e.message || String(e));
+      } finally {
+        ozondrrInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function loadOzonDrrIfNeeded() {
+      if (ozondrrLoaded || ozondrrInflight) return;
+      loadOzonDrrReport();
+    }
+
+    let wbLoaded = false;
+    let wbInflight = false;
+
+    function initWbDates() {
+      const from = document.getElementById("wb-from");
+      const to = document.getElementById("wb-to");
+      if (!from || !to || from.value) return;
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const p = (n) => String(n).padStart(2, "0");
+      const ymd = (d) => d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+      from.value = ymd(start);
+      to.value = ymd(end);
+    }
+
+    function wbErr(text) {
+      const el = document.getElementById("wb-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function wbMetricCells(m) {
+      return `<td class="num">${formatOzonNum(m.revenue)}</td>`
+        + `<td class="num">${formatOzonNum(m.saleQty, 0)}</td>`
+        + `<td class="num">${formatOzonNum(m.saleRub)}</td>`
+        + `<td class="num">${formatOzonNum(m.retQty, 0)}</td>`
+        + `<td class="num">${formatOzonNum(m.retRub)}</td>`
+        + `<td class="num">${formatOzonNum(m.buyout)}</td>`
+        + `<td class="num">${formatOzonNum(m.logistics)}</td>`
+        + `<td class="num">${formatOzonNum(m.lost)}</td>`
+        + `<td class="num">${formatOzonNum(m.penalty)}</td>`
+        + `<td class="num">${formatOzonNum(m.surcharge)}</td>`
+        + `<td class="num">${formatOzonNum(m.storage)}</td>`
+        + `<td class="num">${formatOzonNum(m.acceptance)}</td>`
+        + `<td class="num">${formatOzonNum(m.deduction)}</td>`
+        + `<td class="num">${formatOzonNum(m.pay)}</td>`
+        + `<td class="num">${formatOzonNum(m.cost)}</td>`
+        + `<td class="num">${formatOzonNum(m.tax)}</td>`
+        + `<td class="num">${formatOzonNum(m.profit)}</td>`
+        + `<td class="num">${formatOzonNum(m.margin, 0)}</td>`;
+    }
+
+    function renderWb(report) {
+      const box = document.getElementById("wb-report");
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      const head = `
+        <tr>
+          <th>Номенклатура</th>
+          <th>Выручка до вычета комиссий, руб</th>
+          <th>Продажи, шт</th>
+          <th>Продажи, руб, к перечислению</th>
+          <th>Возвраты, шт</th>
+          <th>Возвраты, руб</th>
+          <th>Выкуп, %</th>
+          <th>Логистика, руб</th>
+          <th>Оплата потерянного товара, руб</th>
+          <th>Штрафы, руб</th>
+          <th>Доплаты, руб</th>
+          <th>Хранение, руб</th>
+          <th>Платная приемка, руб</th>
+          <th>Прочие удержания, руб</th>
+          <th>Итого к оплате, руб</th>
+          <th>Себестоимость, руб</th>
+          <th>Налог, руб</th>
+          <th>Итоговая прибыль, руб</th>
+          <th>Маржа, %</th>
+        </tr>`;
+      const body = [];
+      for (const row of report.rows || []) {
+        const cls = row.name === "Нераспределенные расходы" ? " class=\"group\"" : "";
+        body.push(`<tr${cls}><td class="name">${escapeHtml(row.name)}</td>${wbMetricCells(row.metrics)}</tr>`);
+      }
+      if (report.total) {
+        body.push(`<tr class="total"><td class="name">Итого</td>${wbMetricCells(report.total)}</tr>`);
+      }
+      const warn = (report.warnings || []).length
+        ? `<p class="pnl-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
+        : "";
+      const period = report.period
+        ? `<p class="pnl-note">Период ${escapeHtml(report.period.from)} – ${escapeHtml(report.period.to)} · налог ${escapeHtml(String(report.taxRate || 0))}%</p>`
+        : "";
+      box.innerHTML = warn + period + `
+        <div class="pnl-section">
+          <div class="pnl-scroll"><table class="ozon">
+            <thead>${head}</thead>
+            <tbody>${body.join("") || `<tr><td colspan="19">Нет данных за период</td></tr>`}</tbody>
+          </table></div>
+        </div>`;
+    }
+
+    async function loadWbReport() {
+      if (USER.tabs?.wb === false || wbInflight) return;
+      const from = document.getElementById("wb-from").value;
+      const to = document.getElementById("wb-to").value;
+      if (!from || !to) {
+        wbErr("Укажите период с и по");
+        return;
+      }
+      wbInflight = true;
+      const btn = document.getElementById("wb-run");
+      if (btn) btn.disabled = true;
+      wbErr("");
+      document.getElementById("wb-report").innerHTML = `<p class="pnl-note">Считаем рентабельность WB из 1С (ecotidy). Это может занять около минуты…</p>`;
+      try {
+        const report = await api(
+          "/api/wb?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to),
+          { method: "GET" }
+        );
+        wbLoaded = true;
+        renderWb(report);
+      } catch (e) {
+        wbLoaded = false;
+        renderWb(null);
+        wbErr(e.message || String(e));
+      } finally {
+        wbInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function loadWbIfNeeded() {
+      if (wbLoaded || wbInflight) return;
+      loadWbReport();
+    }
+
+    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb"];
+    const TAB_LABELS = {
+      hours: "Часы",
+      activity: "Активность",
+      pnl: "Доходы и расходы",
+      pnlecotidy: "ДИР ПИ",
+      units: "Юниты",
+      plan: "План",
+      budget: "Бюджет",
+      bitrix: "Bitrix",
+      bitrixfreq: "Чистота Битрикс",
+      ozon: "Озон",
+      ozondrr: "Озон ДРР",
+      wb: "WB",
+    };
+
+    function normalizeClientTabOrder(order) {
+      const seen = new Set();
+      const out = [];
+      for (const raw of Array.isArray(order) ? order : []) {
+        const name = String(raw || "").trim();
+        if (!DEFAULT_TAB_ORDER.includes(name) || seen.has(name)) continue;
+        seen.add(name);
+        out.push(name);
+      }
+      for (const name of DEFAULT_TAB_ORDER) {
+        if (!seen.has(name)) out.push(name);
+      }
+      return out;
+    }
+
     function visibleTabs() {
+      const order = normalizeClientTabOrder(USER.tabOrder);
       const tabs = [];
-      if (USER.tabs?.hours !== false) tabs.push("hours");
-      if (USER.tabs?.activity !== false) tabs.push("activity");
-      if (USER.tabs?.pnl !== false) tabs.push("pnl");
+      for (const name of order) {
+        if (USER.tabs?.[name] !== false) tabs.push(name);
+      }
       if (USER.admin) tabs.push("admin");
       return tabs;
+    }
+
+    function reorderNavTabs() {
+      const nav = document.querySelector("nav.tabs");
+      const spacer = nav?.querySelector(".tab-spacer");
+      if (!nav || !spacer) return;
+      for (const name of normalizeClientTabOrder(USER.tabOrder)) {
+        const btn = nav.querySelector(`.tab[data-tab="${name}"]`);
+        if (btn) nav.insertBefore(btn, spacer);
+      }
+      const adminBtn = document.getElementById("tab-btn-admin");
+      if (adminBtn) nav.insertBefore(adminBtn, spacer);
+    }
+
+    /** Экраны для ТВ-перелистывания (без админки). */
+    function slideTabs() {
+      return visibleTabs().filter((name) => name !== "admin");
+    }
+
+    function currentTabName() {
+      const on = document.querySelector(".tab[data-tab].is-on");
+      return on?.getAttribute("data-tab") || "hours";
+    }
+
+    const SLIDE_SEC_KEY = "dashboard-slide-sec";
+    const SLIDE_PAUSE_KEY = "dashboard-slide-paused";
+    let slideTimer = null;
+    let slidePaused = localStorage.getItem(SLIDE_PAUSE_KEY) === "1";
+    let slideSec = Number(localStorage.getItem(SLIDE_SEC_KEY)) || 30;
+    if (![10, 15, 30, 60, 90, 120].includes(slideSec)) slideSec = 30;
+
+    function clearSlideTimer() {
+      if (slideTimer) {
+        clearTimeout(slideTimer);
+        slideTimer = null;
+      }
+    }
+
+    function updateSlidePauseBtn() {
+      const btn = document.getElementById("slide-pause");
+      if (!btn) return;
+      btn.textContent = slidePaused ? "Пуск" : "Пауза";
+      btn.title = slidePaused ? "Продолжить перелистывание" : "Пауза";
+    }
+
+    function restartSlideTimer() {
+      clearSlideTimer();
+      if (!document.body.classList.contains("is-full") || slidePaused) return;
+      if (slideTabs().length < 2) return;
+      slideTimer = setTimeout(() => {
+        slideStep(1);
+      }, slideSec * 1000);
+    }
+
+    function slideStep(dir) {
+      const tabs = slideTabs();
+      if (tabs.length < 2) return;
+      let i = tabs.indexOf(currentTabName());
+      if (i < 0) i = dir > 0 ? -1 : 0;
+      const next = tabs[(i + dir + tabs.length) % tabs.length];
+      showTab(next);
+    }
+
+    function syncSlideBar() {
+      const bar = document.getElementById("slide-bar");
+      if (!bar) return;
+      const can = document.body.classList.contains("is-full") && slideTabs().length >= 2;
+      bar.hidden = !can;
+      const sel = document.getElementById("slide-sec");
+      if (sel && String(slideSec) !== sel.value) sel.value = String(slideSec);
+      updateSlidePauseBtn();
+      if (can) restartSlideTimer();
+      else clearSlideTimer();
     }
 
     function applyUserUi() {
       const who = document.getElementById("who");
       if (who) who.textContent = USER.login || "";
+      reorderNavTabs();
       for (const btn of document.querySelectorAll(".tab[data-tab]")) {
         const name = btn.getAttribute("data-tab");
         btn.hidden = !visibleTabs().includes(name);
       }
+      syncSlideBar();
     }
 
     function showTab(name) {
@@ -983,6 +3097,15 @@
       document.getElementById("tab-hours").hidden = name !== "hours";
       document.getElementById("tab-activity").hidden = name !== "activity";
       document.getElementById("tab-pnl").hidden = name !== "pnl";
+      document.getElementById("tab-pnlecotidy").hidden = name !== "pnlecotidy";
+      document.getElementById("tab-units").hidden = name !== "units";
+      document.getElementById("tab-budget").hidden = name !== "budget";
+      document.getElementById("tab-plan").hidden = name !== "plan";
+      document.getElementById("tab-bitrix").hidden = name !== "bitrix";
+      document.getElementById("tab-bitrixfreq").hidden = name !== "bitrixfreq";
+      document.getElementById("tab-ozon").hidden = name !== "ozon";
+      document.getElementById("tab-ozondrr").hidden = name !== "ozondrr";
+      document.getElementById("tab-wb").hidden = name !== "wb";
       document.getElementById("tab-admin").hidden = name !== "admin";
       for (const btn of document.querySelectorAll(".tab[data-tab]")) {
         const on = btn.getAttribute("data-tab") === name;
@@ -993,7 +3116,17 @@
       if (name === "admin") loadAdminUsers();
       if (name === "activity" && data?.activity) fillActivityFilters(data.activity);
       if (name === "pnl") loadPnlIfNeeded();
+      if (name === "pnlecotidy") loadPnlEcotidyIfNeeded();
+      if (name === "units") loadUnitsIfNeeded();
+      if (name === "budget") loadBudgetIfNeeded();
+      if (name === "plan") loadPlanIfNeeded();
+      if (name === "bitrix") loadBitrixIfNeeded();
+      if (name === "bitrixfreq") loadBitrixFreqIfNeeded();
+      if (name === "ozon") loadOzonIfNeeded();
+      if (name === "ozondrr") loadOzonDrrIfNeeded();
+      if (name === "wb") loadWbIfNeeded();
       fitHoursStage();
+      if (document.body.classList.contains("is-full")) restartSlideTimer();
     }
 
     function adminErr(text) {
@@ -1009,35 +3142,65 @@
 
     async function api(url, opts = {}) {
       const res = await fetch(url, { credentials: "same-origin", cache: "no-store", ...opts });
-      const data = await res.json().catch(() => ({}));
+      const text = await res.text();
+      let data = {};
+      try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
       if (res.status === 401) {
         location.href = "/login.html";
         throw new Error("Нужно войти");
       }
-      if (!res.ok) throw new Error(data.error || "Ошибка запроса");
+      if (!res.ok) {
+        throw new Error(data.error || ("Ошибка запроса (" + res.status + (text ? ": " + text.slice(0, 180) : "") + ")"));
+      }
       return data;
     }
 
     function adminTable(users) {
       if (!users.length) return `<p class="meta">Пользователей пока нет.</p>`;
-      const body = users.map((u) => {
+      const tabFields = [
+        ["hours", "Часы"],
+        ["activity", "Активность"],
+        ["pnl", "Доходы и расходы"],
+        ["pnlecotidy", "ДИР ПИ"],
+        ["units", "Юниты"],
+        ["budget", "Бюджет"],
+        ["plan", "План"],
+        ["bitrix", "Bitrix"],
+        ["bitrixfreq", "Чистота Битрикс"],
+        ["ozon", "Озон"],
+        ["ozondrr", "Озон ДРР"],
+        ["wb", "WB"],
+      ];
+      const cards = users.map((u) => {
         const self = u.id === USER.id;
-        return `<tr data-id="${escapeHtml(u.id)}">
-          <td>${escapeHtml(u.login)}${self ? ' <span class="meta">вы</span>' : ""}</td>
-          <td><label><input type="checkbox" data-field="hours" ${u.tabs?.hours ? "checked" : ""}> Часы</label></td>
-          <td><label><input type="checkbox" data-field="activity" ${u.tabs?.activity ? "checked" : ""}> Активность</label></td>
-          <td><label><input type="checkbox" data-field="pnl" ${u.tabs?.pnl !== false ? "checked" : ""}> Доходы и расходы</label></td>
-          <td><label><input type="checkbox" data-field="admin" ${u.admin ? "checked" : ""}> Админ</label></td>
-          <td>
-            <button type="button" data-act="pass">Пароль</button>
-            ${self ? "" : `<button type="button" data-act="del">Удалить</button>`}
-          </td>
-        </tr>`;
+        const order = normalizeClientTabOrder(u.tabOrder);
+        const checks = tabFields.map(([field, label]) => {
+          const on = u.tabs?.[field] !== false;
+          return `<label><input type="checkbox" data-field="${field}" ${on ? "checked" : ""}> ${escapeHtml(label)}</label>`;
+        }).join("");
+        const orderItems = order.map((name, idx) => {
+          const on = u.tabs?.[name] !== false;
+          return `<li class="${on ? "" : "is-off"}" data-tab="${escapeHtml(name)}">
+            <span class="ord-label">${escapeHtml(TAB_LABELS[name] || name)}</span>
+            <button type="button" data-act="tab-up" title="Выше" ${idx === 0 ? "disabled" : ""}>↑</button>
+            <button type="button" data-act="tab-down" title="Ниже" ${idx === order.length - 1 ? "disabled" : ""}>↓</button>
+          </li>`;
+        }).join("");
+        return `<div class="admin-user" data-id="${escapeHtml(u.id)}" data-tab-order="${escapeHtml(order.join(","))}">
+          <div class="admin-user-head">
+            <div><span class="login">${escapeHtml(u.login)}</span>${self ? ' <span class="meta">вы</span>' : ""}</div>
+            <div class="admin-user-actions">
+              <label><input type="checkbox" data-field="admin" ${u.admin ? "checked" : ""}> Админ</label>
+              <button type="button" data-act="pass">Пароль</button>
+              ${self ? "" : `<button type="button" data-act="del">Удалить</button>`}
+            </div>
+          </div>
+          <div class="admin-user-tabs">${checks}</div>
+          <p class="admin-user-order-title">Порядок вкладок (↑ ↓) — свой для этого пользователя</p>
+          <ol class="admin-tab-order">${orderItems}</ol>
+        </div>`;
       }).join("");
-      return `<table class="admin">
-        <thead><tr><th>Логин</th><th colspan="3">Вкладки</th><th>Права</th><th></th></tr></thead>
-        <tbody>${body}</tbody>
-      </table>`;
+      return `<div class="admin-users">${cards}</div>`;
     }
 
     async function loadAdminUsers() {
@@ -1051,9 +3214,9 @@
       }
     }
 
-    function fitHoursStage() {
-      const tab = document.getElementById("tab-hours");
-      const stage = tab && tab.querySelector(".hours-stage");
+    function fitStage(tabId, stageSelector) {
+      const tab = document.getElementById(tabId);
+      const stage = tab && tab.querySelector(stageSelector);
       if (!tab || !stage) return;
       stage.style.transform = "";
       stage.style.width = "";
@@ -1068,6 +3231,11 @@
       stage.style.transform = "translate(-50%, -50%) scale(" + s + ")";
     }
 
+    function fitHoursStage() {
+      fitStage("tab-hours", ".hours-stage");
+      fitStage("tab-bitrix", ".bitrix-stage");
+    }
+
     function setFull(on) {
       document.body.classList.toggle("is-full", on);
       const btn = document.getElementById("btn-full");
@@ -1077,6 +3245,7 @@
       } else if (document.fullscreenElement) {
         document.exitFullscreen?.().catch(() => {});
       }
+      syncSlideBar();
       requestAnimationFrame(() => requestAnimationFrame(fitHoursStage));
     }
 
@@ -1118,6 +3287,15 @@
               hours: document.getElementById("new-hours").checked,
               activity: document.getElementById("new-activity").checked,
               pnl: document.getElementById("new-pnl").checked,
+              pnlecotidy: document.getElementById("new-pnlecotidy").checked,
+              units: document.getElementById("new-units").checked,
+              budget: document.getElementById("new-budget").checked,
+              plan: document.getElementById("new-plan").checked,
+              bitrix: document.getElementById("new-bitrix").checked,
+              bitrixfreq: document.getElementById("new-bitrixfreq").checked,
+              ozon: document.getElementById("new-ozon").checked,
+              ozondrr: document.getElementById("new-ozondrr").checked,
+              wb: document.getElementById("new-wb").checked,
             },
           }),
         });
@@ -1125,6 +3303,15 @@
         document.getElementById("new-hours").checked = true;
         document.getElementById("new-activity").checked = true;
         document.getElementById("new-pnl").checked = true;
+        document.getElementById("new-pnlecotidy").checked = true;
+        document.getElementById("new-units").checked = true;
+        document.getElementById("new-budget").checked = true;
+        document.getElementById("new-plan").checked = true;
+        document.getElementById("new-bitrix").checked = true;
+        document.getElementById("new-bitrixfreq").checked = true;
+        document.getElementById("new-ozon").checked = true;
+        document.getElementById("new-ozondrr").checked = true;
+        document.getElementById("new-wb").checked = true;
         await loadAdminUsers();
       } catch (ex) {
         adminErr(ex.message || String(ex));
@@ -1132,21 +3319,27 @@
     });
     document.getElementById("admin-users").addEventListener("change", async (e) => {
       const input = e.target.closest("input[data-field]");
-      const row = e.target.closest("tr[data-id]");
-      if (!input || !row) return;
-      const id = row.getAttribute("data-id");
+      const card = e.target.closest(".admin-user[data-id]");
+      if (!input || !card) return;
+      const id = card.getAttribute("data-id");
       const field = input.getAttribute("data-field");
       const patch = field === "admin"
         ? { admin: input.checked }
         : { tabs: { [field]: input.checked } };
       try {
         adminErr("");
-        await api("/api/admin/users?id=" + encodeURIComponent(id), {
+        const updated = await api("/api/admin/users?id=" + encodeURIComponent(id), {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(patch),
         });
-        if (id === USER.id) location.reload();
+        if (id === USER.id) {
+          USER.tabs = updated.tabs;
+          USER.admin = updated.admin;
+          USER.tabOrder = updated.tabOrder;
+          applyUserUi();
+        }
+        await loadAdminUsers();
       } catch (ex) {
         input.checked = !input.checked;
         adminErr(ex.message || String(ex));
@@ -1154,9 +3347,9 @@
     });
     document.getElementById("admin-users").addEventListener("click", async (e) => {
       const btn = e.target.closest("button[data-act]");
-      const row = e.target.closest("tr[data-id]");
-      if (!btn || !row) return;
-      const id = row.getAttribute("data-id");
+      const card = e.target.closest(".admin-user[data-id]");
+      if (!btn || !card) return;
+      const id = card.getAttribute("data-id");
       const act = btn.getAttribute("data-act");
       try {
         adminErr("");
@@ -1164,6 +3357,7 @@
           if (!confirm("Удалить этого пользователя?")) return;
           await api("/api/admin/users?id=" + encodeURIComponent(id), { method: "DELETE" });
           await loadAdminUsers();
+          return;
         }
         if (act === "pass") {
           const password = prompt("Новый пароль (не меньше 4 символов)");
@@ -1173,6 +3367,33 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ password }),
           });
+          return;
+        }
+        if (act === "tab-up" || act === "tab-down") {
+          const item = btn.closest("li[data-tab]");
+          if (!item) return;
+          const tab = item.getAttribute("data-tab");
+          let order = normalizeClientTabOrder(
+            (card.getAttribute("data-tab-order") || "").split(",").filter(Boolean)
+          );
+          const i = order.indexOf(tab);
+          if (i < 0) return;
+          const j = act === "tab-up" ? i - 1 : i + 1;
+          if (j < 0 || j >= order.length) return;
+          const next = order.slice();
+          const tmp = next[i];
+          next[i] = next[j];
+          next[j] = tmp;
+          const updated = await api("/api/admin/users?id=" + encodeURIComponent(id), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tabOrder: next }),
+          });
+          if (id === USER.id) {
+            USER.tabOrder = updated.tabOrder;
+            applyUserUi();
+          }
+          await loadAdminUsers();
         }
       } catch (ex) {
         adminErr(ex.message || String(ex));
@@ -1181,14 +3402,43 @@
     document.getElementById("btn-full").addEventListener("click", () => {
       setFull(!document.body.classList.contains("is-full"));
     });
+    document.getElementById("slide-prev").addEventListener("click", () => slideStep(-1));
+    document.getElementById("slide-next").addEventListener("click", () => slideStep(1));
+    document.getElementById("slide-pause").addEventListener("click", () => {
+      slidePaused = !slidePaused;
+      localStorage.setItem(SLIDE_PAUSE_KEY, slidePaused ? "1" : "0");
+      updateSlidePauseBtn();
+      if (slidePaused) clearSlideTimer();
+      else restartSlideTimer();
+    });
+    document.getElementById("slide-sec").addEventListener("change", (e) => {
+      const val = Number(e.target.value) || 30;
+      slideSec = val;
+      localStorage.setItem(SLIDE_SEC_KEY, String(slideSec));
+      restartSlideTimer();
+    });
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && document.body.classList.contains("is-full")) setFull(false);
+      if (!document.body.classList.contains("is-full")) return;
+      if (e.key === "Escape") {
+        setFull(false);
+        return;
+      }
+      const tag = (e.target && e.target.tagName) || "";
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target?.isContentEditable) return;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        slideStep(-1);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        slideStep(1);
+      }
     });
     document.addEventListener("fullscreenchange", () => {
       if (!document.fullscreenElement && document.body.classList.contains("is-full")) {
         document.body.classList.remove("is-full");
         const btn = document.getElementById("btn-full");
         if (btn) btn.textContent = "На весь экран";
+        syncSlideBar();
       }
       requestAnimationFrame(() => requestAnimationFrame(fitHoursStage));
     });
@@ -1212,7 +3462,93 @@
       pnlLoaded = false;
       loadPnlReport();
     });
+    document.getElementById("pnl-group").addEventListener("change", () => {
+      if (!document.getElementById("pnl-from").value || !document.getElementById("pnl-to").value) return;
+      pnlLoaded = false;
+      loadPnlReport();
+    });
+    document.getElementById("pnlecotidy-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      pnlecotidyLoaded = false;
+      loadPnlEcotidyReport();
+    });
+    document.getElementById("pnlecotidy-group").addEventListener("change", () => {
+      if (!document.getElementById("pnlecotidy-from").value || !document.getElementById("pnlecotidy-to").value) return;
+      pnlecotidyLoaded = false;
+      loadPnlEcotidyReport();
+    });
+    document.getElementById("units-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      unitsLoaded = false;
+      loadUnitsReport();
+    });
+    document.getElementById("budget-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      budgetLoaded = false;
+      loadBudgetReport();
+    });
+    document.getElementById("budget-group").addEventListener("change", () => {
+      if (!document.getElementById("budget-from").value || !document.getElementById("budget-to").value) return;
+      budgetLoaded = false;
+      loadBudgetReport();
+    });
+    document.getElementById("plan-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      planLoaded = false;
+      loadPlanReport();
+    });
+    document.getElementById("plan-form").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-plan-variant]");
+      if (!btn) return;
+      planVariant = btn.getAttribute("data-plan-variant") || "rp";
+      for (const item of document.querySelectorAll("[data-plan-variant]")) {
+        item.classList.toggle("is-on", item === btn);
+      }
+      if (planData) renderPlan(planData);
+    });
+    document.getElementById("bitrix-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      bitrixLoaded = false;
+      loadBitrixReport();
+    });
+    document.getElementById("bitrix-form").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-bitrix-preset]");
+      if (!btn) return;
+      setBitrixPreset(btn.getAttribute("data-bitrix-preset") || "week");
+      if (bitrixPreset !== "custom") {
+        bitrixLoaded = false;
+        loadBitrixReport();
+      }
+    });
+    document.getElementById("bitrixfreq-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      bitrixfreqLoaded = false;
+      loadBitrixFreqReport();
+    });
+    document.getElementById("ozon-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      ozonLoaded = false;
+      loadOzonReport();
+    });
+    document.getElementById("ozondrr-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      ozondrrLoaded = false;
+      loadOzonDrrReport();
+    });
+    document.getElementById("wb-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      wbLoaded = false;
+      loadWbReport();
+    });
+    setBitrixPreset("week");
     initPnlDates();
+    initPnlEcotidyDates();
+    initUnitsDates();
+    initBudgetDates();
+    initPlanDates();
+    initOzonDates();
+    initOzonDrrDates();
+    initWbDates();
     applyUserUi();
     if (EMBEDDED?.activity) fillActivityFilters(EMBEDDED.activity);
     showTab(location.hash.replace("#", ""));

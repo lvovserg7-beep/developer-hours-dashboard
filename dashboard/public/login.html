@@ -3,27 +3,56 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Вход — Задачи разработчика</title>
+  <title>Вход — Центр управления корпорации</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    :root { --bg: #f6f5f2; --ink: #1c1b18; --muted: #5c5a54; --line: #ddd9d0; --card: #fff; --accent: #8a5a12; }
+    :root {
+      --bg: #f4f2ed;
+      --ink: #1c1b18;
+      --muted: #5c5a54;
+      --line: #ddd9d0;
+      --card: #fff;
+      --accent: #8a5a12;
+      --font: "Manrope", "Segoe UI", system-ui, sans-serif;
+    }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       min-height: 100vh;
       display: grid;
       place-items: center;
-      font: 14px/1.4 "Segoe UI", system-ui, sans-serif;
+      font: 14px/1.45 var(--font);
       color: var(--ink);
       background: var(--bg);
+      -webkit-font-smoothing: antialiased;
     }
     form {
-      width: min(100% - 32px, 360px);
+      width: min(100% - 32px, 400px);
       background: var(--card);
       border: 1px solid var(--line);
       padding: 24px;
     }
-    h1 { font-size: 20px; font-weight: 650; margin: 0 0 6px; }
-    p { margin: 0 0 16px; color: var(--muted); }
+    .logos {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .logos img {
+      height: 40px;
+      width: auto;
+      max-width: 200px;
+      object-fit: contain;
+    }
+    .logos img[alt="Аллсан Интеграция"],
+    .logos img[alt="Экотайди"] {
+      height: 52px;
+    }
+    h1 { font-size: 20px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.02em; }
+    .mission { margin: 0 0 18px; color: var(--muted); font-size: 13px; line-height: 1.45; }
     label { display: block; margin: 0 0 6px; font-size: 12px; color: var(--muted); }
     input {
       width: 100%;
@@ -38,7 +67,7 @@
       margin-top: 8px;
       padding: 10px 12px;
       font: inherit;
-      font-weight: 650;
+      font-weight: 600;
       color: #fff;
       background: var(--accent);
       border: 0;
@@ -49,31 +78,36 @@
   </style>
 </head>
 <body>
-  <form id="login">
-    <h1>Задачи разработчика</h1>
-    <p>Войдите, чтобы открыть дашборд.</p>
+  <form id="login-form">
+    <div class="logos">
+      <img src="/assets/logo-allsan.png" alt="Аллсан Интеграция" width="62" height="50">
+      <img src="/assets/logo-ecotidy.jpg" alt="Экотайди" width="55" height="40">
+    </div>
+    <h1>Центр управления корпорации</h1>
+    <p class="mission">Собираем достоверные данные в понятный и быстрый формат — чтобы вся компания принимала управленческие решения вовремя, уверенно и по существу.</p>
     <div id="err" class="err" hidden></div>
-    <label for="login-name">Логин</label>
-    <input id="login-name" name="login" autocomplete="username" required>
-    <label for="login-pass">Пароль</label>
-    <input id="login-pass" name="password" type="password" autocomplete="current-password" required>
+    <label for="login">Логин</label>
+    <input id="login" name="login" type="text" autocomplete="username" required>
+    <label for="password">Пароль</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
     <button type="submit">Войти</button>
   </form>
   <script>
+    const err = document.getElementById("err");
     fetch("/api/me", { credentials: "same-origin" }).then((r) => {
       if (r.ok) location.href = "/";
     }).catch(() => {});
-    document.getElementById("login").addEventListener("submit", async (e) => {
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const err = document.getElementById("err");
       err.hidden = true;
       try {
         const res = await fetch("/api/login", {
           method: "POST",
+          credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            login: document.getElementById("login-name").value,
-            password: document.getElementById("login-pass").value,
+            login: document.getElementById("login").value,
+            password: document.getElementById("password").value,
           }),
         });
         const data = await res.json().catch(() => ({}));
