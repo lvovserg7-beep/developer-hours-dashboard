@@ -33,8 +33,10 @@ const root = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
 const IIS_DIR = process.env.IIS_PUBLISH_DIR || "C:\\inetpub\\wwwroot\\employees";
 const CACHE_MS = 10 * 60 * 1000;
+const RETRY_MS = 30 * 1000;
+const SNAPSHOT_PATH = join(root, "data", "snapshot.json");
 
-let cache = { at: 0, data: null, html: "", error: null, inflight: null };
+let cache = { at: 0, data: null, html: "", error: null, inflight: null, stale: false };
 
 const EMPTY_DATA = {
   generatedAt: "",
@@ -46,6 +48,38 @@ const EMPTY_DATA = {
   employees: [],
   activity: [],
 };
+
+function hasHoursPayload(data) {
+  if (!data || typeof data !== "object") return false;
+  const tasks = Number(data.totals?.tasks) || 0;
+  const hours = Number(data.kpis?.hoursInWork) || 0;
+  const done = Number(data.kpis?.hoursCompleted) || 0;
+  if (tasks > 0 || hours > 0 || done > 0) return true;
+  const charts = data.charts || {};
+  return Object.values(charts).some((rows) => Array.isArray(rows) && rows.length > 0);
+}
+
+function loadSnapshotFromDisk() {
+  try {
+    if (!existsSync(SNAPSHOT_PATH)) return null;
+    const raw = JSON.parse(readFileSync(SNAPSHOT_PATH, "utf8"));
+    if (!hasHoursPayload(raw)) return null;
+    return raw;
+  } catch (err) {
+    console.warn("snapshot read failed:", err.message || err);
+    return null;
+  }
+}
+
+function saveSnapshotToDisk(data) {
+  try {
+    if (!hasHoursPayload(data)) return;
+    mkdirSync(dirname(SNAPSHOT_PATH), { recursive: true });
+    writeFileSync(SNAPSHOT_PATH, JSON.stringify(data), "utf8");
+  } catch (err) {
+    console.warn("snapshot write failed:", err.message || err);
+  }
+}
 
 function renderHtml(data, user) {
   const template = readFileSync(join(root, "public", "index.html"), "utf8");
@@ -68,31 +102,65 @@ function renderHtml(data, user) {
 
 async function refresh(force = false) {
   const now = Date.now();
-  if (!force && cache.data && now - cache.at < CACHE_MS) return cache;
+  const ttl = cache.stale || !hasHoursPayload(cache.data) ? RETRY_MS : CACHE_MS;
+  if (!force && cache.data && now - cache.at < ttl) return cache;
   if (cache.inflight) return cache.inflight;
 
   cache.inflight = (async () => {
     const data = await loadActiveEmployees();
+    if (!hasHoursPayload(data)) {
+      throw new Error("1С вернула пустой снимок часов");
+    }
     cache = {
       at: Date.now(),
       data,
       html: "",
       error: null,
       inflight: null,
+      stale: false,
     };
+    saveSnapshotToDisk(data);
     publishToIis();
     return cache;
   })().catch((err) => {
     cache.inflight = null;
     cache.error = String(err.message || err);
-    if (!cache.data) {
-      cache.data = EMPTY_DATA;
+    if (hasHoursPayload(cache.data)) {
+      cache.stale = true;
       cache.at = Date.now();
+      console.warn("hours refresh failed, keeping previous snapshot:", cache.error);
+    } else {
+      const disk = loadSnapshotFromDisk();
+      if (disk) {
+        cache.data = disk;
+        cache.stale = true;
+        cache.at = Date.now();
+        console.warn("hours refresh failed, loaded disk snapshot:", cache.error);
+      } else {
+        cache.data = EMPTY_DATA;
+        cache.stale = true;
+        cache.at = 0;
+        console.warn("hours refresh failed, no snapshot yet:", cache.error);
+      }
     }
     return cache;
   });
 
   return cache.inflight;
+}
+
+function startHoursRefreshLoop() {
+  setInterval(() => {
+    refresh(true)
+      .then((snap) => {
+        if (snap.error) return;
+        const t = snap.data?.totals || {};
+        console.log(
+          `Hours cache updated: employees ${t.employees}, tasks ${t.tasks}, hours ${snap.data?.kpis?.hoursInWork}, done ${snap.data?.kpis?.hoursCompleted}`
+        );
+      })
+      .catch((err) => console.warn("hours refresh loop:", err.message || err));
+  }, CACHE_MS);
 }
 
 function publishToIis() {
@@ -448,19 +516,23 @@ const server = createServer(async (req, res) => {
     }
 
     if (path === "/api/employees" || path === "/api/health") {
-      const snap = await refresh();
+      const force = url.searchParams.get("force") === "1" || url.searchParams.get("refresh") === "1";
+      const snap = await refresh(force);
       if (path === "/api/health") {
         return json(res, 200, {
           ok: true,
           generatedAt: snap.data?.generatedAt,
           employees: snap.data?.totals?.employees,
+          tasks: snap.data?.totals?.tasks,
+          stale: Boolean(snap.stale),
+          error: snap.error || null,
         });
       }
       return json(res, 200, filterDashboardData(snap.data, user));
     }
 
     if (path === "/" || path === "/index.html") {
-      const snap = await refresh();
+      const snap = await refresh(true);
       return send(res, 200, renderHtml(snap.data, user), "text/html; charset=utf-8");
     }
 
@@ -475,21 +547,40 @@ const server = createServer(async (req, res) => {
 });
 
 ensureAuthReady();
+{
+  const disk = loadSnapshotFromDisk();
+  if (disk) {
+    cache.data = disk;
+    cache.stale = true;
+    cache.at = 0;
+    console.log(
+      `Loaded hours snapshot from disk: employees ${disk.totals?.employees}, tasks ${disk.totals?.tasks}`
+    );
+  }
+}
+
+console.log("Updating hours cache from 1C on startup...");
 refresh(true)
   .then((snap) => {
+    if (snap.error) {
+      console.warn(`Startup hours refresh: ${snap.error}`);
+    } else {
+      const t = snap.data?.totals || {};
+      console.log(
+        `Startup hours OK: employees ${t.employees}, tasks ${t.tasks}, hours ${snap.data?.kpis?.hoursInWork}, done ${snap.data?.kpis?.hoursCompleted}`
+      );
+    }
+    if (snap.publishError) console.log(`IIS publish skipped: ${snap.publishError}`);
+  })
+  .catch((err) => {
+    console.warn("Startup hours refresh failed:", err.message || err);
+  })
+  .finally(() => {
     server.listen(PORT, "0.0.0.0", () => {
       console.log(`Dashboard http://localhost:${PORT}/`);
       if (existsSync(join(IIS_DIR, "index.html"))) {
         console.log(`IIS snapshot http://localhost/employees/`);
       }
-      if (snap.publishError) console.log(`IIS publish skipped: ${snap.publishError}`);
-      if (snap.error) console.log(`1C unavailable, UI started anyway: ${snap.error}`);
-      else {
-        console.log(`Employees in work: ${snap.data.totals.employees}, tasks: ${snap.data.totals.tasks}, hours: ${snap.data.kpis?.hoursInWork}, done: ${snap.data.kpis?.hoursCompleted}`);
-      }
+      startHoursRefreshLoop();
     });
-  })
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
   });

@@ -202,6 +202,19 @@ function sumMap(map) {
   return s;
 }
 
+/** Дата YYYY-MM-DD из значения Bitrix (ISO или дата). */
+function bitrixDay(value) {
+  const s = String(value || "").trim();
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : "";
+}
+
+function inBitrixRange(value, fromYmd, toYmd) {
+  const day = bitrixDay(value);
+  if (!day) return false;
+  return day >= fromYmd && day <= toYmd;
+}
+
 function isDealInWork(deal, stages) {
   const semantic = String(deal.STAGE_SEMANTIC_ID || "").toUpperCase();
   if (semantic === "P" || semantic === "PROCESS") return true;
@@ -276,15 +289,25 @@ export async function loadBitrixAnalytics(opts = {}) {
     bitrixAll(
       "crm.deal.list",
       {
+        // Фактическое закрытие — MOVED_TIME (переход в финал); CLOSEDATE часто «плановая» дата.
         filter: noArchive({
-          ">=CLOSEDATE": range.from,
-          "<=CLOSEDATE": range.to,
+          ">=MOVED_TIME": range.fromIso,
+          "<=MOVED_TIME": range.toIso,
           CLOSED: "Y",
         }),
-        select: ["ID", "ASSIGNED_BY_ID", "CLOSEDATE", "STAGE_ID", "OPPORTUNITY", "CATEGORY_ID"],
-        order: { CLOSEDATE: "ASC" },
+        select: [
+          "ID",
+          "ASSIGNED_BY_ID",
+          "CLOSEDATE",
+          "MOVED_TIME",
+          "STAGE_ID",
+          "STAGE_SEMANTIC_ID",
+          "OPPORTUNITY",
+          "CATEGORY_ID",
+        ],
+        order: { MOVED_TIME: "ASC" },
       },
-      { maxPages: 50 }
+      { maxPages: 100 }
     ),
     // Снимок воронки: открытые сделки сейчас (не привязаны к периоду отчёта)
     bitrixAll(
@@ -321,10 +344,12 @@ export async function loadBitrixAnalytics(opts = {}) {
     if (isLeadConverted(row.STATUS_ID, stages)) bump(convertedBy, row.ASSIGNED_BY_ID);
   }
   for (const row of dealsClosedLive) {
-    if (isDealWon(row.STAGE_ID, stages)) {
+    const closedAt = row.MOVED_TIME || row.CLOSEDATE;
+    if (!inBitrixRange(closedAt, range.from, range.to)) continue;
+    if (isDealWon(row.STAGE_ID, stages) || String(row.STAGE_SEMANTIC_ID || "").toUpperCase() === "S") {
       bump(wonBy, row.ASSIGNED_BY_ID);
       bump(wonSumBy, row.ASSIGNED_BY_ID, money(row.OPPORTUNITY));
-    } else if (isDealLost(row.STAGE_ID, stages)) {
+    } else if (isDealLost(row.STAGE_ID, stages) || String(row.STAGE_SEMANTIC_ID || "").toUpperCase() === "F") {
       bump(loseBy, row.ASSIGNED_BY_ID);
     }
   }
@@ -398,7 +423,7 @@ export async function loadBitrixAnalytics(opts = {}) {
     note:
       "Звонки — статистика телефонии за период. Сделки и лиды — по дате создания. " +
       "Выигранные лиды — статус «качественный» / конвертация в сделку по дате закрытия. " +
-      "Выигранные и проигранные сделки — по дате закрытия и семантике стадии. " +
+      "Выигранные и проигранные сделки — только закрытые в выбранном периоде (по дате перехода в финал). " +
       "Сделки в работе (шт и ₽) — текущий снимок открытой воронки, не фильтр периода.",
     warnings,
   };
