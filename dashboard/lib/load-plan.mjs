@@ -2,7 +2,6 @@ import { odataAllPages } from "./odata.mjs";
 import { EMPTY_GUID } from "../load-employees.mjs";
 
 const STAGES = [
-  { id: "pay", title: "Согласование оплаты", minOrder: 2 },
   { id: "pause", title: "Пауза", minOrder: 3 },
   { id: "sprint", title: "Спринт", minOrder: 4 },
   { id: "impl", title: "Внедрение", minOrder: 5 },
@@ -256,7 +255,7 @@ export async function loadPlan(fromText, toText) {
   for (const row of tasksData.rows) {
     if (row.Попадос || row.Отложено || row.Стикер) continue;
     const order = statusOrder(row, orderByStatusId, orderByStatusKey);
-    if (!(order > 2)) continue;
+    if (!(order > 3)) continue;
     const hours = num(row.Часы);
     const marketing = num(row.Маркетинг);
     const client = counterparties.get(extractKey(row.Контрагент_Key) || extractKey(row.Контрагент));
@@ -358,7 +357,9 @@ export async function loadPlan(fromText, toText) {
     from: fromText,
     to: toText,
     generatedAt: new Date().toISOString(),
-    stages: STAGES.map((s) => ({ id: s.id, title: s.title })),
+    stages: STAGES
+      .filter((s) => s.id !== "pay")
+      .map((s) => ({ id: s.id, title: s.title })),
     variants: {
       rp: {
         title: "Разработка",

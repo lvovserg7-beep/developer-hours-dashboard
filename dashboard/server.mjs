@@ -200,7 +200,7 @@ const IIS_WEB_CONFIG = `<?xml version="1.0" encoding="UTF-8"?>
 `;
 
 function send(res, status, body, type, extra = {}) {
-  const buf = Buffer.from(body);
+  const buf = Buffer.isBuffer(body) ? body : Buffer.from(String(body));
   res.writeHead(status, {
     "Content-Type": type,
     "Content-Length": buf.length,
@@ -271,6 +271,20 @@ const server = createServer(async (req, res) => {
       return send(res, 200, html, "text/html; charset=utf-8");
     }
 
+    if (path === "/favicon.ico" || path === "/favicon.png") {
+      const candidates = [
+        join(root, "public", "favicon.ico"),
+        join(root, "public", "assets", "favicon.ico"),
+        join(root, "public", "assets", "favicon.png"),
+      ];
+      const file = candidates.find((p) => existsSync(p));
+      if (!file) return send(res, 404, "Not found", "text/plain; charset=utf-8");
+      const type = file.endsWith(".png") ? "image/png" : "image/x-icon";
+      return send(res, 200, readFileSync(file), type, {
+        "Cache-Control": "public, max-age=86400",
+      });
+    }
+
     if (path.startsWith("/assets/")) {
       const rel = path.slice("/assets/".length).replace(/\.\./g, "");
       const assetsRoot = resolve(root, "public", "assets");
@@ -287,7 +301,9 @@ const server = createServer(async (req, res) => {
         ".webp": "image/webp",
         ".ico": "image/x-icon",
       };
-      return send(res, 200, readFileSync(file), types[ext] || "application/octet-stream");
+      const headers = {};
+      if (rel.startsWith("favicon")) headers["Cache-Control"] = "public, max-age=86400";
+      return send(res, 200, readFileSync(file), types[ext] || "application/octet-stream", headers);
     }
 
     if (path === "/api/login" && req.method === "POST") {
