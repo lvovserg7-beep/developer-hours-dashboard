@@ -63,7 +63,8 @@
     body.wide-report:not(.is-full) #tab-budget .panel,
     body.wide-report:not(.is-full) #tab-ozon .panel,
     body.wide-report:not(.is-full) #tab-units .panel,
-    body.wide-report:not(.is-full) #tab-wb .panel {
+    body.wide-report:not(.is-full) #tab-wb .panel,
+    body.wide-report:not(.is-full) #tab-debtors .panel {
       width: 100%;
     }
     body.wide-report:not(.is-full) #tab-plan .report-stage,
@@ -75,7 +76,9 @@
     body.wide-report:not(.is-full) #tab-units .report-stage,
     body.wide-report:not(.is-full) #tab-units .report-stage-inner,
     body.wide-report:not(.is-full) #tab-wb .report-stage,
-    body.wide-report:not(.is-full) #tab-wb .report-stage-inner {
+    body.wide-report:not(.is-full) #tab-wb .report-stage-inner,
+    body.wide-report:not(.is-full) #tab-debtors .report-stage,
+    body.wide-report:not(.is-full) #tab-debtors .report-stage-inner {
       width: 100%;
       max-width: none;
     }
@@ -83,7 +86,8 @@
     body.wide-report:not(.is-full) #tab-budget .pnl-scroll,
     body.wide-report:not(.is-full) #tab-ozon .pnl-scroll,
     body.wide-report:not(.is-full) #tab-units .pnl-scroll,
-    body.wide-report:not(.is-full) #tab-wb .pnl-scroll {
+    body.wide-report:not(.is-full) #tab-wb .pnl-scroll,
+    body.wide-report:not(.is-full) #tab-debtors .pnl-scroll {
       max-width: none;
       width: 100%;
       overflow-x: auto;
@@ -92,7 +96,8 @@
     body.wide-report:not(.is-full) #tab-budget table.budget,
     body.wide-report:not(.is-full) #tab-ozon table.ozon,
     body.wide-report:not(.is-full) #tab-units table.pnl,
-    body.wide-report:not(.is-full) #tab-wb table.ozon {
+    body.wide-report:not(.is-full) #tab-wb table.ozon,
+    body.wide-report:not(.is-full) #tab-debtors table.pnl {
       width: 100%;
       min-width: 100%;
       table-layout: auto;
@@ -101,7 +106,8 @@
     body.wide-report:not(.is-full) #tab-budget table.budget td.name,
     body.wide-report:not(.is-full) #tab-ozon table.ozon td.name,
     body.wide-report:not(.is-full) #tab-units table.pnl td.name,
-    body.wide-report:not(.is-full) #tab-wb table.ozon td.name {
+    body.wide-report:not(.is-full) #tab-wb table.ozon td.name,
+    body.wide-report:not(.is-full) #tab-debtors table.pnl td.name {
       max-width: none;
       width: 14%;
     }
@@ -114,9 +120,13 @@
     body.wide-report:not(.is-full) #tab-units table.pnl th.num,
     body.wide-report:not(.is-full) #tab-units table.pnl td.num,
     body.wide-report:not(.is-full) #tab-wb table.ozon th.num,
-    body.wide-report:not(.is-full) #tab-wb table.ozon td.num {
+    body.wide-report:not(.is-full) #tab-wb table.ozon td.num,
+    body.wide-report:not(.is-full) #tab-debtors table.pnl th.num,
+    body.wide-report:not(.is-full) #tab-debtors table.pnl td.num {
       white-space: nowrap;
     }
+    table.pnl td.diff-bad,
+    table.pnl td.num.neg { color: var(--bad); }
     .brand-bar {
       display: flex;
       flex-wrap: wrap;
@@ -1072,6 +1082,7 @@
         <button type="button" class="tab" data-tab="ozon" role="tab" aria-selected="false">Озон себестоимость</button>
         <button type="button" class="tab" data-tab="ozondrr" role="tab" aria-selected="false">Озон ДРР</button>
         <button type="button" class="tab" data-tab="wb" role="tab" aria-selected="false">WB рентабельность</button>
+        <button type="button" class="tab" data-tab="debtors" role="tab" aria-selected="false">Задолженность клиентов</button>
         <button type="button" class="tab" data-tab="admin" id="tab-btn-admin" role="tab" aria-selected="false" hidden>Админка</button>
         <span class="tab-spacer"></span>
         <span class="slide-bar" id="slide-bar" hidden aria-label="Перелистывание экранов">
@@ -1141,6 +1152,7 @@
             <label><input type="checkbox" id="new-ozon"> Озон себестоимость</label>
             <label><input type="checkbox" id="new-ozondrr"> Озон ДРР</label>
             <label><input type="checkbox" id="new-wb"> WB рентабельность</label>
+            <label><input type="checkbox" id="new-debtors"> Задолженность клиентов</label>
             <label><input type="checkbox" id="new-admin"> Администратор</label>
           </div>
           <button type="submit">Создать</button>
@@ -1466,6 +1478,17 @@
         </form>
         <div id="wb-err" class="err" hidden></div>
         <div id="wb-report"></div>
+      </section>
+    </div>
+    <div id="tab-debtors" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Задолженность клиентов</h2>
+        <p class="lead tab-intro">Типовой отчёт 1С: остатки регистра «Расчеты с клиентами». Долг клиента и наш долг по сумме остатка, планируемая оплата и отгрузка. База — trade (Аллсан Интеграция).</p>
+        <form class="pnl-toolbar" id="debtors-form">
+          <button type="submit" id="debtors-run">Сформировать</button>
+        </form>
+        <div id="debtors-err" class="err" hidden></div>
+        <div id="debtors-report"></div>
       </section>
     </div>
   </main>
@@ -3268,7 +3291,104 @@
       loadWbReport();
     }
 
-    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb"];
+    let debtorsLoaded = false;
+    let debtorsInflight = false;
+
+    function debtorsErr(text) {
+      const el = document.getElementById("debtors-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function formatDebtMoney(value) {
+      const n = Number(value) || 0;
+      if (!n) return "";
+      return new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+    }
+
+    function debtMoneyCell(value) {
+      const n = Number(value) || 0;
+      const cls = n < 0 ? "num neg" : "num";
+      return `<td class="${cls}">${formatDebtMoney(n)}</td>`;
+    }
+
+    function debtMetricCells(m) {
+      return debtMoneyCell(m.clientDebt)
+        + debtMoneyCell(m.ourDebt)
+        + debtMoneyCell(m.saldo)
+        + debtMoneyCell(m.paying)
+        + debtMoneyCell(m.toPay)
+        + debtMoneyCell(m.toShip)
+        + debtMoneyCell(m.shipping);
+    }
+
+    function renderDebtors(report) {
+      const box = document.getElementById("debtors-report");
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      const head = `
+        <tr>
+          <th>Клиент</th>
+          <th class="num">Долг клиента</th>
+          <th class="num">Наш долг</th>
+          <th class="num">Сальдо долга</th>
+          <th class="num">Оплачивается</th>
+          <th class="num">Планируемая оплата</th>
+          <th class="num">К отгрузке</th>
+          <th class="num">Отгружается</th>
+        </tr>`;
+      const body = (report.rows || []).map((row) =>
+        `<tr><td class="name">${escapeHtml(row.client)}</td>${debtMetricCells(row)}</tr>`
+      ).join("");
+      const total = report.total
+        ? `<tr class="total"><td class="name">Итого ${escapeHtml(report.currency || "RUB")}</td>${debtMetricCells(report.total)}</tr>`
+        : "";
+      const warn = (report.warnings || []).length
+        ? `<p class="pnl-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
+        : "";
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      const meta = report.meta
+        ? `<p class="pnl-note">Клиентов: ${escapeHtml(String(report.meta.clients || 0))} · строк остатков: ${escapeHtml(String(report.meta.balanceRows || 0))} · ${escapeHtml(report.source || "")}</p>`
+        : "";
+      box.innerHTML = warn + note + meta + `
+        <div class="pnl-section">
+          <div class="pnl-scroll"><table class="pnl">
+            <thead>${head}</thead>
+            <tbody>${body || `<tr><td colspan="8">Нет данных</td></tr>`}${total}</tbody>
+          </table></div>
+        </div>`;
+      afterReportPaint();
+    }
+
+    async function loadDebtorsReport() {
+      if (USER.tabs?.debtors === false || debtorsInflight) return;
+      debtorsInflight = true;
+      const btn = document.getElementById("debtors-run");
+      if (btn) btn.disabled = true;
+      debtorsErr("");
+      document.getElementById("debtors-report").innerHTML = `<p class="pnl-note">Читаем остатки расчётов с клиентами из 1С…</p>`;
+      try {
+        const report = await api("/api/debtors", { method: "GET" });
+        debtorsLoaded = true;
+        renderDebtors(report);
+      } catch (e) {
+        debtorsLoaded = false;
+        renderDebtors(null);
+        debtorsErr(e.message || String(e));
+      } finally {
+        debtorsInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb", "debtors"];
     const TAB_LABELS = {
       hours: "Часы",
       activity: "Активность",
@@ -3282,6 +3402,7 @@
       ozon: "Озон",
       ozondrr: "Озон ДРР",
       wb: "WB",
+      debtors: "Задолженность",
     };
 
     function normalizeClientTabOrder(order) {
@@ -3449,6 +3570,11 @@
         await loadWbReport();
         return;
       }
+      if (name === "debtors") {
+        debtorsLoaded = false;
+        await loadDebtorsReport();
+        return;
+      }
     }
 
     async function refreshSlideTabData() {
@@ -3515,6 +3641,7 @@
       document.getElementById("tab-ozon").hidden = name !== "ozon";
       document.getElementById("tab-ozondrr").hidden = name !== "ozondrr";
       document.getElementById("tab-wb").hidden = name !== "wb";
+      document.getElementById("tab-debtors").hidden = name !== "debtors";
       document.getElementById("tab-admin").hidden = name !== "admin";
       for (const btn of document.querySelectorAll(".tab[data-tab]")) {
         const on = btn.getAttribute("data-tab") === name;
@@ -3524,7 +3651,7 @@
       if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
       document.body.classList.toggle(
         "wide-report",
-        name === "plan" || name === "budget" || name === "ozon" || name === "units" || name === "wb"
+        name === "plan" || name === "budget" || name === "ozon" || name === "units" || name === "wb" || name === "debtors"
       );
       document.body.classList.remove("wide-plan");
       if (name === "admin") loadAdminUsers();
@@ -3578,6 +3705,7 @@
         ["ozon", "Озон"],
         ["ozondrr", "Озон ДРР"],
         ["wb", "WB"],
+        ["debtors", "Задолженность"],
       ];
       const cards = users.map((u) => {
         const self = u.id === USER.id;
@@ -3839,6 +3967,7 @@
               ozon: document.getElementById("new-ozon").checked,
               ozondrr: document.getElementById("new-ozondrr").checked,
               wb: document.getElementById("new-wb").checked,
+              debtors: document.getElementById("new-debtors").checked,
             },
           }),
         });
@@ -4095,6 +4224,11 @@
       e.preventDefault();
       wbLoaded = false;
       loadWbReport();
+    });
+    document.getElementById("debtors-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      debtorsLoaded = false;
+      loadDebtorsReport();
     });
     setBitrixPreset("week");
     initPnlDates();

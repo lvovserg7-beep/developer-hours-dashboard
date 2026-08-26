@@ -14,6 +14,7 @@ import { loadBitrixFrequency } from "./lib/load-bitrix-freq.mjs";
 import { loadOzonCost, defaultOzonRange } from "./lib/load-ozon.mjs";
 import { loadOzonDrr, defaultOzonDrrRange } from "./lib/load-ozon-drr.mjs";
 import { loadWbProfit, defaultWbRange } from "./lib/load-wb.mjs";
+import { loadDebtors } from "./lib/load-debtors.mjs";
 import {
   cookieName,
   ensureAuthReady,
@@ -27,6 +28,10 @@ import {
   publicUser,
   filterDashboardData,
   userHasTab,
+  clientIp,
+  checkLoginThrottle,
+  registerLoginFailure,
+  clearLoginFailures,
 } from "./lib/auth.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -308,8 +313,32 @@ const server = createServer(async (req, res) => {
 
     if (path === "/api/login" && req.method === "POST") {
       const body = await readJson(req);
-      const user = checkLogin(body.login, body.password);
-      if (!user) return json(res, 401, { error: "Неверный логин или пароль" });
+      const login = String(body.login || "");
+      const ip = clientIp(req);
+      const throttle = checkLoginThrottle(ip, login);
+      if (!throttle.ok) {
+        return json(
+          res,
+          429,
+          { error: throttle.error },
+          { "Retry-After": String(throttle.retryAfterSec) }
+        );
+      }
+      const user = checkLogin(login, body.password);
+      if (!user) {
+        registerLoginFailure(ip, login);
+        const again = checkLoginThrottle(ip, login);
+        if (!again.ok) {
+          return json(
+            res,
+            429,
+            { error: again.error },
+            { "Retry-After": String(again.retryAfterSec) }
+          );
+        }
+        return json(res, 401, { error: "Неверный логин или пароль" });
+      }
+      clearLoginFailures(ip, login);
       return json(res, 200, { ok: true, user: publicUser(user) }, { "Set-Cookie": sessionCookie(signSession(user.id)) });
     }
 
@@ -528,6 +557,22 @@ const server = createServer(async (req, res) => {
         const msg = String(err.message || err);
         console.error(err);
         return json(res, /период/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/debtors") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "debtors")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Задолженность клиентов»." });
+      }
+      try {
+        const organization = String(url.searchParams.get("organization") || "").trim();
+        const data = await loadDebtors({ organization: organization || undefined, database: "trade" });
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, 502, { error: msg });
       }
     }
 

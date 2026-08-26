@@ -7,7 +7,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const USERS_FILE = join(root, "users.json");
 const COOKIE = "dash_session";
 const SESSION_MS = 14 * 24 * 60 * 60 * 1000;
-const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb"];
+const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb", "debtors"];
 
 const TAB_LABELS = {
   hours: "Часы",
@@ -22,6 +22,7 @@ const TAB_LABELS = {
   ozon: "Озон себестоимость",
   ozondrr: "Озон ДРР",
   wb: "WB рентабельность",
+  debtors: "Задолженность клиентов",
 };
 
 function envValues() {
@@ -137,7 +138,7 @@ export function ensureAuthReady() {
       salt,
       hash,
       admin: true,
-      tabs: { hours: true, activity: true, pnl: true, pnlecotidy: true, units: true, plan: true, budget: true, bitrix: true, bitrixfreq: true, ozon: true, ozondrr: true, wb: true },
+      tabs: { hours: true, activity: true, pnl: true, pnlecotidy: true, units: true, plan: true, budget: true, bitrix: true, bitrixfreq: true, ozon: true, ozondrr: true, wb: true, debtors: true },
       tabOrder: [...TABS],
     });
     changed = true;
@@ -305,7 +306,88 @@ export function filterDashboardData(data, user) {
   if (!tabs.ozon) out.ozon = null;
   if (!tabs.ozondrr) out.ozondrr = null;
   if (!tabs.wb) out.wb = null;
+  if (!tabs.debtors) out.debtors = null;
   return out;
+}
+
+/** Защита входа от перебора: лимит по IP и по логину. */
+const LOGIN_MAX_FAILS = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_LOCK_MS = 15 * 60 * 1000;
+const loginAttempts = new Map();
+
+function attemptKey(kind, value) {
+  return `${kind}:${String(value || "").trim().toLowerCase() || "-"}`;
+}
+
+function pruneAttempt(key, now = Date.now()) {
+  const row = loginAttempts.get(key);
+  if (!row) return null;
+  if (row.lockedUntil && row.lockedUntil <= now) {
+    loginAttempts.delete(key);
+    return null;
+  }
+  if (!row.lockedUntil && now - row.firstAt > LOGIN_WINDOW_MS) {
+    loginAttempts.delete(key);
+    return null;
+  }
+  return row;
+}
+
+function lockedRetrySec(row, now = Date.now()) {
+  if (!row?.lockedUntil || row.lockedUntil <= now) return 0;
+  return Math.max(1, Math.ceil((row.lockedUntil - now) / 1000));
+}
+
+export function clientIp(req) {
+  const xf = String(req.headers?.["x-forwarded-for"] || "")
+    .split(",")[0]
+    .trim();
+  if (xf) return xf;
+  const real = String(req.headers?.["x-real-ip"] || "").trim();
+  if (real) return real;
+  return String(req.socket?.remoteAddress || "unknown");
+}
+
+/** @returns {{ ok: true } | { ok: false, retryAfterSec: number, error: string }} */
+export function checkLoginThrottle(ip, login) {
+  const now = Date.now();
+  let worst = 0;
+  for (const key of [attemptKey("ip", ip), attemptKey("login", login)]) {
+    const row = pruneAttempt(key, now);
+    const sec = lockedRetrySec(row, now);
+    if (sec > worst) worst = sec;
+  }
+  if (worst > 0) {
+    const mins = Math.ceil(worst / 60);
+    return {
+      ok: false,
+      retryAfterSec: worst,
+      error: `Слишком много неудачных попыток. Повторите через ${mins} мин.`,
+    };
+  }
+  return { ok: true };
+}
+
+export function registerLoginFailure(ip, login) {
+  const now = Date.now();
+  for (const key of [attemptKey("ip", ip), attemptKey("login", login)]) {
+    let row = pruneAttempt(key, now);
+    if (!row) row = { count: 0, firstAt: now, lockedUntil: 0 };
+    row.count += 1;
+    if (row.count >= LOGIN_MAX_FAILS) {
+      row.lockedUntil = now + LOGIN_LOCK_MS;
+    }
+    loginAttempts.set(key, row);
+  }
+  if (loginAttempts.size > 5000) {
+    for (const key of [...loginAttempts.keys()]) pruneAttempt(key, now);
+  }
+}
+
+export function clearLoginFailures(ip, login) {
+  loginAttempts.delete(attemptKey("ip", ip));
+  loginAttempts.delete(attemptKey("login", login));
 }
 
 export { publicUser, TABS, TAB_LABELS, normalizeTabOrder };
