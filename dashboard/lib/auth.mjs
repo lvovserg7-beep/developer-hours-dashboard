@@ -7,7 +7,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const USERS_FILE = join(root, "users.json");
 const COOKIE = "dash_session";
 const SESSION_MS = 14 * 24 * 60 * 60 * 1000;
-const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb", "debtors"];
+const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb", "debtors", "mbalance", "clientpay"];
 
 const TAB_LABELS = {
   hours: "Часы",
@@ -23,6 +23,8 @@ const TAB_LABELS = {
   ozondrr: "Озон ДРР",
   wb: "WB рентабельность",
   debtors: "Задолженность клиентов",
+  mbalance: "Управленческий баланс",
+  clientpay: "Реестр оплат клиентов",
 };
 
 function envValues() {
@@ -138,7 +140,7 @@ export function ensureAuthReady() {
       salt,
       hash,
       admin: true,
-      tabs: { hours: true, activity: true, pnl: true, pnlecotidy: true, units: true, plan: true, budget: true, bitrix: true, bitrixfreq: true, ozon: true, ozondrr: true, wb: true, debtors: true },
+      tabs: { hours: true, activity: true, pnl: true, pnlecotidy: true, units: true, plan: true, budget: true, bitrix: true, bitrixfreq: true, ozon: true, ozondrr: true, wb: true, debtors: true, mbalance: true, clientpay: true },
       tabOrder: [...TABS],
     });
     changed = true;
@@ -307,6 +309,8 @@ export function filterDashboardData(data, user) {
   if (!tabs.ozondrr) out.ozondrr = null;
   if (!tabs.wb) out.wb = null;
   if (!tabs.debtors) out.debtors = null;
+  if (!tabs.mbalance) out.mbalance = null;
+  if (!tabs.clientpay) out.clientpay = null;
   return out;
 }
 

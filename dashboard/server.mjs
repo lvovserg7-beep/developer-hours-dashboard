@@ -15,6 +15,8 @@ import { loadOzonCost, defaultOzonRange } from "./lib/load-ozon.mjs";
 import { loadOzonDrr, defaultOzonDrrRange } from "./lib/load-ozon-drr.mjs";
 import { loadWbProfit, defaultWbRange } from "./lib/load-wb.mjs";
 import { loadDebtors } from "./lib/load-debtors.mjs";
+import { loadMBalance } from "./lib/load-mbalance.mjs";
+import { loadClientPayments } from "./lib/load-client-payments.mjs";
 import {
   cookieName,
   ensureAuthReady,
@@ -568,6 +570,56 @@ const server = createServer(async (req, res) => {
       try {
         const organization = String(url.searchParams.get("organization") || "").trim();
         const data = await loadDebtors({ organization: organization || undefined, database: "trade" });
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/mbalance") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "mbalance")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Управленческий баланс»." });
+      }
+      try {
+        const dateFrom = String(url.searchParams.get("from") || "").trim();
+        const dateTo = String(url.searchParams.get("to") || "").trim();
+        const organization = String(url.searchParams.get("organization") || "").trim();
+        const data = await loadMBalance({
+          dateFrom: dateFrom || undefined,
+          dateTo: dateTo || undefined,
+          organization: organization || undefined,
+          database: "trade",
+        });
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /период|пустой/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/clientpay") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "clientpay")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Реестр оплат клиентов»." });
+      }
+      try {
+        const dateFrom = String(url.searchParams.get("from") || "").trim();
+        const dateTo = String(url.searchParams.get("to") || "").trim();
+        const year = String(url.searchParams.get("year") || "").trim();
+        const month = String(url.searchParams.get("month") || "").trim();
+        const client = String(url.searchParams.get("client") || "").trim();
+        const data = await loadClientPayments({
+          dateFrom: dateFrom || undefined,
+          dateTo: dateTo || undefined,
+          year: year ? Number(year) : undefined,
+          month: month ? Number(month) : undefined,
+          client: client || undefined,
+          database: "trade",
+        });
         return json(res, 200, data);
       } catch (err) {
         const msg = String(err.message || err);

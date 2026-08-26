@@ -64,7 +64,9 @@
     body.wide-report:not(.is-full) #tab-ozon .panel,
     body.wide-report:not(.is-full) #tab-units .panel,
     body.wide-report:not(.is-full) #tab-wb .panel,
-    body.wide-report:not(.is-full) #tab-debtors .panel {
+    body.wide-report:not(.is-full) #tab-debtors .panel,
+    body.wide-report:not(.is-full) #tab-mbalance .panel,
+    body.wide-report:not(.is-full) #tab-clientpay .panel {
       width: 100%;
     }
     body.wide-report:not(.is-full) #tab-plan .report-stage,
@@ -78,7 +80,11 @@
     body.wide-report:not(.is-full) #tab-wb .report-stage,
     body.wide-report:not(.is-full) #tab-wb .report-stage-inner,
     body.wide-report:not(.is-full) #tab-debtors .report-stage,
-    body.wide-report:not(.is-full) #tab-debtors .report-stage-inner {
+    body.wide-report:not(.is-full) #tab-debtors .report-stage-inner,
+    body.wide-report:not(.is-full) #tab-mbalance .report-stage,
+    body.wide-report:not(.is-full) #tab-mbalance .report-stage-inner,
+    body.wide-report:not(.is-full) #tab-clientpay .report-stage,
+    body.wide-report:not(.is-full) #tab-clientpay .report-stage-inner {
       width: 100%;
       max-width: none;
     }
@@ -87,7 +93,9 @@
     body.wide-report:not(.is-full) #tab-ozon .pnl-scroll,
     body.wide-report:not(.is-full) #tab-units .pnl-scroll,
     body.wide-report:not(.is-full) #tab-wb .pnl-scroll,
-    body.wide-report:not(.is-full) #tab-debtors .pnl-scroll {
+    body.wide-report:not(.is-full) #tab-debtors .pnl-scroll,
+    body.wide-report:not(.is-full) #tab-mbalance .pnl-scroll,
+    body.wide-report:not(.is-full) #tab-clientpay .pnl-scroll {
       max-width: none;
       width: 100%;
       overflow-x: auto;
@@ -97,7 +105,9 @@
     body.wide-report:not(.is-full) #tab-ozon table.ozon,
     body.wide-report:not(.is-full) #tab-units table.pnl,
     body.wide-report:not(.is-full) #tab-wb table.ozon,
-    body.wide-report:not(.is-full) #tab-debtors table.pnl {
+    body.wide-report:not(.is-full) #tab-debtors table.pnl,
+    body.wide-report:not(.is-full) #tab-mbalance table.pnl,
+    body.wide-report:not(.is-full) #tab-clientpay table.pnl {
       width: 100%;
       min-width: 100%;
       table-layout: auto;
@@ -107,7 +117,9 @@
     body.wide-report:not(.is-full) #tab-ozon table.ozon td.name,
     body.wide-report:not(.is-full) #tab-units table.pnl td.name,
     body.wide-report:not(.is-full) #tab-wb table.ozon td.name,
-    body.wide-report:not(.is-full) #tab-debtors table.pnl td.name {
+    body.wide-report:not(.is-full) #tab-debtors table.pnl td.name,
+    body.wide-report:not(.is-full) #tab-mbalance table.pnl td.name,
+    body.wide-report:not(.is-full) #tab-clientpay table.pnl td.name {
       max-width: none;
       width: 14%;
     }
@@ -122,7 +134,11 @@
     body.wide-report:not(.is-full) #tab-wb table.ozon th.num,
     body.wide-report:not(.is-full) #tab-wb table.ozon td.num,
     body.wide-report:not(.is-full) #tab-debtors table.pnl th.num,
-    body.wide-report:not(.is-full) #tab-debtors table.pnl td.num {
+    body.wide-report:not(.is-full) #tab-debtors table.pnl td.num,
+    body.wide-report:not(.is-full) #tab-mbalance table.pnl th.num,
+    body.wide-report:not(.is-full) #tab-mbalance table.pnl td.num,
+    body.wide-report:not(.is-full) #tab-clientpay table.pnl th.num,
+    body.wide-report:not(.is-full) #tab-clientpay table.pnl td.num {
       white-space: nowrap;
     }
     table.pnl td.diff-bad,
@@ -1083,6 +1099,8 @@
         <button type="button" class="tab" data-tab="ozondrr" role="tab" aria-selected="false">Озон ДРР</button>
         <button type="button" class="tab" data-tab="wb" role="tab" aria-selected="false">WB рентабельность</button>
         <button type="button" class="tab" data-tab="debtors" role="tab" aria-selected="false">Задолженность клиентов</button>
+        <button type="button" class="tab" data-tab="mbalance" role="tab" aria-selected="false">Управленческий баланс</button>
+        <button type="button" class="tab" data-tab="clientpay" role="tab" aria-selected="false">Реестр оплат клиентов</button>
         <button type="button" class="tab" data-tab="admin" id="tab-btn-admin" role="tab" aria-selected="false" hidden>Админка</button>
         <span class="tab-spacer"></span>
         <span class="slide-bar" id="slide-bar" hidden aria-label="Перелистывание экранов">
@@ -1153,6 +1171,8 @@
             <label><input type="checkbox" id="new-ozondrr"> Озон ДРР</label>
             <label><input type="checkbox" id="new-wb"> WB рентабельность</label>
             <label><input type="checkbox" id="new-debtors"> Задолженность клиентов</label>
+            <label><input type="checkbox" id="new-mbalance"> Управленческий баланс</label>
+            <label><input type="checkbox" id="new-clientpay"> Реестр оплат клиентов</label>
             <label><input type="checkbox" id="new-admin"> Администратор</label>
           </div>
           <button type="submit">Создать</button>
@@ -1489,6 +1509,56 @@
         </form>
         <div id="debtors-err" class="err" hidden></div>
         <div id="debtors-report"></div>
+      </section>
+    </div>
+    <div id="tab-mbalance" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Управленческий баланс</h2>
+        <p class="lead tab-intro">Типовой отчёт 1С: активы и пассивы по месяцам (остаток на конец и изменение). Источники — оперативные регистры и «Прочие активы и пассивы». База — trade.</p>
+        <form class="pnl-toolbar" id="mbalance-form">
+          <div class="filter-period-row">
+            <div>
+              <label for="mbalance-from">С</label>
+              <input id="mbalance-from" type="date" required>
+            </div>
+            <div>
+              <label for="mbalance-to">По</label>
+              <input id="mbalance-to" type="date" required>
+            </div>
+          </div>
+          <button type="submit" id="mbalance-run">Сформировать</button>
+        </form>
+        <div id="mbalance-err" class="err" hidden></div>
+        <div id="mbalance-report"></div>
+      </section>
+    </div>
+    <div id="tab-clientpay" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Реестр оплат клиентов</h2>
+        <p class="lead tab-intro">Проведённые оплаты от клиентов по организациям Аллсан (база trade): безнал и касса. Фильтр по месяцу и по клиенту.</p>
+        <form class="pnl-toolbar" id="clientpay-form">
+          <div class="filter-dates">
+            <label>Период</label>
+            <div class="dates">
+              <div>
+                <span>с</span>
+                <input id="clientpay-from" type="date" required>
+              </div>
+              <div>
+                <span>по</span>
+                <input id="clientpay-to" type="date" required>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label for="clientpay-client">Клиент</label>
+            <input id="clientpay-client" type="text" list="clientpay-clients" placeholder="Все клиенты" autocomplete="off">
+            <datalist id="clientpay-clients"></datalist>
+          </div>
+          <button type="submit" id="clientpay-run">Сформировать</button>
+        </form>
+        <div id="clientpay-err" class="err" hidden></div>
+        <div id="clientpay-report"></div>
       </section>
     </div>
   </main>
@@ -3388,7 +3458,227 @@
       }
     }
 
-    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb", "debtors"];
+    let mbalanceLoaded = false;
+    let mbalanceInflight = false;
+
+    function mbalanceErr(text) {
+      const el = document.getElementById("mbalance-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function initMBalanceDates() {
+      const from = document.getElementById("mbalance-from");
+      const to = document.getElementById("mbalance-to");
+      if (!from || !to || from.value) return;
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth();
+      const pad = (n) => String(n).padStart(2, "0");
+      // По умолчанию — последние 4 месяца, как на типовом скрине
+      const start = new Date(y, m - 3, 1);
+      const end = new Date(y, m + 1, 0);
+      from.value = `${start.getFullYear()}-${pad(start.getMonth() + 1)}-01`;
+      to.value = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
+    }
+
+    function formatMbMoney(value) {
+      const n = Number(value) || 0;
+      if (!n) return "";
+      const abs = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(n));
+      return n < 0 ? `(${abs})` : abs;
+    }
+
+    function mbMoneyCell(value) {
+      const n = Number(value) || 0;
+      const cls = n < 0 ? "num neg" : "num";
+      return `<td class="${cls}">${formatMbMoney(n)}</td>`;
+    }
+
+    function renderMBalance(report) {
+      const box = document.getElementById("mbalance-report");
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      const periods = report.periods || [];
+      const headMonths = periods.map((p) =>
+        `<th class="num" colspan="2">${escapeHtml(p.label)}</th>`
+      ).join("");
+      const headSub = periods.map(() =>
+        `<th class="num">На конец периода</th><th class="num">Изменение</th>`
+      ).join("");
+      const body = (report.rows || []).map((row) => {
+        const pad = "&nbsp;".repeat(Math.max(0, (row.level || 0) * 3));
+        const nameCls = row.bold ? "name" : "name";
+        const weight = row.bold ? "font-weight:600;" : "";
+        const cells = periods.map((_, i) => mbMoneyCell(row.end?.[i]) + mbMoneyCell(row.change?.[i])).join("");
+        const zero = (row.end || []).every((v) => !Number(v)) && (row.change || []).every((v) => !Number(v));
+        if (row.hideIfZero && zero) return "";
+        return `<tr style="${weight}"><td class="${nameCls}">${pad}${escapeHtml(row.name)}</td>${cells}</tr>`;
+      }).join("");
+      const imb = report.imbalance;
+      const imbRow = imb
+        ? `<tr class="total"><td class="name neg">${escapeHtml(imb.name)}</td>${periods.map((_, i) => mbMoneyCell(imb.end?.[i]) + mbMoneyCell(imb.change?.[i])).join("")}</tr>`
+        : "";
+      const warn = (report.warnings || []).length
+        ? `<p class="pnl-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
+        : "";
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      box.innerHTML = warn + note + `
+        <div class="pnl-section">
+          <div class="pnl-scroll"><table class="pnl">
+            <thead>
+              <tr><th>Показатель</th>${headMonths}</tr>
+              <tr><th></th>${headSub}</tr>
+            </thead>
+            <tbody>${body || `<tr><td colspan="${1 + periods.length * 2}">Нет данных</td></tr>`}${imbRow}</tbody>
+          </table></div>
+        </div>`;
+      afterReportPaint();
+    }
+
+    async function loadMBalanceReport() {
+      if (USER.tabs?.mbalance === false || mbalanceInflight) return;
+      mbalanceInflight = true;
+      const btn = document.getElementById("mbalance-run");
+      if (btn) btn.disabled = true;
+      mbalanceErr("");
+      document.getElementById("mbalance-report").innerHTML = `<p class="pnl-note">Считаем управленческий баланс из 1С…</p>`;
+      try {
+        const from = document.getElementById("mbalance-from").value;
+        const to = document.getElementById("mbalance-to").value;
+        const qs = new URLSearchParams({ from, to });
+        const report = await api("/api/mbalance?" + qs.toString(), { method: "GET" });
+        mbalanceLoaded = true;
+        renderMBalance(report);
+      } catch (e) {
+        mbalanceLoaded = false;
+        renderMBalance(null);
+        mbalanceErr(e.message || String(e));
+      } finally {
+        mbalanceInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    let clientpayLoaded = false;
+    let clientpayInflight = false;
+
+    function clientpayErr(text) {
+      const el = document.getElementById("clientpay-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function initClientPayDates() {
+      const from = document.getElementById("clientpay-from");
+      const to = document.getElementById("clientpay-to");
+      if (!from || !to || from.value) return;
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth();
+      const pad = (n) => String(n).padStart(2, "0");
+      const last = new Date(y, m + 1, 0).getDate();
+      from.value = `${y}-${pad(m + 1)}-01`;
+      to.value = `${y}-${pad(m + 1)}-${pad(last)}`;
+    }
+
+    function formatPayMoney(value) {
+      const n = Number(value) || 0;
+      if (!n) return "";
+      return new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+    }
+
+    function fillClientPayDatalist(clients) {
+      const list = document.getElementById("clientpay-clients");
+      if (!list) return;
+      list.innerHTML = (clients || []).map((c) => `<option value="${escapeHtml(c)}"></option>`).join("");
+    }
+
+    function renderClientPay(report) {
+      const box = document.getElementById("clientpay-report");
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      fillClientPayDatalist(report.clients);
+      const head = `
+        <tr>
+          <th>Дата</th>
+          <th>Номер</th>
+          <th>Клиент</th>
+          <th class="num">Сумма</th>
+          <th>Канал</th>
+          <th>Назначение</th>
+        </tr>`;
+      const body = (report.rows || []).map((row) =>
+        `<tr>
+          <td>${escapeHtml(row.date)}</td>
+          <td>${escapeHtml(row.number)}</td>
+          <td class="name">${escapeHtml(row.client)}</td>
+          <td class="num">${formatPayMoney(row.amount)}</td>
+          <td>${escapeHtml(row.channel)}</td>
+          <td>${escapeHtml(row.purpose || row.comment || "")}</td>
+        </tr>`
+      ).join("");
+      const total = report.total
+        ? `<tr class="total"><td colspan="3" class="name">Итого: ${escapeHtml(String(report.total.count || 0))} опл.</td><td class="num">${formatPayMoney(report.total.amount)}</td><td colspan="2"></td></tr>`
+        : "";
+      const warn = (report.warnings || []).length
+        ? `<p class="pnl-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
+        : "";
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      const orgs = (report.organizations || []).length
+        ? `<p class="pnl-note">Организации: ${report.organizations.map((o) => escapeHtml(o)).join(", ")} · ${escapeHtml(report.dateFrom)} — ${escapeHtml(report.dateTo)}</p>`
+        : "";
+      box.innerHTML = warn + note + orgs + `
+        <div class="pnl-section">
+          <div class="pnl-scroll"><table class="pnl">
+            <thead>${head}</thead>
+            <tbody>${body || `<tr><td colspan="6">Нет оплат за период</td></tr>`}${total}</tbody>
+          </table></div>
+        </div>`;
+      afterReportPaint();
+    }
+
+    async function loadClientPayReport() {
+      if (USER.tabs?.clientpay === false || clientpayInflight) return;
+      clientpayInflight = true;
+      const btn = document.getElementById("clientpay-run");
+      if (btn) btn.disabled = true;
+      clientpayErr("");
+      document.getElementById("clientpay-report").innerHTML = `<p class="pnl-note">Читаем оплаты клиентов из 1С…</p>`;
+      try {
+        const from = document.getElementById("clientpay-from").value;
+        const to = document.getElementById("clientpay-to").value;
+        const client = document.getElementById("clientpay-client").value.trim();
+        const qs = new URLSearchParams({ from, to });
+        if (client) qs.set("client", client);
+        const report = await api("/api/clientpay?" + qs.toString(), { method: "GET" });
+        clientpayLoaded = true;
+        renderClientPay(report);
+      } catch (e) {
+        clientpayLoaded = false;
+        renderClientPay(null);
+        clientpayErr(e.message || String(e));
+      } finally {
+        clientpayInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb", "debtors", "mbalance", "clientpay"];
     const TAB_LABELS = {
       hours: "Часы",
       activity: "Активность",
@@ -3403,6 +3693,8 @@
       ozondrr: "Озон ДРР",
       wb: "WB",
       debtors: "Задолженность",
+      mbalance: "Упр. баланс",
+      clientpay: "Оплаты клиентов",
     };
 
     function normalizeClientTabOrder(order) {
@@ -3575,6 +3867,16 @@
         await loadDebtorsReport();
         return;
       }
+      if (name === "mbalance") {
+        mbalanceLoaded = false;
+        await loadMBalanceReport();
+        return;
+      }
+      if (name === "clientpay") {
+        clientpayLoaded = false;
+        await loadClientPayReport();
+        return;
+      }
     }
 
     async function refreshSlideTabData() {
@@ -3642,6 +3944,8 @@
       document.getElementById("tab-ozondrr").hidden = name !== "ozondrr";
       document.getElementById("tab-wb").hidden = name !== "wb";
       document.getElementById("tab-debtors").hidden = name !== "debtors";
+      document.getElementById("tab-mbalance").hidden = name !== "mbalance";
+      document.getElementById("tab-clientpay").hidden = name !== "clientpay";
       document.getElementById("tab-admin").hidden = name !== "admin";
       for (const btn of document.querySelectorAll(".tab[data-tab]")) {
         const on = btn.getAttribute("data-tab") === name;
@@ -3651,7 +3955,7 @@
       if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
       document.body.classList.toggle(
         "wide-report",
-        name === "plan" || name === "budget" || name === "ozon" || name === "units" || name === "wb" || name === "debtors"
+        name === "plan" || name === "budget" || name === "ozon" || name === "units" || name === "wb" || name === "debtors" || name === "mbalance" || name === "clientpay"
       );
       document.body.classList.remove("wide-plan");
       if (name === "admin") loadAdminUsers();
@@ -3706,6 +4010,8 @@
         ["ozondrr", "Озон ДРР"],
         ["wb", "WB"],
         ["debtors", "Задолженность"],
+        ["mbalance", "Упр. баланс"],
+        ["clientpay", "Оплаты клиентов"],
       ];
       const cards = users.map((u) => {
         const self = u.id === USER.id;
@@ -3968,6 +4274,8 @@
               ozondrr: document.getElementById("new-ozondrr").checked,
               wb: document.getElementById("new-wb").checked,
               debtors: document.getElementById("new-debtors").checked,
+              mbalance: document.getElementById("new-mbalance").checked,
+              clientpay: document.getElementById("new-clientpay").checked,
             },
           }),
         });
@@ -4230,6 +4538,16 @@
       debtorsLoaded = false;
       loadDebtorsReport();
     });
+    document.getElementById("mbalance-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      mbalanceLoaded = false;
+      loadMBalanceReport();
+    });
+    document.getElementById("clientpay-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      clientpayLoaded = false;
+      loadClientPayReport();
+    });
     setBitrixPreset("week");
     initPnlDates();
     initPnlEcotidyDates();
@@ -4239,6 +4557,8 @@
     initOzonDates();
     initOzonDrrDates();
     initWbDates();
+    initMBalanceDates();
+    initClientPayDates();
     installMonthPickers();
     ensureReportStages();
     applyUserUi();
