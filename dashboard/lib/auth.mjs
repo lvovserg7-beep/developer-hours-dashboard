@@ -7,7 +7,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const USERS_FILE = join(root, "users.json");
 const COOKIE = "dash_session";
 const SESSION_MS = 14 * 24 * 60 * 60 * 1000;
-const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb", "debtors", "mbalance", "clientpay"];
+const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb", "debtors", "mbalance", "clientpay", "seo", "seoqueries"];
 
 const TAB_LABELS = {
   hours: "Часы",
@@ -25,6 +25,8 @@ const TAB_LABELS = {
   debtors: "Задолженность клиентов",
   mbalance: "Управленческий баланс",
   clientpay: "Реестр оплат клиентов",
+  seo: "Поиск SEO",
+  seoqueries: "SEO запросы",
 };
 
 function envValues() {
@@ -268,6 +270,16 @@ export function updateUser(id, patch) {
   }
   if (patch.tabs) user.tabs = normalizeTabs({ ...user.tabs, ...patch.tabs });
   if (patch.tabOrder) user.tabOrder = normalizeTabOrder(patch.tabOrder);
+  saveStore(store);
+  return publicUser(user);
+}
+
+/** Смена только своего порядка вкладок (без прав админа). */
+export function updateOwnTabOrder(userId, tabOrder) {
+  const store = ensureAuthReady();
+  const user = store.users.find((u) => u.id === userId);
+  if (!user) throw new Error("Пользователь не найден");
+  user.tabOrder = normalizeTabOrder(tabOrder);
   saveStore(store);
   return publicUser(user);
 }

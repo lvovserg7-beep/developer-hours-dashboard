@@ -272,6 +272,37 @@
       margin: 0;
       text-align: left;
     }
+    .seo-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 420px;
+      overflow: auto;
+      padding: 4px 0;
+    }
+    .seo-bar-row {
+      display: grid;
+      grid-template-columns: 3.2em 1fr 4.5em;
+      gap: 8px;
+      align-items: center;
+      font-size: var(--fs-xs);
+    }
+    .seo-bar-lab { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .seo-bar-track {
+      height: 10px;
+      background: #ebe7df;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .seo-bar-fill {
+      display: block;
+      height: 100%;
+      background: var(--accent, #8a5a12);
+    }
+    .seo-bar-val {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
     .units-detail {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1017,15 +1048,33 @@
       padding: 4px 6px;
       font-size: 13px;
       background: var(--th);
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
     }
     .admin-tab-order li.is-off {
       opacity: 0.45;
+    }
+    .admin-tab-order li.is-dragging {
+      opacity: 0.55;
+      cursor: grabbing;
+    }
+    .admin-tab-order li.drag-over {
+      outline: 2px solid var(--accent, #8a5a12);
+      outline-offset: 1px;
+    }
+    .admin-tab-order .ord-grip {
+      color: var(--muted);
+      letter-spacing: -1px;
+      font-size: 11px;
+      line-height: 1;
     }
     .admin-tab-order .ord-label { min-width: 4.5em; }
     .admin-tab-order button {
       min-width: 22px;
       padding: 0 4px;
       line-height: 1.2;
+      cursor: pointer;
     }
     .admin-tab-order button:disabled {
       opacity: 0.3;
@@ -1101,6 +1150,9 @@
         <button type="button" class="tab" data-tab="debtors" role="tab" aria-selected="false">Задолженность клиентов</button>
         <button type="button" class="tab" data-tab="mbalance" role="tab" aria-selected="false">Управленческий баланс</button>
         <button type="button" class="tab" data-tab="clientpay" role="tab" aria-selected="false">Реестр оплат клиентов</button>
+        <button type="button" class="tab" data-tab="seo" role="tab" aria-selected="false">Поиск SEO</button>
+        <button type="button" class="tab" data-tab="seoqueries" role="tab" aria-selected="false">SEO запросы</button>
+        <button type="button" class="tab" data-tab="settings" id="tab-btn-settings" role="tab" aria-selected="false">Настройки</button>
         <button type="button" class="tab" data-tab="admin" id="tab-btn-admin" role="tab" aria-selected="false" hidden>Админка</button>
         <span class="tab-spacer"></span>
         <span class="slide-bar" id="slide-bar" hidden aria-label="Перелистывание экранов">
@@ -1144,6 +1196,15 @@
     <footer>Часы в работе по статусам — реквизит «Часы». Часы в работе по разработчикам — реквизит «Часы разработки», не общие часы задачи. Выполненные по разработчикам: анализ = часы минус разработка и внедрение; разработка = часы разработки и внедрения. Выполненные по аналитикам: только реквизит «Часы внедрения», без часов анализа. Аналитик — реквизит «Руководитель проектов».</footer>
     </div>
     </div>
+    <div id="tab-settings" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Настройки</h2>
+        <p class="lead tab-intro">Порядок вкладок только для вас. Перетащите пункты или используйте ↑ ↓. Включить или выключить доски и назначить администратора может только администратор.</p>
+        <div id="settings-err" class="err" hidden></div>
+        <p class="admin-user-order-title">Порядок вкладок — перетащите или ↑ ↓</p>
+        <ol class="admin-tab-order" id="settings-tab-order"></ol>
+      </section>
+    </div>
     <div id="tab-admin" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Пользователи и права</h2>
@@ -1173,6 +1234,8 @@
             <label><input type="checkbox" id="new-debtors"> Задолженность клиентов</label>
             <label><input type="checkbox" id="new-mbalance"> Управленческий баланс</label>
             <label><input type="checkbox" id="new-clientpay"> Реестр оплат клиентов</label>
+            <label><input type="checkbox" id="new-seo"> Поиск SEO</label>
+            <label><input type="checkbox" id="new-seoqueries"> SEO запросы</label>
             <label><input type="checkbox" id="new-admin"> Администратор</label>
           </div>
           <button type="submit">Создать</button>
@@ -1454,7 +1517,7 @@
     </div>
     <div id="tab-ozondrr" class="tab-panel" hidden>
       <section class="panel">
-        <h2 class="tab-intro">Расчет доли рекламных расходов</h2>
+        <h2 class="tab-intro">Расчёт доли рекламных расходов</h2>
         <p class="lead tab-intro">Как отчёт 1С «ДИР озон»: продажи из документов Alsn_Продажи, расходы поиск / трафарет / заказ из регистра рекламы. ДРР = (все расходы рекламы) / сумма продаж × 100. База — Первый интегратор (ecotidy).</p>
         <form class="pnl-toolbar" id="ozondrr-form">
           <div class="filter-dates">
@@ -1478,7 +1541,7 @@
     </div>
     <div id="tab-wb" class="tab-panel" hidden>
       <section class="panel">
-        <h2 class="tab-intro">Расчет рентабельности WB</h2>
+        <h2 class="tab-intro">Расчёт рентабельности WB</h2>
         <p class="lead tab-intro">Как отчёт 1С: реализация Wildberries по дням, налог из константы ALSN_WB_НалогНаПрибыль, себестоимость — средняя по расходу регистра. База — Первый интегратор (ecotidy).</p>
         <form class="pnl-toolbar" id="wb-form">
           <div class="filter-dates">
@@ -1503,7 +1566,7 @@
     <div id="tab-debtors" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Задолженность клиентов</h2>
-        <p class="lead tab-intro">Типовой отчёт 1С: остатки регистра «Расчеты с клиентами». Долг клиента и наш долг по сумме остатка, планируемая оплата и отгрузка. База — trade (Аллсан Интеграция).</p>
+        <p class="lead tab-intro">Типовой отчёт 1С: остатки регистра «Расчёты с клиентами». Долг клиента и наш долг по сумме остатка, планируемая оплата и отгрузка. База — trade (Аллсан Интеграция).</p>
         <form class="pnl-toolbar" id="debtors-form">
           <button type="submit" id="debtors-run">Сформировать</button>
         </form>
@@ -1559,6 +1622,82 @@
         </form>
         <div id="clientpay-err" class="err" hidden></div>
         <div id="clientpay-report"></div>
+      </section>
+    </div>
+    <div id="tab-seo" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Поиск SEO</h2>
+        <p class="lead tab-intro">Показы и клики из Google Search Console и Яндекс.Вебмастера. История в CSV на диске сервера; догрузка при старте, если за вчера ещё нет данных.</p>
+        <form class="pnl-toolbar" id="seo-form">
+          <div class="filter-dates">
+            <label>Период</label>
+            <div class="dates">
+              <div>
+                <span>с</span>
+                <input id="seo-from" type="date" required>
+              </div>
+              <div>
+                <span>по</span>
+                <input id="seo-to" type="date" required>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label for="seo-source">Источник</label>
+            <select id="seo-source">
+              <option value="all">Все</option>
+              <option value="gsc">Google Search Console</option>
+              <option value="yandex">Яндекс.Вебмастер</option>
+            </select>
+          </div>
+          <div>
+            <label for="seo-site">Сайт</label>
+            <select id="seo-site">
+              <option value="">Все сайты</option>
+            </select>
+          </div>
+          <button type="submit" id="seo-run">Сформировать</button>
+        </form>
+        <div id="seo-err" class="err" hidden></div>
+        <div id="seo-report"></div>
+      </section>
+    </div>
+    <div id="tab-seoqueries" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">SEO запросы</h2>
+        <p class="lead tab-intro">Полный список поисковых запросов из CSV (Яндекс / GSC). Те же фильтры, что на доске «Поиск SEO»: период, источник и сайт.</p>
+        <form class="pnl-toolbar" id="seoqueries-form">
+          <div class="filter-dates">
+            <label>Период</label>
+            <div class="dates">
+              <div>
+                <span>с</span>
+                <input id="seoqueries-from" type="date" required>
+              </div>
+              <div>
+                <span>по</span>
+                <input id="seoqueries-to" type="date" required>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label for="seoqueries-source">Источник</label>
+            <select id="seoqueries-source">
+              <option value="all">Все</option>
+              <option value="gsc">Google Search Console</option>
+              <option value="yandex">Яндекс.Вебмастер</option>
+            </select>
+          </div>
+          <div>
+            <label for="seoqueries-site">Сайт</label>
+            <select id="seoqueries-site">
+              <option value="">Все сайты</option>
+            </select>
+          </div>
+          <button type="submit" id="seoqueries-run">Сформировать</button>
+        </form>
+        <div id="seoqueries-err" class="err" hidden></div>
+        <div id="seoqueries-report"></div>
       </section>
     </div>
   </main>
@@ -2881,7 +3020,7 @@
         <th class="num">Сделок в работе</th>
         <th class="num">Заполнено правильно</th>
         <th class="num">Лиды без акт. 3+ дн.</th>
-        <th class="num">Лиды &gt;3 недозвона</th>
+        <th class="num">Лиды &gt;3 недозвонов</th>
         <th class="num">Сделки без задачи</th>
         <th class="num">Просроч. задачи</th>
       </tr>`;
@@ -3678,7 +3817,249 @@
       }
     }
 
-    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb", "debtors", "mbalance", "clientpay"];
+    let seoLoaded = false;
+    let seoInflight = false;
+
+    function seoErr(text) {
+      const el = document.getElementById("seo-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function initSeoDates() {
+      const from = document.getElementById("seo-from");
+      const to = document.getElementById("seo-to");
+      if (!from || !to || from.value) return;
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      const yest = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+      const fromD = new Date(yest.getTime() - 6 * 24 * 60 * 60 * 1000);
+      from.value = `${fromD.getFullYear()}-${pad(fromD.getMonth() + 1)}-${pad(fromD.getDate())}`;
+      to.value = `${yest.getFullYear()}-${pad(yest.getMonth() + 1)}-${pad(yest.getDate())}`;
+    }
+
+    function formatSeoNum(value, digits = 0) {
+      const n = Number(value) || 0;
+      return new Intl.NumberFormat("ru-RU", {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+      }).format(n);
+    }
+
+    function formatSeoPct(value) {
+      return formatSeoNum((Number(value) || 0) * 100, 2) + " %";
+    }
+
+    function fillSeoSites(sites, selected) {
+      const sel = document.getElementById("seo-site");
+      if (!sel) return;
+      const cur = selected != null ? selected : sel.value;
+      sel.innerHTML =
+        `<option value="">Все сайты</option>` +
+        (sites || []).map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+      if (cur && [...sel.options].some((o) => o.value === cur)) sel.value = cur;
+    }
+
+    function renderSeo(report) {
+      const box = document.getElementById("seo-report");
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      fillSeoSites(report.sites);
+      const t = report.totals || {};
+      const g = report.bySource?.gsc || {};
+      const y = report.bySource?.yandex || {};
+      const series = report.series || [];
+      const maxImp = Math.max(1, ...series.map((r) => r.impressions || 0));
+      const bars = series
+        .map((r) => {
+          const w = Math.max(2, Math.round((100 * (r.impressions || 0)) / maxImp));
+          return `<div class="seo-bar-row" title="${escapeHtml(r.date)}: показы ${formatSeoNum(r.impressions)}, клики ${formatSeoNum(r.clicks)}">
+            <span class="seo-bar-lab">${escapeHtml(r.date.slice(5))}</span>
+            <span class="seo-bar-track"><span class="seo-bar-fill" style="width:${w}%"></span></span>
+            <span class="seo-bar-val">${formatSeoNum(r.impressions)}</span>
+          </div>`;
+        })
+        .join("");
+      const qHead = `<tr><th>Источник</th><th>Запрос</th><th class="num">Клики</th><th class="num">Показы</th><th class="num">CTR</th><th class="num">Позиция</th></tr>`;
+      const qBody = (report.queries || [])
+        .map(
+          (q) => `<tr>
+          <td>${escapeHtml(q.source === "gsc" ? "GSC" : "Яндекс")}</td>
+          <td class="name">${escapeHtml(q.query)}</td>
+          <td class="num">${formatSeoNum(q.clicks)}</td>
+          <td class="num">${formatSeoNum(q.impressions)}</td>
+          <td class="num">${formatSeoPct(q.ctr)}</td>
+          <td class="num">${formatSeoNum(q.position, 1)}</td>
+        </tr>`
+        )
+        .join("");
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      const period = report.period
+        ? `<p class="pnl-note">Период CSV: ${escapeHtml(report.period.from)} — ${escapeHtml(report.period.to)} · целевой день синка: ${escapeHtml(report.yesterday || "")}</p>`
+        : "";
+      box.innerHTML = note + period + `
+        <div class="kpi-strip">
+          <div class="bt"><div class="lab">Показы</div><div class="val">${formatSeoNum(t.impressions)}</div></div>
+          <div class="bt"><div class="lab">Клики</div><div class="val">${formatSeoNum(t.clicks)}</div></div>
+          <div class="bt"><div class="lab">CTR</div><div class="val">${formatSeoPct(t.ctr)}</div></div>
+          <div class="bt"><div class="lab">GSC показы</div><div class="val">${formatSeoNum(g.impressions)}</div></div>
+          <div class="bt"><div class="lab">Яндекс показы</div><div class="val">${formatSeoNum(y.impressions)}</div></div>
+        </div>
+        <div class="pnl-section">
+          <h3>Показы по дням</h3>
+          <div class="seo-bars">${bars || `<p class="meta">Нет дневных строк в CSV за период</p>`}</div>
+        </div>
+        <div class="pnl-section">
+          <h3>Топ-10 запросов</h3>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead>${qHead}</thead>
+            <tbody>${qBody || `<tr><td colspan="6">Нет запросов в CSV</td></tr>`}</tbody>
+          </table></div>
+        </div>`;
+      afterReportPaint();
+    }
+
+    async function loadSeoReport() {
+      if (USER.tabs?.seo === false || seoInflight) return;
+      seoInflight = true;
+      const btn = document.getElementById("seo-run");
+      if (btn) btn.disabled = true;
+      seoErr("");
+      document.getElementById("seo-report").innerHTML = `<p class="pnl-note">Читаем SEO из CSV…</p>`;
+      try {
+        const from = document.getElementById("seo-from").value;
+        const to = document.getElementById("seo-to").value;
+        const source = document.getElementById("seo-source").value;
+        const site = document.getElementById("seo-site").value;
+        const qs = new URLSearchParams({ from, to, source, limit: "10" });
+        if (site) qs.set("site", site);
+        const report = await api("/api/seo?" + qs.toString(), { method: "GET" });
+        seoLoaded = true;
+        renderSeo(report);
+      } catch (e) {
+        seoLoaded = false;
+        renderSeo(null);
+        seoErr(e.message || String(e));
+      } finally {
+        seoInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    let seoqueriesLoaded = false;
+    let seoqueriesInflight = false;
+
+    function seoqueriesErr(text) {
+      const el = document.getElementById("seoqueries-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function initSeoQueriesDates() {
+      const from = document.getElementById("seoqueries-from");
+      const to = document.getElementById("seoqueries-to");
+      if (!from || !to || from.value) return;
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      const yest = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+      const fromD = new Date(yest.getTime() - 6 * 24 * 60 * 60 * 1000);
+      from.value = `${fromD.getFullYear()}-${pad(fromD.getMonth() + 1)}-${pad(fromD.getDate())}`;
+      to.value = `${yest.getFullYear()}-${pad(yest.getMonth() + 1)}-${pad(yest.getDate())}`;
+    }
+
+    function fillSeoQueriesSites(sites, selected) {
+      const sel = document.getElementById("seoqueries-site");
+      if (!sel) return;
+      const cur = selected != null ? selected : sel.value;
+      sel.innerHTML =
+        `<option value="">Все сайты</option>` +
+        (sites || []).map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+      if (cur && [...sel.options].some((o) => o.value === cur)) sel.value = cur;
+    }
+
+    function renderSeoQueries(report) {
+      const box = document.getElementById("seoqueries-report");
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      fillSeoQueriesSites(report.sites);
+      const t = report.totals || {};
+      const qHead = `<tr><th>№</th><th>Источник</th><th>Сайт</th><th>Запрос</th><th class="num">Клики</th><th class="num">Показы</th><th class="num">CTR</th><th class="num">Позиция</th></tr>`;
+      const qBody = (report.queries || [])
+        .map(
+          (q, i) => `<tr>
+          <td class="num">${i + 1}</td>
+          <td>${escapeHtml(q.source === "gsc" ? "GSC" : "Яндекс")}</td>
+          <td>${escapeHtml(q.site || "")}</td>
+          <td class="name">${escapeHtml(q.query)}</td>
+          <td class="num">${formatSeoNum(q.clicks)}</td>
+          <td class="num">${formatSeoNum(q.impressions)}</td>
+          <td class="num">${formatSeoPct(q.ctr)}</td>
+          <td class="num">${formatSeoNum(q.position, 1)}</td>
+        </tr>`
+        )
+        .join("");
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      const period = report.period
+        ? `<p class="pnl-note">Период: ${escapeHtml(report.period.from)} — ${escapeHtml(report.period.to)} · запросов: ${formatSeoNum((report.queries || []).length)}</p>`
+        : "";
+      box.innerHTML = note + period + `
+        <div class="kpi-strip">
+          <div class="bt"><div class="lab">Показы</div><div class="val">${formatSeoNum(t.impressions)}</div></div>
+          <div class="bt"><div class="lab">Клики</div><div class="val">${formatSeoNum(t.clicks)}</div></div>
+          <div class="bt"><div class="lab">CTR</div><div class="val">${formatSeoPct(t.ctr)}</div></div>
+        </div>
+        <div class="pnl-section">
+          <h3>Все запросы</h3>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead>${qHead}</thead>
+            <tbody>${qBody || `<tr><td colspan="8">Нет запросов в CSV</td></tr>`}</tbody>
+          </table></div>
+        </div>`;
+      afterReportPaint();
+    }
+
+    async function loadSeoQueriesReport() {
+      if (USER.tabs?.seoqueries === false || seoqueriesInflight) return;
+      seoqueriesInflight = true;
+      const btn = document.getElementById("seoqueries-run");
+      if (btn) btn.disabled = true;
+      seoqueriesErr("");
+      document.getElementById("seoqueries-report").innerHTML = `<p class="pnl-note">Читаем SEO-запросы из CSV…</p>`;
+      try {
+        const from = document.getElementById("seoqueries-from").value;
+        const to = document.getElementById("seoqueries-to").value;
+        const source = document.getElementById("seoqueries-source").value;
+        const site = document.getElementById("seoqueries-site").value;
+        const qs = new URLSearchParams({ from, to, source, limit: "all" });
+        if (site) qs.set("site", site);
+        const report = await api("/api/seoqueries?" + qs.toString(), { method: "GET" });
+        seoqueriesLoaded = true;
+        renderSeoQueries(report);
+      } catch (e) {
+        seoqueriesLoaded = false;
+        renderSeoQueries(null);
+        seoqueriesErr(e.message || String(e));
+      } finally {
+        seoqueriesInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb", "debtors", "mbalance", "clientpay", "seo", "seoqueries"];
     const TAB_LABELS = {
       hours: "Часы",
       activity: "Активность",
@@ -3695,6 +4076,8 @@
       debtors: "Задолженность",
       mbalance: "Упр. баланс",
       clientpay: "Оплаты клиентов",
+      seo: "Поиск SEO",
+      seoqueries: "SEO запросы",
     };
 
     function normalizeClientTabOrder(order) {
@@ -3718,6 +4101,7 @@
       for (const name of order) {
         if (USER.tabs?.[name] === true) tabs.push(name);
       }
+      tabs.push("settings");
       if (USER.admin) tabs.push("admin");
       return tabs;
     }
@@ -3730,13 +4114,15 @@
         const btn = nav.querySelector(`.tab[data-tab="${name}"]`);
         if (btn) nav.insertBefore(btn, spacer);
       }
+      const settingsBtn = document.getElementById("tab-btn-settings");
+      if (settingsBtn) nav.insertBefore(settingsBtn, spacer);
       const adminBtn = document.getElementById("tab-btn-admin");
       if (adminBtn) nav.insertBefore(adminBtn, spacer);
     }
 
-    /** Экраны для ТВ-перелистывания (без админки). */
+    /** Экраны для ТВ-перелистывания (без настроек и админки). */
     function slideTabs() {
-      return visibleTabs().filter((name) => name !== "admin");
+      return visibleTabs().filter((name) => name !== "admin" && name !== "settings");
     }
 
     function currentTabName() {
@@ -3877,6 +4263,16 @@
         await loadClientPayReport();
         return;
       }
+      if (name === "seo") {
+        seoLoaded = false;
+        await loadSeoReport();
+        return;
+      }
+      if (name === "seoqueries") {
+        seoqueriesLoaded = false;
+        await loadSeoQueriesReport();
+        return;
+      }
     }
 
     async function refreshSlideTabData() {
@@ -3946,6 +4342,9 @@
       document.getElementById("tab-debtors").hidden = name !== "debtors";
       document.getElementById("tab-mbalance").hidden = name !== "mbalance";
       document.getElementById("tab-clientpay").hidden = name !== "clientpay";
+      document.getElementById("tab-seo").hidden = name !== "seo";
+      document.getElementById("tab-seoqueries").hidden = name !== "seoqueries";
+      document.getElementById("tab-settings").hidden = name !== "settings";
       document.getElementById("tab-admin").hidden = name !== "admin";
       for (const btn of document.querySelectorAll(".tab[data-tab]")) {
         const on = btn.getAttribute("data-tab") === name;
@@ -3955,9 +4354,10 @@
       if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
       document.body.classList.toggle(
         "wide-report",
-        name === "plan" || name === "budget" || name === "ozon" || name === "units" || name === "wb" || name === "debtors" || name === "mbalance" || name === "clientpay"
+        name === "plan" || name === "budget" || name === "ozon" || name === "units" || name === "wb" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "seo" || name === "seoqueries"
       );
       document.body.classList.remove("wide-plan");
+      if (name === "settings") loadSettingsTabOrder();
       if (name === "admin") loadAdminUsers();
       if (name === "activity" && data?.activity) fillActivityFilters(data.activity);
       // В обычном режиме отчёты только по «Сформировать»; часы/активность — при открытии вкладки.
@@ -4012,6 +4412,8 @@
         ["debtors", "Задолженность"],
         ["mbalance", "Упр. баланс"],
         ["clientpay", "Оплаты клиентов"],
+        ["seo", "Поиск SEO"],
+        ["seoqueries", "SEO запросы"],
       ];
       const cards = users.map((u) => {
         const self = u.id === USER.id;
@@ -4022,7 +4424,8 @@
         }).join("");
         const orderItems = order.map((name, idx) => {
           const on = u.tabs?.[name] === true;
-          return `<li class="${on ? "" : "is-off"}" data-tab="${escapeHtml(name)}">
+          return `<li class="${on ? "" : "is-off"}" data-tab="${escapeHtml(name)}" draggable="true">
+            <span class="ord-grip" aria-hidden="true">⋮⋮</span>
             <span class="ord-label">${escapeHtml(TAB_LABELS[name] || name)}</span>
             <button type="button" data-act="tab-up" title="Выше" ${idx === 0 ? "disabled" : ""}>↑</button>
             <button type="button" data-act="tab-down" title="Ниже" ${idx === order.length - 1 ? "disabled" : ""}>↓</button>
@@ -4032,17 +4435,79 @@
           <div class="admin-user-head">
             <div><span class="login">${escapeHtml(u.login)}</span>${self ? ' <span class="meta">вы</span>' : ""}</div>
             <div class="admin-user-actions">
-              <label><input type="checkbox" data-field="admin" ${u.admin ? "checked" : ""}> Админ</label>
+              <label><input type="checkbox" data-field="admin" ${u.admin ? "checked" : ""}> Администратор</label>
               <button type="button" data-act="pass">Пароль</button>
               ${self ? "" : `<button type="button" data-act="del">Удалить</button>`}
             </div>
           </div>
           <div class="admin-user-tabs">${checks}</div>
-          <p class="admin-user-order-title">Порядок вкладок (↑ ↓) — свой для этого пользователя</p>
+          <p class="admin-user-order-title">Порядок вкладок — перетащите или ↑ ↓</p>
           <ol class="admin-tab-order">${orderItems}</ol>
         </div>`;
       }).join("");
       return `<div class="admin-users">${cards}</div>`;
+    }
+
+    async function saveUserTabOrder(card, nextOrder) {
+      const id = card.getAttribute("data-id");
+      if (!id) return;
+      const next = normalizeClientTabOrder(nextOrder);
+      const updated = await api("/api/admin/users?id=" + encodeURIComponent(id), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tabOrder: next }),
+      });
+      card.setAttribute("data-tab-order", next.join(","));
+      if (id === USER.id) {
+        USER.tabOrder = updated.tabOrder;
+        applyUserUi();
+      }
+      await loadAdminUsers();
+    }
+
+    function settingsErr(text) {
+      const el = document.getElementById("settings-err");
+      if (!el) return;
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function settingsOrderItemsHtml(order) {
+      return order.map((name, idx) => {
+        const on = USER.tabs?.[name] === true;
+        return `<li class="${on ? "" : "is-off"}" data-tab="${escapeHtml(name)}" draggable="true">
+          <span class="ord-grip" aria-hidden="true">⋮⋮</span>
+          <span class="ord-label">${escapeHtml(TAB_LABELS[name] || name)}</span>
+          <button type="button" data-act="tab-up" title="Выше" ${idx === 0 ? "disabled" : ""}>↑</button>
+          <button type="button" data-act="tab-down" title="Ниже" ${idx === order.length - 1 ? "disabled" : ""}>↓</button>
+        </li>`;
+      }).join("");
+    }
+
+    function loadSettingsTabOrder() {
+      const list = document.getElementById("settings-tab-order");
+      if (!list) return;
+      settingsErr("");
+      const order = normalizeClientTabOrder(USER.tabOrder);
+      list.setAttribute("data-tab-order", order.join(","));
+      list.innerHTML = settingsOrderItemsHtml(order);
+    }
+
+    async function saveOwnTabOrder(nextOrder) {
+      const next = normalizeClientTabOrder(nextOrder);
+      const updated = await api("/api/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tabOrder: next }),
+      });
+      USER.tabOrder = updated.tabOrder;
+      applyUserUi();
+      loadSettingsTabOrder();
     }
 
     async function loadAdminUsers() {
@@ -4074,7 +4539,7 @@
         if (form) bitrixTab.insertBefore(form, bitrixStage);
         wrapStageHost(bitrixTab, bitrixStage);
       }
-      const skip = new Set(["tab-hours", "tab-bitrix", "tab-admin"]);
+      const skip = new Set(["tab-hours", "tab-bitrix", "tab-admin", "tab-settings"]);
       for (const tab of document.querySelectorAll(".tab-panel")) {
         if (skip.has(tab.id)) continue;
         const panel = tab.querySelector(":scope > .panel");
@@ -4276,6 +4741,8 @@
               debtors: document.getElementById("new-debtors").checked,
               mbalance: document.getElementById("new-mbalance").checked,
               clientpay: document.getElementById("new-clientpay").checked,
+              seo: document.getElementById("new-seo").checked,
+              seoqueries: document.getElementById("new-seoqueries").checked,
             },
           }),
         });
@@ -4352,21 +4819,194 @@
           const tmp = next[i];
           next[i] = next[j];
           next[j] = tmp;
-          const updated = await api("/api/admin/users?id=" + encodeURIComponent(id), {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ tabOrder: next }),
-          });
-          if (id === USER.id) {
-            USER.tabOrder = updated.tabOrder;
-            applyUserUi();
-          }
-          await loadAdminUsers();
+          await saveUserTabOrder(card, next);
         }
       } catch (ex) {
         adminErr(ex.message || String(ex));
       }
     });
+
+    (() => {
+      const root = document.getElementById("admin-users");
+      let dragEl = null;
+      let dragCard = null;
+      let dragStartOrder = "";
+
+      function clearDragOver(list) {
+        const scope = list || root;
+        for (const el of scope.querySelectorAll(".admin-tab-order li.drag-over")) {
+          el.classList.remove("drag-over");
+        }
+      }
+
+      function orderFromList(list) {
+        return [...list.querySelectorAll("li[data-tab]")].map((el) => el.getAttribute("data-tab")).filter(Boolean);
+      }
+
+      root.addEventListener("dragstart", (e) => {
+        const li = e.target.closest("li[data-tab]");
+        if (!li || !root.contains(li)) return;
+        if (e.target.closest("button, input, a")) {
+          e.preventDefault();
+          return;
+        }
+        const card = li.closest(".admin-user[data-id]");
+        const list = li.closest(".admin-tab-order");
+        if (!card || !list) return;
+        dragEl = li;
+        dragCard = card;
+        dragStartOrder = orderFromList(list).join(",");
+        li.classList.add("is-dragging");
+        try {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", li.getAttribute("data-tab") || "");
+        } catch (_) { /* IE/Edge quirks */ }
+      });
+
+      root.addEventListener("dragover", (e) => {
+        if (!dragEl || !dragCard) return;
+        const list = dragCard.querySelector(".admin-tab-order");
+        if (!list || !dragCard.contains(e.target)) return;
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+
+        const overLi = e.target.closest("li[data-tab]");
+        clearDragOver(list);
+        if (!overLi || overLi === dragEl || overLi.parentElement !== list) return;
+        overLi.classList.add("drag-over");
+        const rect = overLi.getBoundingClientRect();
+        const before = (e.clientX - rect.left) < rect.width / 2;
+        if (before) {
+          if (overLi.previousElementSibling !== dragEl) list.insertBefore(dragEl, overLi);
+        } else if (overLi.nextElementSibling !== dragEl) {
+          list.insertBefore(dragEl, overLi.nextSibling);
+        }
+      });
+
+      root.addEventListener("drop", (e) => {
+        if (!dragEl || !dragCard || !dragCard.contains(e.target)) return;
+        e.preventDefault();
+      });
+
+      root.addEventListener("dragend", async () => {
+        const card = dragCard;
+        const list = card?.querySelector(".admin-tab-order");
+        if (dragEl) dragEl.classList.remove("is-dragging");
+        clearDragOver();
+        const start = dragStartOrder;
+        dragEl = null;
+        dragCard = null;
+        dragStartOrder = "";
+        if (!card || !list) return;
+        const next = orderFromList(list);
+        if (next.join(",") === start) return;
+        try {
+          adminErr("");
+          await saveUserTabOrder(card, next);
+        } catch (ex) {
+          adminErr(ex.message || String(ex));
+          await loadAdminUsers();
+        }
+      });
+    })();
+
+    (() => {
+      const list = document.getElementById("settings-tab-order");
+      if (!list) return;
+      let dragEl = null;
+      let dragStartOrder = "";
+
+      function clearDragOver() {
+        for (const el of list.querySelectorAll("li.drag-over")) el.classList.remove("drag-over");
+      }
+
+      function orderFromList() {
+        return [...list.querySelectorAll("li[data-tab]")].map((el) => el.getAttribute("data-tab")).filter(Boolean);
+      }
+
+      list.addEventListener("click", async (e) => {
+        const btn = e.target.closest("button[data-act]");
+        if (!btn || !list.contains(btn)) return;
+        const act = btn.getAttribute("data-act");
+        if (act !== "tab-up" && act !== "tab-down") return;
+        const item = btn.closest("li[data-tab]");
+        if (!item) return;
+        const tab = item.getAttribute("data-tab");
+        let order = normalizeClientTabOrder(
+          (list.getAttribute("data-tab-order") || "").split(",").filter(Boolean)
+        );
+        const i = order.indexOf(tab);
+        if (i < 0) return;
+        const j = act === "tab-up" ? i - 1 : i + 1;
+        if (j < 0 || j >= order.length) return;
+        const next = order.slice();
+        const tmp = next[i];
+        next[i] = next[j];
+        next[j] = tmp;
+        try {
+          settingsErr("");
+          await saveOwnTabOrder(next);
+        } catch (ex) {
+          settingsErr(ex.message || String(ex));
+        }
+      });
+
+      list.addEventListener("dragstart", (e) => {
+        const li = e.target.closest("li[data-tab]");
+        if (!li || !list.contains(li)) return;
+        if (e.target.closest("button, input, a")) {
+          e.preventDefault();
+          return;
+        }
+        dragEl = li;
+        dragStartOrder = orderFromList().join(",");
+        li.classList.add("is-dragging");
+        try {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", li.getAttribute("data-tab") || "");
+        } catch (_) { /* IE/Edge quirks */ }
+      });
+
+      list.addEventListener("dragover", (e) => {
+        if (!dragEl) return;
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+        const overLi = e.target.closest("li[data-tab]");
+        clearDragOver();
+        if (!overLi || overLi === dragEl || overLi.parentElement !== list) return;
+        overLi.classList.add("drag-over");
+        const rect = overLi.getBoundingClientRect();
+        const before = (e.clientX - rect.left) < rect.width / 2;
+        if (before) {
+          if (overLi.previousElementSibling !== dragEl) list.insertBefore(dragEl, overLi);
+        } else if (overLi.nextElementSibling !== dragEl) {
+          list.insertBefore(dragEl, overLi.nextSibling);
+        }
+      });
+
+      list.addEventListener("drop", (e) => {
+        if (!dragEl) return;
+        e.preventDefault();
+      });
+
+      list.addEventListener("dragend", async () => {
+        if (dragEl) dragEl.classList.remove("is-dragging");
+        clearDragOver();
+        const start = dragStartOrder;
+        dragEl = null;
+        dragStartOrder = "";
+        const next = orderFromList();
+        if (next.join(",") === start) return;
+        try {
+          settingsErr("");
+          await saveOwnTabOrder(next);
+        } catch (ex) {
+          settingsErr(ex.message || String(ex));
+          loadSettingsTabOrder();
+        }
+      });
+    })();
+
     document.getElementById("btn-full").addEventListener("click", () => {
       setFull(!document.body.classList.contains("is-full"));
     });
@@ -4548,6 +5188,16 @@
       clientpayLoaded = false;
       loadClientPayReport();
     });
+    document.getElementById("seo-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      seoLoaded = false;
+      loadSeoReport();
+    });
+    document.getElementById("seoqueries-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      seoqueriesLoaded = false;
+      loadSeoQueriesReport();
+    });
     setBitrixPreset("week");
     initPnlDates();
     initPnlEcotidyDates();
@@ -4559,6 +5209,8 @@
     initWbDates();
     initMBalanceDates();
     initClientPayDates();
+    initSeoDates();
+    initSeoQueriesDates();
     installMonthPickers();
     ensureReportStages();
     applyUserUi();

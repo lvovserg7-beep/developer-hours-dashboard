@@ -162,7 +162,7 @@ function finishMetrics(m, taxRate) {
 
 /**
  * Расчёт рентабельности Wildberries (база ecotidy).
- * Источник: отчёт «Рассчет себестоимости вб» / Расчет рентабельности WB.
+ * Источник: отчёт «Расчёт себестоимости ВБ» / Расчёт рентабельности WB.
  * Документы грузим по дням (месячный $filter на OData зависает).
  */
 export async function loadWbProfit(fromRaw, toRaw, opts = {}) {
@@ -318,7 +318,7 @@ export async function loadWbProfit(fromRaw, toRaw, opts = {}) {
     generatedAt: new Date().toISOString(),
     source: "1С ecotidy",
     organization: "ПЕРВЫЙ ИНТЕГРАТОР ООО",
-    title: "Расчет рентабельности WB",
+    title: "Расчёт рентабельности WB",
     period: { from: range.from, to: range.to },
     taxRate,
     rows: rows.map(({ name, metrics }) => ({ name, metrics })),

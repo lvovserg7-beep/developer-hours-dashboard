@@ -17,6 +17,7 @@ import { loadWbProfit, defaultWbRange } from "./lib/load-wb.mjs";
 import { loadDebtors } from "./lib/load-debtors.mjs";
 import { loadMBalance } from "./lib/load-mbalance.mjs";
 import { loadClientPayments } from "./lib/load-client-payments.mjs";
+import { loadSeoReport, syncSeoCsv } from "./lib/load-seo.mjs";
 import {
   cookieName,
   ensureAuthReady,
@@ -26,6 +27,7 @@ import {
   listPublicUsers,
   createUser,
   updateUser,
+  updateOwnTabOrder,
   removeUser,
   publicUser,
   filterDashboardData,
@@ -354,7 +356,22 @@ const server = createServer(async (req, res) => {
       return redirect(res, "/login.html");
     }
 
-    if (path === "/api/me") return json(res, 200, publicUser(user));
+    if (path === "/api/me") {
+      if (req.method === "GET") return json(res, 200, publicUser(user));
+      if (req.method === "PATCH") {
+        const body = await readJson(req);
+        if (body.admin != null || body.tabs || body.login != null || body.password) {
+          return json(res, 403, { error: "Через этот запрос можно менять только порядок своих вкладок." });
+        }
+        if (!body.tabOrder) return json(res, 400, { error: "Не указан порядок вкладок" });
+        try {
+          return json(res, 200, updateOwnTabOrder(user.id, body.tabOrder));
+        } catch (err) {
+          return json(res, 400, { error: String(err.message || err) });
+        }
+      }
+      return json(res, 405, { error: "Метод не поддерживается" });
+    }
 
     if (path === "/api/admin/users") {
       if (!user.admin) return json(res, 403, { error: "Нужны права администратора" });
@@ -628,6 +645,43 @@ const server = createServer(async (req, res) => {
       }
     }
 
+    if (path === "/api/seo" || path === "/api/seoqueries") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      const tabKey = path === "/api/seoqueries" ? "seoqueries" : "seo";
+      if (!userHasTab(user, tabKey)) {
+        return json(
+          res,
+          403,
+          { error: tabKey === "seoqueries" ? "Нет доступа к вкладке «SEO запросы»." : "Нет доступа к вкладке «Поиск SEO»." }
+        );
+      }
+      try {
+        const from = String(url.searchParams.get("from") || "").trim();
+        const to = String(url.searchParams.get("to") || "").trim();
+        const source = String(url.searchParams.get("source") || "all").trim();
+        const site = String(url.searchParams.get("site") || "").trim();
+        const limitRaw = String(url.searchParams.get("limit") || "").trim().toLowerCase();
+        let queryLimit = tabKey === "seoqueries" ? 0 : 10;
+        if (limitRaw === "all" || limitRaw === "0") queryLimit = 0;
+        else if (limitRaw) {
+          const n = Number(limitRaw);
+          if (Number.isFinite(n) && n > 0) queryLimit = Math.floor(n);
+        }
+        const data = loadSeoReport({
+          from: from || undefined,
+          to: to || undefined,
+          source,
+          site: site || undefined,
+          queryLimit,
+        });
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /дата|период/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
     if (path === "/api/employees" || path === "/api/health") {
       const force = url.searchParams.get("force") === "1" || url.searchParams.get("refresh") === "1";
       const snap = await refresh(force);
@@ -689,11 +743,26 @@ refresh(true)
     console.warn("Startup hours refresh failed:", err.message || err);
   })
   .finally(() => {
-    server.listen(PORT, "0.0.0.0", () => {
-      console.log(`Dashboard http://localhost:${PORT}/`);
-      if (existsSync(join(IIS_DIR, "index.html"))) {
-        console.log(`IIS snapshot http://localhost/employees/`);
-      }
-      startHoursRefreshLoop();
-    });
+    console.log("SEO CSV sync on startup...");
+    syncSeoCsv({ force: process.env.SEO_FORCE_SYNC === "1" })
+      .then((seo) => {
+        const gscDone = (seo.gsc || []).filter((x) => !x.skipped).length;
+        const yaDone = (seo.yandex || []).filter((x) => !x.skipped).length;
+        const gscSkip = (seo.gsc || []).filter((x) => x.skipped).length;
+        const yaSkip = (seo.yandex || []).filter((x) => x.skipped).length;
+        console.log(
+          `SEO sync: yesterday=${seo.yesterday}, gsc loaded=${gscDone} skip=${gscSkip}, yandex loaded=${yaDone} skip=${yaSkip}`
+        );
+        for (const w of seo.warnings || []) console.warn("SEO:", w);
+      })
+      .catch((err) => console.warn("SEO sync failed:", err.message || err))
+      .finally(() => {
+        server.listen(PORT, "0.0.0.0", () => {
+          console.log(`Dashboard http://localhost:${PORT}/`);
+          if (existsSync(join(IIS_DIR, "index.html"))) {
+            console.log(`IIS snapshot http://localhost/employees/`);
+          }
+          startHoursRefreshLoop();
+        });
+      });
   });

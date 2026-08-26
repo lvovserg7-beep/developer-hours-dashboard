@@ -120,7 +120,7 @@ function finishMetrics(m) {
 
 /**
  * Расчёт доли рекламных расходов (ДРР) по Озону — база ecotidy.
- * Источник: отчёт «ДИР озон» / Расчет доли рекламных расходов.
+ * Источник: отчёт «ДИР озон» / Расчёт доли рекламных расходов.
  */
 export async function loadOzonDrr(fromRaw, toRaw) {
   const range = resolveRange(fromRaw, toRaw);
@@ -218,7 +218,7 @@ export async function loadOzonDrr(fromRaw, toRaw) {
     generatedAt: new Date().toISOString(),
     source: "1С ecotidy",
     organization: "ПЕРВЫЙ ИНТЕГРАТОР ООО",
-    title: "Расчет доли рекламных расходов",
+    title: "Расчёт доли рекламных расходов",
     period: { from: range.from, to: range.to },
     groups: groupRows,
     total: finishMetrics(totalRaw),
