@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const SEO_DAILY_CSV = join(root, "data", "seo-daily.csv");
 export const SEO_QUERIES_CSV = join(root, "data", "seo-queries.csv");
+export const SEO_QUERY_CLASS_CSV = join(root, "data", "seo-query-class.csv");
+export const SEO_QUERY_DAILY_CSV = join(root, "data", "seo-query-daily.csv");
 
 const DAILY_HEADER = ["source", "site", "date", "clicks", "impressions", "ctr", "position"];
 const QUERY_HEADER = [
@@ -18,6 +20,8 @@ const QUERY_HEADER = [
   "ctr",
   "position",
 ];
+const CLASS_HEADER = ["query", "product"];
+const QUERY_DAILY_HEADER = ["source", "site", "date", "query", "clicks", "impressions", "ctr", "position"];
 
 function escapeCsv(value) {
   const s = String(value ?? "");
@@ -116,6 +120,19 @@ function normalizeQueryRow(row) {
   };
 }
 
+function normalizeQueryDailyRow(row) {
+  return {
+    source: String(row.source || "").trim(),
+    site: String(row.site || "").trim(),
+    date: String(row.date || "").trim().slice(0, 10),
+    query: String(row.query || "").trim(),
+    clicks: num(row.clicks),
+    impressions: num(row.impressions),
+    ctr: num(row.ctr),
+    position: num(row.position),
+  };
+}
+
 export function readDailyRows() {
   return readCsv(SEO_DAILY_CSV, DAILY_HEADER).map(normalizeDailyRow).filter((r) => r.source && r.site && r.date);
 }
@@ -184,4 +201,114 @@ export function replaceQueryRows(source, site, incoming) {
   );
   writeCsv(SEO_QUERIES_CSV, QUERY_HEADER, rows);
   return next.length;
+}
+
+export function readQueryClassRows() {
+  return readCsv(SEO_QUERY_CLASS_CSV, CLASS_HEADER)
+    .map((r) => ({
+      query: String(r.query || "").trim(),
+      product: String(r.product || "").trim(),
+    }))
+    .filter((r) => r.query && r.product);
+}
+
+/** Карта lowercase(query) → product id. */
+export function readQueryClassMap() {
+  const map = new Map();
+  for (const row of readQueryClassRows()) {
+    map.set(row.query.toLowerCase(), row.product);
+  }
+  return map;
+}
+
+/**
+ * Дописать классификации для новых запросов (существующие не перезаписываем).
+ * @param {Array<{ query: string, product: string }>} incoming
+ */
+export function upsertQueryClasses(incoming) {
+  const map = new Map();
+  for (const row of readQueryClassRows()) {
+    map.set(row.query.toLowerCase(), { query: row.query, product: row.product });
+  }
+  let added = 0;
+  for (const raw of incoming || []) {
+    const query = String(raw.query || "").trim();
+    const product = String(raw.product || "").trim();
+    if (!query || !product) continue;
+    const key = query.toLowerCase();
+    if (map.has(key)) continue;
+    map.set(key, { query, product });
+    added += 1;
+  }
+  const rows = [...map.values()].sort((a, b) => a.query.localeCompare(b.query, "ru"));
+  writeCsv(SEO_QUERY_CLASS_CSV, CLASS_HEADER, rows);
+  return { total: rows.length, added };
+}
+
+/**
+ * Перезаписать product у известных запросов (для разовой переклассификации).
+ * @param {Array<{ query: string, product: string }>} incoming
+ */
+export function overwriteQueryClasses(incoming) {
+  const map = new Map();
+  for (const row of readQueryClassRows()) {
+    map.set(row.query.toLowerCase(), { query: row.query, product: row.product });
+  }
+  let updated = 0;
+  let added = 0;
+  for (const raw of incoming || []) {
+    const query = String(raw.query || "").trim();
+    const product = String(raw.product || "").trim();
+    if (!query || !product) continue;
+    const key = query.toLowerCase();
+    const prev = map.get(key);
+    if (!prev) {
+      map.set(key, { query, product });
+      added += 1;
+      continue;
+    }
+    if (prev.product !== product) {
+      map.set(key, { query: prev.query || query, product });
+      updated += 1;
+    }
+  }
+  const rows = [...map.values()].sort((a, b) => a.query.localeCompare(b.query, "ru"));
+  writeCsv(SEO_QUERY_CLASS_CSV, CLASS_HEADER, rows);
+  return { total: rows.length, updated, added };
+}
+
+export function readQueryDailyRows() {
+  return readCsv(SEO_QUERY_DAILY_CSV, QUERY_DAILY_HEADER)
+    .map(normalizeQueryDailyRow)
+    .filter((r) => r.source && r.site && r.date && r.query);
+}
+
+/**
+ * Дописать/заменить дневные позиции запросов (ключ source+site+date+query).
+ * @param {Array<ReturnType<typeof normalizeQueryDailyRow>>} incoming
+ */
+export function upsertQueryDailyRows(incoming) {
+  const map = new Map();
+  for (const row of readQueryDailyRows()) {
+    map.set(`${row.source}\t${row.site}\t${row.date}\t${row.query.toLowerCase()}`, row);
+  }
+  let added = 0;
+  for (const raw of incoming || []) {
+    const row = normalizeQueryDailyRow(raw);
+    if (!row.source || !row.site || !row.date || !row.query) continue;
+    const key = `${row.source}\t${row.site}\t${row.date}\t${row.query.toLowerCase()}`;
+    if (!map.has(key)) added += 1;
+    map.set(key, row);
+  }
+  const rows = [...map.values()].sort((a, b) =>
+    a.source !== b.source
+      ? a.source.localeCompare(b.source)
+      : a.site !== b.site
+        ? a.site.localeCompare(b.site)
+        : a.query !== b.query
+          ? a.query.localeCompare(b.query, "ru")
+          : a.date.localeCompare(b.date)
+  );
+  writeCsv(SEO_QUERY_DAILY_CSV, QUERY_DAILY_HEADER, rows);
+  return { total: rows.length, upserted: (incoming || []).length, added };
 }

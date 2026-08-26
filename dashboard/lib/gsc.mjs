@@ -128,7 +128,7 @@ export function gscConfigured() {
 /**
  * Search Analytics query.
  * @param {string} siteUrl
- * @param {{ startDate: string, endDate: string, dimensions?: string[], rowLimit?: number, startRow?: number }} opts
+ * @param {{ startDate: string, endDate: string, dimensions?: string[], rowLimit?: number, startRow?: number, dimensionFilterGroups?: object[] }} opts
  */
 export async function gscSearchAnalytics(siteUrl, opts) {
   const token = await getAccessToken();
@@ -142,6 +142,9 @@ export async function gscSearchAnalytics(siteUrl, opts) {
     startRow: Number(opts.startRow) || 0,
     searchType: opts.searchType || "web",
   };
+  if (Array.isArray(opts.dimensionFilterGroups) && opts.dimensionFilterGroups.length) {
+    body.dimensionFilterGroups = opts.dimensionFilterGroups;
+  }
   const res = await fetch(url, {
     method: "POST",
     headers: {

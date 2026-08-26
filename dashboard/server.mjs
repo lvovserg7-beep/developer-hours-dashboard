@@ -17,7 +17,8 @@ import { loadWbProfit, defaultWbRange } from "./lib/load-wb.mjs";
 import { loadDebtors } from "./lib/load-debtors.mjs";
 import { loadMBalance } from "./lib/load-mbalance.mjs";
 import { loadClientPayments } from "./lib/load-client-payments.mjs";
-import { loadSeoReport, syncSeoCsv } from "./lib/load-seo.mjs";
+import { loadSeoReport, loadSeoProductsReport, loadSeoPositionsReport, syncSeoCsv, ensureSeoQueryClasses, ensureSeoQueryPositions, reclassifyBrandSeoQueries, reclassifyBoxesSeoQueries } from "./lib/load-seo.mjs";
+import { readQueryRows } from "./lib/seo-csv.mjs";
 import {
   cookieName,
   ensureAuthReady,
@@ -678,7 +679,61 @@ const server = createServer(async (req, res) => {
       } catch (err) {
         const msg = String(err.message || err);
         console.error(err);
-        return json(res, /дата|период/i.test(msg) ? 400 : 502, { error: msg });
+        return json(res, /дата|период|продукт/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/seoproducts") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "seoproducts")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Все запросы по продуктам»." });
+      }
+      try {
+        const from = String(url.searchParams.get("from") || "").trim();
+        const to = String(url.searchParams.get("to") || "").trim();
+        const source = String(url.searchParams.get("source") || "all").trim();
+        const site = String(url.searchParams.get("site") || "").trim();
+        const product = String(url.searchParams.get("product") || "all").trim();
+        const data = loadSeoProductsReport({
+          from: from || undefined,
+          to: to || undefined,
+          source,
+          site: site || undefined,
+          product,
+        });
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /дата|период|продукт/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/seopositions") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "seopositions")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Позиции в поисковиках»." });
+      }
+      try {
+        const from = String(url.searchParams.get("from") || "").trim();
+        const to = String(url.searchParams.get("to") || "").trim();
+        const source = String(url.searchParams.get("source") || "all").trim();
+        const site = String(url.searchParams.get("site") || "").trim();
+        const product = String(url.searchParams.get("product") || "all").trim();
+        const force = url.searchParams.get("force") === "1";
+        const data = await loadSeoPositionsReport({
+          from: from || undefined,
+          to: to || undefined,
+          source,
+          site: site || undefined,
+          product,
+          force,
+        });
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /дата|период|продукт/i.test(msg) ? 400 : 502, { error: msg });
       }
     }
 
@@ -754,6 +809,16 @@ refresh(true)
           `SEO sync: yesterday=${seo.yesterday}, gsc loaded=${gscDone} skip=${gscSkip}, yandex loaded=${yaDone} skip=${yaSkip}`
         );
         for (const w of seo.warnings || []) console.warn("SEO:", w);
+        try {
+          const cls = ensureSeoQueryClasses(readQueryRows().map((r) => r.query));
+          console.log(`SEO product classes: total=${cls.total}, added=${cls.added}`);
+          const brand = reclassifyBrandSeoQueries();
+          console.log(`SEO brand reclass: updated=${brand.updated}, added=${brand.added}, total=${brand.total}`);
+          const boxes = reclassifyBoxesSeoQueries();
+          console.log(`SEO boxes reclass: updated=${boxes.updated}, added=${boxes.added}, total=${boxes.total}`);
+        } catch (err) {
+          console.warn("SEO product classes:", err.message || err);
+        }
       })
       .catch((err) => console.warn("SEO sync failed:", err.message || err))
       .finally(() => {
@@ -763,6 +828,15 @@ refresh(true)
             console.log(`IIS snapshot http://localhost/employees/`);
           }
           startHoursRefreshLoop();
+          console.log("SEO positions sync (top keys)...");
+          ensureSeoQueryPositions({ force: false })
+            .then((pos) => {
+              console.log(
+                `SEO positions: fetched=${pos.fetched}, skipped=${pos.skipped}, rows=${pos.rows || 0}`
+              );
+              for (const w of pos.warnings || []) console.warn("SEO positions:", w);
+            })
+            .catch((err) => console.warn("SEO positions:", err.message || err));
         });
       });
   });

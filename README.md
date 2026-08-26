@@ -4,7 +4,7 @@
 
 Стабильная версия: [v1.6.0](https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.6.0)
 
-Тестовая версия (не для боевого): [v1.7.7-test](https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.7.7-test) — файл `TESTING`. Клон: `git clone --branch v1.7.7-test …`. На боевую ставить только стабильный тег из `STABLE`.
+Тестовая версия (не для боевого): [v1.7.10-test](https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.7.10-test) — файл `TESTING`. Клон: `git clone --branch v1.7.10-test …`. На боевую ставить только стабильный тег из `STABLE`.
 
 Репозиторий: [https://github.com/lvovserg7-beep/developer-hours-dashboard](https://github.com/lvovserg7-beep/developer-hours-dashboard)
 

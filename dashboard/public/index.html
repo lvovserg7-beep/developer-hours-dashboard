@@ -303,6 +303,35 @@
       text-align: right;
       font-variant-numeric: tabular-nums;
     }
+    .pos-table { min-width: 720px; }
+    .pos-table th.pos-date,
+    .pos-table td.pos-cell {
+      text-align: center;
+      white-space: nowrap;
+      min-width: 3.6rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .pos-table td.pos-cell { padding: 6px 4px; }
+    .pos-band-1 { background: #d9e4f0; }
+    .pos-band-10 { background: #e4eadc; }
+    .pos-band-30 { background: #f3ead3; }
+    .pos-band-bad { background: #f3e2de; }
+    .pos-miss { color: var(--muted); }
+    .pos-delta {
+      display: inline-block;
+      margin-left: 1px;
+      font-size: 10px;
+      font-weight: 600;
+      vertical-align: super;
+      line-height: 1;
+    }
+    .pos-delta.is-up { color: var(--ok); }
+    .pos-delta.is-down { color: var(--bad); }
+    .pos-product-title {
+      margin: 18px 0 8px;
+      font-size: 15px;
+      font-weight: var(--weight-strong);
+    }
     .units-detail {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1152,6 +1181,8 @@
         <button type="button" class="tab" data-tab="clientpay" role="tab" aria-selected="false">Реестр оплат клиентов</button>
         <button type="button" class="tab" data-tab="seo" role="tab" aria-selected="false">Поиск SEO</button>
         <button type="button" class="tab" data-tab="seoqueries" role="tab" aria-selected="false">SEO запросы</button>
+        <button type="button" class="tab" data-tab="seoproducts" role="tab" aria-selected="false">Все запросы по продуктам</button>
+        <button type="button" class="tab" data-tab="seopositions" role="tab" aria-selected="false">Позиции в поисковиках</button>
         <button type="button" class="tab" data-tab="settings" id="tab-btn-settings" role="tab" aria-selected="false">Настройки</button>
         <button type="button" class="tab" data-tab="admin" id="tab-btn-admin" role="tab" aria-selected="false" hidden>Админка</button>
         <span class="tab-spacer"></span>
@@ -1236,6 +1267,8 @@
             <label><input type="checkbox" id="new-clientpay"> Реестр оплат клиентов</label>
             <label><input type="checkbox" id="new-seo"> Поиск SEO</label>
             <label><input type="checkbox" id="new-seoqueries"> SEO запросы</label>
+            <label><input type="checkbox" id="new-seoproducts"> Все запросы по продуктам</label>
+            <label><input type="checkbox" id="new-seopositions"> Позиции в поисковиках</label>
             <label><input type="checkbox" id="new-admin"> Администратор</label>
           </div>
           <button type="submit">Создать</button>
@@ -1698,6 +1731,109 @@
         </form>
         <div id="seoqueries-err" class="err" hidden></div>
         <div id="seoqueries-report"></div>
+      </section>
+    </div>
+    <div id="tab-seoproducts" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Все запросы по продуктам</h2>
+        <p class="lead tab-intro">Запросы из CSV с разбивкой по продуктам: бренд, маркетплейсы, поставщики, 1С-коробки, разработка, поддержка. Новые без правила — в «Прочее». Дневная статистика — доля продукта в дневных показах/кликах.</p>
+        <form class="pnl-toolbar" id="seoproducts-form">
+          <div class="filter-dates">
+            <label>Период</label>
+            <div class="dates">
+              <div>
+                <span>с</span>
+                <input id="seoproducts-from" type="date" required>
+              </div>
+              <div>
+                <span>по</span>
+                <input id="seoproducts-to" type="date" required>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label for="seoproducts-product">Продукт</label>
+            <select id="seoproducts-product">
+              <option value="all">Все продукты</option>
+              <option value="brand">Запросы по бренду</option>
+              <option value="marketplaces">Маркетплейсы</option>
+              <option value="suppliers">Интеграции с поставщиками</option>
+              <option value="boxes">1С-коробки</option>
+              <option value="development">Разработка</option>
+              <option value="support">Поддержка</option>
+              <option value="other">Прочее</option>
+            </select>
+          </div>
+          <div>
+            <label for="seoproducts-source">Источник</label>
+            <select id="seoproducts-source">
+              <option value="all">Все</option>
+              <option value="gsc">Google Search Console</option>
+              <option value="yandex">Яндекс.Вебмастер</option>
+            </select>
+          </div>
+          <div>
+            <label for="seoproducts-site">Сайт</label>
+            <select id="seoproducts-site">
+              <option value="">Все сайты</option>
+            </select>
+          </div>
+          <button type="submit" id="seoproducts-run">Сформировать</button>
+        </form>
+        <div id="seoproducts-err" class="err" hidden></div>
+        <div id="seoproducts-report"></div>
+      </section>
+    </div>
+
+    <div id="tab-seopositions" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Позиции в поисковиках</h2>
+        <p class="lead tab-intro">Топ-5 ключей по каждому продукту и позиции по дням. Цвет ячейки — зона выдачи; индекс — изменение к предыдущему дню.</p>
+        <form class="pnl-toolbar" id="seopositions-form">
+          <div class="filter-dates">
+            <label>Период</label>
+            <div class="dates">
+              <div>
+                <span>с</span>
+                <input id="seopositions-from" type="date" required>
+              </div>
+              <div>
+                <span>по</span>
+                <input id="seopositions-to" type="date" required>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label for="seopositions-product">Продукт</label>
+            <select id="seopositions-product">
+              <option value="all">Все продукты</option>
+              <option value="brand">Запросы по бренду</option>
+              <option value="marketplaces">Маркетплейсы</option>
+              <option value="suppliers">Интеграции с поставщиками</option>
+              <option value="boxes">1С-коробки</option>
+              <option value="development">Разработка</option>
+              <option value="support">Поддержка</option>
+              <option value="other">Прочее</option>
+            </select>
+          </div>
+          <div>
+            <label for="seopositions-source">Источник</label>
+            <select id="seopositions-source">
+              <option value="all">Все</option>
+              <option value="gsc">Google Search Console</option>
+              <option value="yandex">Яндекс.Вебмастер</option>
+            </select>
+          </div>
+          <div>
+            <label for="seopositions-site">Сайт</label>
+            <select id="seopositions-site">
+              <option value="">Все сайты</option>
+            </select>
+          </div>
+          <button type="submit" id="seopositions-run">Сформировать</button>
+        </form>
+        <div id="seopositions-err" class="err" hidden></div>
+        <div id="seopositions-report"></div>
       </section>
     </div>
   </main>
@@ -4059,7 +4195,355 @@
       }
     }
 
-    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb", "debtors", "mbalance", "clientpay", "seo", "seoqueries"];
+    let seoproductsLoaded = false;
+    let seoproductsInflight = false;
+
+    function seoproductsErr(text) {
+      const el = document.getElementById("seoproducts-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function initSeoProductsDates() {
+      const from = document.getElementById("seoproducts-from");
+      const to = document.getElementById("seoproducts-to");
+      if (!from || !to || from.value) return;
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      const yest = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+      const fromD = new Date(yest.getTime() - 6 * 24 * 60 * 60 * 1000);
+      from.value = `${fromD.getFullYear()}-${pad(fromD.getMonth() + 1)}-${pad(fromD.getDate())}`;
+      to.value = `${yest.getFullYear()}-${pad(yest.getMonth() + 1)}-${pad(yest.getDate())}`;
+    }
+
+    function fillSeoProductsSites(sites, selected) {
+      const sel = document.getElementById("seoproducts-site");
+      if (!sel) return;
+      const cur = selected != null ? selected : sel.value;
+      sel.innerHTML =
+        `<option value="">Все сайты</option>` +
+        (sites || []).map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+      if (cur && [...sel.options].some((o) => o.value === cur)) sel.value = cur;
+    }
+
+    function renderSeoProducts(report) {
+      const box = document.getElementById("seoproducts-report");
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      fillSeoProductsSites(report.sites);
+      const t = report.totals || {};
+      const product = report.product || "all";
+      const products = report.products || [];
+      const productTotals = report.productTotals || [];
+      const series = report.series || [];
+
+      const pHead = `<tr><th>Продукт</th><th class="num">Запросов</th><th class="num">Клики</th><th class="num">Показы</th><th class="num">CTR</th></tr>`;
+      const pBody = productTotals
+        .map(
+          (p) => `<tr>
+          <td class="name">${escapeHtml(p.label)}</td>
+          <td class="num">${formatSeoNum(p.queries)}</td>
+          <td class="num">${formatSeoNum(p.clicks)}</td>
+          <td class="num">${formatSeoNum(p.impressions)}</td>
+          <td class="num">${formatSeoPct(p.ctr)}</td>
+        </tr>`
+        )
+        .join("");
+
+      let dayHead;
+      let dayBody;
+      let productBarsHtml = "";
+      if (product === "all") {
+        dayHead =
+          `<tr><th>Дата</th>` +
+          products.map((p) => `<th class="num">${escapeHtml(p.label)} · показы</th><th class="num">${escapeHtml(p.label)} · клики</th>`).join("") +
+          `<th class="num">Итого показы</th><th class="num">Итого клики</th></tr>`;
+        dayBody = series
+          .map((r) => {
+            const cells = products
+              .map(
+                (p) =>
+                  `<td class="num">${formatSeoNum(r[`${p.id}Impressions`] || 0, 1)}</td>` +
+                  `<td class="num">${formatSeoNum(r[`${p.id}Clicks`] || 0, 1)}</td>`
+              )
+              .join("");
+            return `<tr>
+              <td>${escapeHtml(r.date)}</td>
+              ${cells}
+              <td class="num">${formatSeoNum(r.impressions)}</td>
+              <td class="num">${formatSeoNum(r.clicks)}</td>
+            </tr>`;
+          })
+          .join("");
+      } else {
+        const maxImp = Math.max(1, ...series.map((r) => r.impressions || 0));
+        productBarsHtml = series
+          .map((r) => {
+            const w = Math.max(2, Math.round((100 * (r.impressions || 0)) / maxImp));
+            return `<div class="seo-bar-row" title="${escapeHtml(r.date)}: показы ${formatSeoNum(r.impressions, 1)}, клики ${formatSeoNum(r.clicks, 1)}">
+              <span class="seo-bar-lab">${escapeHtml(r.date.slice(5))}</span>
+              <span class="seo-bar-track"><span class="seo-bar-fill" style="width:${w}%"></span></span>
+              <span class="seo-bar-val">${formatSeoNum(r.impressions, 1)}</span>
+            </div>`;
+          })
+          .join("");
+        dayHead = `<tr><th>Дата</th><th class="num">Показы</th><th class="num">Клики</th></tr>`;
+        dayBody = series
+          .map(
+            (r) => `<tr>
+              <td>${escapeHtml(r.date)}</td>
+              <td class="num">${formatSeoNum(r.impressions, 1)}</td>
+              <td class="num">${formatSeoNum(r.clicks, 1)}</td>
+            </tr>`
+          )
+          .join("");
+      }
+
+      const qHead = `<tr><th>№</th><th>Продукт</th><th>Источник</th><th>Сайт</th><th>Запрос</th><th class="num">Клики</th><th class="num">Показы</th><th class="num">CTR</th><th class="num">Позиция</th></tr>`;
+      const qBody = (report.queries || [])
+        .map(
+          (q, i) => `<tr>
+          <td class="num">${i + 1}</td>
+          <td>${escapeHtml(q.productLabel || q.product || "")}</td>
+          <td>${escapeHtml(q.source === "gsc" ? "GSC" : "Яндекс")}</td>
+          <td>${escapeHtml(q.site || "")}</td>
+          <td class="name">${escapeHtml(q.query)}</td>
+          <td class="num">${formatSeoNum(q.clicks)}</td>
+          <td class="num">${formatSeoNum(q.impressions)}</td>
+          <td class="num">${formatSeoPct(q.ctr)}</td>
+          <td class="num">${formatSeoNum(q.position, 1)}</td>
+        </tr>`
+        )
+        .join("");
+
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      const period = report.period
+        ? `<p class="pnl-note">Период: ${escapeHtml(report.period.from)} — ${escapeHtml(report.period.to)} · запросов в отборе: ${formatSeoNum((report.queries || []).length)}</p>`
+        : "";
+      const dayColspan = product === "all" ? 2 + products.length * 2 + 2 : 3;
+      const barsBlock =
+        product !== "all"
+          ? `<div class="pnl-section"><h3>Показы по дням (доля продукта)</h3><div class="seo-bars">${productBarsHtml || `<p class="meta">Нет дневных строк</p>`}</div></div>`
+          : "";
+
+      box.innerHTML =
+        note +
+        period +
+        `
+        <div class="kpi-strip">
+          <div class="bt"><div class="lab">Показы</div><div class="val">${formatSeoNum(t.impressions)}</div></div>
+          <div class="bt"><div class="lab">Клики</div><div class="val">${formatSeoNum(t.clicks)}</div></div>
+          <div class="bt"><div class="lab">CTR</div><div class="val">${formatSeoPct(t.ctr)}</div></div>
+          <div class="bt"><div class="lab">Запросов</div><div class="val">${formatSeoNum(t.queries)}</div></div>
+        </div>
+        <div class="pnl-section">
+          <h3>Сводка по продуктам</h3>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead>${pHead}</thead>
+            <tbody>${pBody || `<tr><td colspan="5">Нет данных</td></tr>`}</tbody>
+          </table></div>
+        </div>
+        ${barsBlock}
+        <div class="pnl-section">
+          <h3>Статистика по дням</h3>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead>${dayHead}</thead>
+            <tbody>${dayBody || `<tr><td colspan="${dayColspan}">Нет дневных строк в CSV за период</td></tr>`}</tbody>
+          </table></div>
+        </div>
+        <div class="pnl-section">
+          <h3>Запросы${product === "all" ? "" : " выбранного продукта"}</h3>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead>${qHead}</thead>
+            <tbody>${qBody || `<tr><td colspan="9">Нет запросов</td></tr>`}</tbody>
+          </table></div>
+        </div>`;
+      afterReportPaint();
+    }
+
+    async function loadSeoProductsReport() {
+      if (USER.tabs?.seoproducts === false || seoproductsInflight) return;
+      seoproductsInflight = true;
+      const btn = document.getElementById("seoproducts-run");
+      if (btn) btn.disabled = true;
+      seoproductsErr("");
+      document.getElementById("seoproducts-report").innerHTML = `<p class="pnl-note">Считаем запросы по продуктам…</p>`;
+      try {
+        const from = document.getElementById("seoproducts-from").value;
+        const to = document.getElementById("seoproducts-to").value;
+        const source = document.getElementById("seoproducts-source").value;
+        const site = document.getElementById("seoproducts-site").value;
+        const product = document.getElementById("seoproducts-product").value;
+        const qs = new URLSearchParams({ from, to, source, product });
+        if (site) qs.set("site", site);
+        const report = await api("/api/seoproducts?" + qs.toString(), { method: "GET" });
+        seoproductsLoaded = true;
+        renderSeoProducts(report);
+      } catch (e) {
+        seoproductsLoaded = false;
+        renderSeoProducts(null);
+        seoproductsErr(e.message || String(e));
+      } finally {
+        seoproductsInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    let seopositionsLoaded = false;
+    let seopositionsInflight = false;
+
+    function seopositionsErr(text) {
+      const el = document.getElementById("seopositions-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function initSeoPositionsDates() {
+      const from = document.getElementById("seopositions-from");
+      const to = document.getElementById("seopositions-to");
+      if (!from || !to || from.value) return;
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      const yest = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+      const fromD = new Date(yest.getTime() - 13 * 24 * 60 * 60 * 1000);
+      from.value = `${fromD.getFullYear()}-${pad(fromD.getMonth() + 1)}-${pad(fromD.getDate())}`;
+      to.value = `${yest.getFullYear()}-${pad(yest.getMonth() + 1)}-${pad(yest.getDate())}`;
+    }
+
+    function fillSeoPositionsSites(sites, selected) {
+      const sel = document.getElementById("seopositions-site");
+      if (!sel) return;
+      const cur = selected != null ? selected : sel.value;
+      sel.innerHTML =
+        `<option value="">Все сайты</option>` +
+        (sites || []).map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+      if (cur && [...sel.options].some((o) => o.value === cur)) sel.value = cur;
+    }
+
+    function formatPosDate(ymd) {
+      const m = String(ymd || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return escapeHtml(ymd || "");
+      return `${m[3]}.${m[2]}`;
+    }
+
+    function posBandClass(pos) {
+      if (pos == null || !(pos > 0)) return "";
+      if (pos <= 3) return "pos-band-1";
+      if (pos <= 10) return "pos-band-10";
+      if (pos <= 30) return "pos-band-30";
+      return "pos-band-bad";
+    }
+
+    function renderPosCell(cell) {
+      if (!cell || cell.position == null || !(cell.position > 0)) {
+        return `<td class="pos-cell pos-miss">—</td>`;
+      }
+      const shown = cell.position < 10 ? formatSeoNum(cell.position, 1) : formatSeoNum(Math.round(cell.position));
+      let deltaHtml = "";
+      if (cell.delta != null && Math.abs(cell.delta) >= 0.5) {
+        const up = cell.delta > 0;
+        const mag = Math.abs(cell.delta) >= 10 ? Math.round(Math.abs(cell.delta)) : formatSeoNum(Math.abs(cell.delta), 0);
+        deltaHtml = `<span class="pos-delta ${up ? "is-up" : "is-down"}">${up ? "⁺" : "⁻"}${mag}</span>`;
+      }
+      return `<td class="pos-cell ${posBandClass(cell.position)}" title="Показы: ${formatSeoNum(cell.impressions)}, клики: ${formatSeoNum(cell.clicks)}">${shown}${deltaHtml}</td>`;
+    }
+
+    function renderSeoPositions(report) {
+      const box = document.getElementById("seopositions-report");
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      fillSeoPositionsSites(report.sites);
+      const dates = report.dates || [];
+      const sections = report.sections || [];
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      const period = report.period
+        ? `<p class="pnl-note">Период: ${escapeHtml(report.period.from)} — ${escapeHtml(report.period.to)}</p>`
+        : "";
+      const syncNote =
+        report.sync && (report.sync.fetched || (report.sync.warnings || []).length)
+          ? `<p class="pnl-note">Догрузка позиций: запросов ${formatSeoNum(report.sync.fetched || 0)}, строк ${formatSeoNum(report.sync.rows || 0)}${(report.sync.warnings || []).length ? " · " + escapeHtml((report.sync.warnings || []).slice(0, 3).join("; ")) : ""}</p>`
+          : "";
+
+      const dateHead = dates.map((d) => `<th class="pos-date">${formatPosDate(d)}</th>`).join("");
+      const blocks = sections
+        .map((sec) => {
+          const rows = (sec.queries || [])
+            .map((q, i) => {
+              const cells = (q.positions || []).map(renderPosCell).join("");
+              return `<tr>
+                <td class="num">${i + 1}</td>
+                <td class="name">${escapeHtml(q.query)}</td>
+                <td>${escapeHtml(q.source === "gsc" ? "GSC" : "Яндекс")}</td>
+                <td class="num">${formatSeoNum(q.clicks)}</td>
+                <td class="num">${formatSeoNum(q.impressions)}</td>
+                ${cells}
+              </tr>`;
+            })
+            .join("");
+          return `
+            <div class="pnl-section">
+              <h3 class="pos-product-title">${escapeHtml(sec.label)}</h3>
+              <div class="pnl-scroll"><table class="pnl pos-table">
+                <thead><tr>
+                  <th>№</th><th>Запрос</th><th>Источник</th><th class="num">Клики</th><th class="num">Показы</th>${dateHead}
+                </tr></thead>
+                <tbody>${rows || `<tr><td colspan="${5 + dates.length}">Нет топ-запросов</td></tr>`}</tbody>
+              </table></div>
+            </div>`;
+        })
+        .join("");
+
+      box.innerHTML =
+        note +
+        period +
+        syncNote +
+        (blocks || `<p class="meta">Нет классифицированных топ-запросов за период</p>`);
+      afterReportPaint();
+    }
+
+    async function loadSeoPositionsReport() {
+      if (USER.tabs?.seopositions === false || seopositionsInflight) return;
+      seopositionsInflight = true;
+      const btn = document.getElementById("seopositions-run");
+      if (btn) btn.disabled = true;
+      seopositionsErr("");
+      document.getElementById("seopositions-report").innerHTML = `<p class="pnl-note">Собираем позиции топ-ключей (может занять минуту при первой догрузке)…</p>`;
+      try {
+        const from = document.getElementById("seopositions-from").value;
+        const to = document.getElementById("seopositions-to").value;
+        const source = document.getElementById("seopositions-source").value;
+        const site = document.getElementById("seopositions-site").value;
+        const product = document.getElementById("seopositions-product").value;
+        const qs = new URLSearchParams({ from, to, source, product });
+        if (site) qs.set("site", site);
+        const report = await api("/api/seopositions?" + qs.toString(), { method: "GET" });
+        seopositionsLoaded = true;
+        renderSeoPositions(report);
+      } catch (e) {
+        seopositionsLoaded = false;
+        renderSeoPositions(null);
+        seopositionsErr(e.message || String(e));
+      } finally {
+        seopositionsInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb", "debtors", "mbalance", "clientpay", "seo", "seoqueries", "seoproducts", "seopositions"];
     const TAB_LABELS = {
       hours: "Часы",
       activity: "Активность",
@@ -4078,6 +4562,8 @@
       clientpay: "Оплаты клиентов",
       seo: "Поиск SEO",
       seoqueries: "SEO запросы",
+      seoproducts: "Все запросы по продуктам",
+      seopositions: "Позиции в поисковиках",
     };
 
     function normalizeClientTabOrder(order) {
@@ -4273,6 +4759,16 @@
         await loadSeoQueriesReport();
         return;
       }
+      if (name === "seoproducts") {
+        seoproductsLoaded = false;
+        await loadSeoProductsReport();
+        return;
+      }
+      if (name === "seopositions") {
+        seopositionsLoaded = false;
+        await loadSeoPositionsReport();
+        return;
+      }
     }
 
     async function refreshSlideTabData() {
@@ -4344,6 +4840,8 @@
       document.getElementById("tab-clientpay").hidden = name !== "clientpay";
       document.getElementById("tab-seo").hidden = name !== "seo";
       document.getElementById("tab-seoqueries").hidden = name !== "seoqueries";
+      document.getElementById("tab-seoproducts").hidden = name !== "seoproducts";
+      document.getElementById("tab-seopositions").hidden = name !== "seopositions";
       document.getElementById("tab-settings").hidden = name !== "settings";
       document.getElementById("tab-admin").hidden = name !== "admin";
       for (const btn of document.querySelectorAll(".tab[data-tab]")) {
@@ -4354,7 +4852,7 @@
       if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
       document.body.classList.toggle(
         "wide-report",
-        name === "plan" || name === "budget" || name === "ozon" || name === "units" || name === "wb" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "seo" || name === "seoqueries"
+        name === "plan" || name === "budget" || name === "ozon" || name === "units" || name === "wb" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
       );
       document.body.classList.remove("wide-plan");
       if (name === "settings") loadSettingsTabOrder();
@@ -4414,6 +4912,8 @@
         ["clientpay", "Оплаты клиентов"],
         ["seo", "Поиск SEO"],
         ["seoqueries", "SEO запросы"],
+        ["seoproducts", "Все запросы по продуктам"],
+        ["seopositions", "Позиции в поисковиках"],
       ];
       const cards = users.map((u) => {
         const self = u.id === USER.id;
@@ -4743,6 +5243,8 @@
               clientpay: document.getElementById("new-clientpay").checked,
               seo: document.getElementById("new-seo").checked,
               seoqueries: document.getElementById("new-seoqueries").checked,
+              seoproducts: document.getElementById("new-seoproducts").checked,
+              seopositions: document.getElementById("new-seopositions").checked,
             },
           }),
         });
@@ -5198,6 +5700,16 @@
       seoqueriesLoaded = false;
       loadSeoQueriesReport();
     });
+    document.getElementById("seoproducts-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      seoproductsLoaded = false;
+      loadSeoProductsReport();
+    });
+    document.getElementById("seopositions-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      seopositionsLoaded = false;
+      loadSeoPositionsReport();
+    });
     setBitrixPreset("week");
     initPnlDates();
     initPnlEcotidyDates();
@@ -5211,6 +5723,8 @@
     initClientPayDates();
     initSeoDates();
     initSeoQueriesDates();
+    initSeoProductsDates();
+    initSeoPositionsDates();
     installMonthPickers();
     ensureReportStages();
     applyUserUi();

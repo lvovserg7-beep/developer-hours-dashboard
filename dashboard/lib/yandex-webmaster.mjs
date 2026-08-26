@@ -156,3 +156,17 @@ export async function yandexPopularQueries(hostId, dateFrom, dateTo, opts = {}) 
     query_indicator: ["TOTAL_SHOWS", "TOTAL_CLICKS", "AVG_SHOW_POSITION", "AVG_CLICK_POSITION"],
   });
 }
+
+/**
+ * История показателей по одному запросу (query_id из popular).
+ */
+export async function yandexQueryHistoryById(hostId, queryId, dateFrom, dateTo) {
+  const userId = await yandexUserId();
+  const encHost = encodeURIComponent(hostId);
+  const encQuery = encodeURIComponent(queryId);
+  return ywFetch(`/user/${userId}/hosts/${encHost}/search-queries/${encQuery}/history`, {
+    date_from: dateFrom,
+    date_to: dateTo,
+    query_indicator: ["TOTAL_SHOWS", "TOTAL_CLICKS", "AVG_SHOW_POSITION", "AVG_CLICK_POSITION"],
+  });
+}

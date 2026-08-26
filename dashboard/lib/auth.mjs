@@ -7,7 +7,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const USERS_FILE = join(root, "users.json");
 const COOKIE = "dash_session";
 const SESSION_MS = 14 * 24 * 60 * 60 * 1000;
-const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb", "debtors", "mbalance", "clientpay", "seo", "seoqueries"];
+const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb", "debtors", "mbalance", "clientpay", "seo", "seoqueries", "seoproducts", "seopositions"];
 
 const TAB_LABELS = {
   hours: "Часы",
@@ -27,6 +27,8 @@ const TAB_LABELS = {
   clientpay: "Реестр оплат клиентов",
   seo: "Поиск SEO",
   seoqueries: "SEO запросы",
+  seoproducts: "Все запросы по продуктам",
+  seopositions: "Позиции в поисковиках",
 };
 
 function envValues() {
