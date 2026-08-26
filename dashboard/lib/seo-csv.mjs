@@ -7,6 +7,7 @@ export const SEO_DAILY_CSV = join(root, "data", "seo-daily.csv");
 export const SEO_QUERIES_CSV = join(root, "data", "seo-queries.csv");
 export const SEO_QUERY_CLASS_CSV = join(root, "data", "seo-query-class.csv");
 export const SEO_QUERY_DAILY_CSV = join(root, "data", "seo-query-daily.csv");
+export const SEO_WORDSTAT_CSV = join(root, "data", "seo-wordstat.csv");
 
 const DAILY_HEADER = ["source", "site", "date", "clicks", "impressions", "ctr", "position"];
 const QUERY_HEADER = [
@@ -22,6 +23,7 @@ const QUERY_HEADER = [
 ];
 const CLASS_HEADER = ["query", "product"];
 const QUERY_DAILY_HEADER = ["source", "site", "date", "query", "clicks", "impressions", "ctr", "position"];
+const WORDSTAT_HEADER = ["query", "frequency", "fetched_at", "backend"];
 
 function escapeCsv(value) {
   const s = String(value ?? "");
@@ -311,4 +313,53 @@ export function upsertQueryDailyRows(incoming) {
   );
   writeCsv(SEO_QUERY_DAILY_CSV, QUERY_DAILY_HEADER, rows);
   return { total: rows.length, upserted: (incoming || []).length, added };
+}
+
+export function readWordstatRows() {
+  return readCsv(SEO_WORDSTAT_CSV, WORDSTAT_HEADER)
+    .map((r) => ({
+      query: String(r.query || "").trim(),
+      frequency: num(r.frequency),
+      fetched_at: String(r.fetched_at || "").trim(),
+      backend: String(r.backend || "").trim(),
+    }))
+    .filter((r) => r.query);
+}
+
+/** Карта lowercase(query) → { frequency, fetched_at, backend }. */
+export function readWordstatMap() {
+  const map = new Map();
+  for (const row of readWordstatRows()) {
+    map.set(row.query.toLowerCase(), row);
+  }
+  return map;
+}
+
+/**
+ * Дописать/обновить частоты Wordstat.
+ * @param {Array<{ query: string, frequency: number, fetched_at?: string, backend?: string }>} incoming
+ */
+export function upsertWordstatRows(incoming) {
+  const map = new Map();
+  for (const row of readWordstatRows()) {
+    map.set(row.query.toLowerCase(), row);
+  }
+  let updated = 0;
+  for (const raw of incoming || []) {
+    const query = String(raw.query || "").trim();
+    if (!query) continue;
+    const key = query.toLowerCase();
+    const prev = map.get(key);
+    const next = {
+      query: prev?.query || query,
+      frequency: num(raw.frequency),
+      fetched_at: String(raw.fetched_at || new Date().toISOString()).trim(),
+      backend: String(raw.backend || prev?.backend || "").trim(),
+    };
+    if (!prev || prev.frequency !== next.frequency || prev.fetched_at !== next.fetched_at) updated += 1;
+    map.set(key, next);
+  }
+  const rows = [...map.values()].sort((a, b) => a.query.localeCompare(b.query, "ru"));
+  writeCsv(SEO_WORDSTAT_CSV, WORDSTAT_HEADER, rows);
+  return { total: rows.length, updated };
 }

@@ -11,6 +11,8 @@ import {
   readQueryClassMap,
   readQueryDailyRows,
   upsertQueryDailyRows,
+  readWordstatMap,
+  upsertWordstatRows,
 } from "./seo-csv.mjs";
 import {
   classifyQuery,
@@ -26,10 +28,12 @@ import {
   yandexQueryHistoryById,
   yandexResolveHostIds,
 } from "./yandex-webmaster.mjs";
+import { fetchWordstatFrequency, wordstatConfigured } from "./wordstat.mjs";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_LOOKBACK = 90;
 const POSITIONS_TOP_PER_PRODUCT = 5;
+const WORDSTAT_CACHE_DAYS = 7;
 
 function pad(n) {
   return String(n).padStart(2, "0");
@@ -827,6 +831,67 @@ export async function ensureSeoQueryPositions(opts = {}) {
 }
 
 /**
+ * Догрузить частоты Wordstat для списка запросов (кэш data/seo-wordstat.csv, TTL ~7 дней).
+ */
+export async function ensureWordstatFrequencies(queries, opts = {}) {
+  const list = Array.isArray(queries) ? queries : [];
+  const force = Boolean(opts.force);
+  if (!list.length) return { fetched: 0, skipped: 0, warnings: [], configured: wordstatConfigured() };
+  if (!wordstatConfigured()) {
+    return {
+      fetched: 0,
+      skipped: list.length,
+      warnings: [
+        "Wordstat не настроен: укажите YANDEX_WORDSTAT_API_KEY (или YANDEX_SEARCH_API_KEY) и YANDEX_FOLDER_ID в dashboard/.env",
+      ],
+      configured: false,
+    };
+  }
+
+  const ttlMs = (Number(process.env.WORDSTAT_CACHE_DAYS) || WORDSTAT_CACHE_DAYS) * DAY_MS;
+  const now = Date.now();
+  const map = readWordstatMap();
+  const need = [];
+  const seen = new Set();
+  for (const raw of list) {
+    const query = String(raw || "").trim();
+    if (!query) continue;
+    const key = query.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const cached = map.get(key);
+    const age = cached?.fetched_at ? now - Date.parse(cached.fetched_at) : Infinity;
+    if (!force && cached && Number.isFinite(age) && age >= 0 && age < ttlMs) continue;
+    need.push(query);
+  }
+
+  const warnings = [];
+  const incoming = [];
+  for (const query of need) {
+    try {
+      const { frequency, backend } = await fetchWordstatFrequency(query);
+      incoming.push({
+        query,
+        frequency,
+        fetched_at: new Date().toISOString(),
+        backend,
+      });
+      // пауза против rate limit (~10/s)
+      await new Promise((r) => setTimeout(r, 120));
+    } catch (err) {
+      warnings.push(`Wordstat «${query}»: ${err.message || err}`);
+    }
+  }
+  if (incoming.length) upsertWordstatRows(incoming);
+  return {
+    fetched: incoming.length,
+    skipped: seen.size - need.length,
+    warnings: [...new Set(warnings)],
+    configured: true,
+  };
+}
+
+/**
  * Отчёт «Позиции в поисковиках»: топ-5 ключей по продукту + позиции по дням.
  */
 export async function loadSeoPositionsReport({
@@ -865,6 +930,12 @@ export async function loadSeoPositionsReport({
     to: dateTo,
   });
 
+  const wordstat = await ensureWordstatFrequencies(
+    picked.flat.map((q) => q.query),
+    { force }
+  );
+  const freqMap = readWordstatMap();
+
   const dailyAll = readQueryDailyRows().filter((r) => {
     if (r.date < dateFrom || r.date > dateTo) return false;
     if (srcFilter !== "all" && r.source !== srcFilter) return false;
@@ -876,7 +947,6 @@ export async function loadSeoPositionsReport({
   for (let d = parseYmd(dateFrom); d && ymd(d) <= dateTo; d = addDays(d, 1)) {
     dates.push(ymd(d));
   }
-  // колонки как у Топвизора: свежие даты слева
   const datesDesc = [...dates].reverse();
 
   const productIds =
@@ -899,7 +969,7 @@ export async function loadSeoPositionsReport({
           const prev = olderDate ? seriesMap.get(olderDate) : null;
           const prevPos = prev && prev.position > 0 ? prev.position : null;
           let delta = null;
-          if (pos != null && prevPos != null) delta = prevPos - pos; // рост = улучшение позиции
+          if (pos != null && prevPos != null) delta = prevPos - pos;
           return {
             date,
             position: pos,
@@ -908,6 +978,7 @@ export async function loadSeoPositionsReport({
             delta,
           };
         });
+        const ws = freqMap.get(q.query.toLowerCase());
         return {
           query: q.query,
           source: q.source,
@@ -915,6 +986,7 @@ export async function loadSeoPositionsReport({
           clicks: q.clicks,
           impressions: q.impressions,
           avgPosition: q.position,
+          frequency: ws ? ws.frequency : null,
           positions,
         };
       });
@@ -926,6 +998,7 @@ export async function loadSeoPositionsReport({
     })
     .filter((s) => s.queries.length);
 
+  const warnings = [...(sync.warnings || []), ...(wordstat.warnings || [])];
   return {
     generatedAt: new Date().toISOString(),
     period: { from: dateFrom, to: dateTo },
@@ -933,11 +1006,16 @@ export async function loadSeoPositionsReport({
     products: SEO_PRODUCTS,
     dates: datesDesc,
     sections,
-    sync,
+    sync: { ...sync, wordstat },
     sites: [...new Set(readDailyRows().map((r) => r.site))].sort(),
+    wordstatConfigured: wordstat.configured,
     note:
       "Топ-5 запросов по кликам в каждом продукте. Ячейки — средняя позиция показа по дням " +
-      "(GSC / Яндекс.Вебмастер). Цвет: 1–3, 4–10, 11–30, 31+. " +
-      "Стрелка — изменение к предыдущему дню в таблице. CSV: data/seo-query-daily.csv.",
+      "(GSC / Яндекс.Вебмастер). Колонка «Частота» — Wordstat (точная фраза в кавычках, ~30 дней), кэш data/seo-wordstat.csv. " +
+      (wordstat.configured
+        ? ""
+        : "Wordstat не настроен: добавьте YANDEX_WORDSTAT_API_KEY и YANDEX_FOLDER_ID. ") +
+      "Цвет: 1–3, 4–10, 11–30, 31+. Стрелка — изменение к предыдущему дню.",
+    warnings,
   };
 }

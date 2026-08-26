@@ -98,7 +98,6 @@ function renderHtml(data, user) {
   return template
     .replace("__EMBEDDED_DATA__", payload)
     .replace("__USER__", JSON.stringify(publicUser(user)).replace(/</g, "\\u003c"))
-    .replace("__META__", parts.meta)
     .replace("__CHART_STATUS__", parts.status)
     .replace("__CHART_KPIS__", parts.kpis)
     .replace("__CHART_DEV_WORK__", parts.devWork)

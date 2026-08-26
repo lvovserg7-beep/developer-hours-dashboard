@@ -381,7 +381,6 @@
     }
     body.is-full header h1,
     body.is-full header .mission,
-    body.is-full header #meta,
     body.is-full header .brand-bar,
     body.is-full .tab-intro,
     body.is-full footer { display: none !important; }
@@ -1162,7 +1161,6 @@
           <p class="mission">Собираем достоверные данные в понятный и быстрый формат — чтобы вся компания принимала управленческие решения вовремя, уверенно и по существу.</p>
         </div>
       </div>
-      <p class="meta" id="meta">__META__</p>
       <nav class="tabs" role="tablist">
         <button type="button" class="tab is-on" data-tab="hours" role="tab" aria-selected="true">Часы</button>
         <button type="button" class="tab" data-tab="activity" role="tab" aria-selected="false">Активность</button>
@@ -1788,7 +1786,7 @@
     <div id="tab-seopositions" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Позиции в поисковиках</h2>
-        <p class="lead tab-intro">Топ-5 ключей по каждому продукту и позиции по дням. Цвет ячейки — зона выдачи; индекс — изменение к предыдущему дню.</p>
+        <p class="lead tab-intro">Топ-5 ключей по каждому продукту и позиции по дням. Колонка «Частота» — Wordstat. Цвет ячейки — зона выдачи; индекс — изменение к предыдущему дню.</p>
         <form class="pnl-toolbar" id="seopositions-form">
           <div class="filter-dates">
             <label>Период</label>
@@ -2016,9 +2014,6 @@
         <div class="kpi">Часов в работе: <b>${k.hoursInWork ?? 0}</b></div>
         <div class="kpi">Отложено: <b>${k.hoursPostponed ?? 0}</b></div>`;
 
-      const when = data.generatedAt ? fmt.format(new Date(data.generatedAt)) : "";
-      document.getElementById("meta").innerHTML =
-        `<b>${escapeHtml(data.source || "1С")}</b> · ${when} · в работе ${data.totals?.tasks || 0} задач, ${data.totals?.employees || 0} сотрудников`;
       fitHoursStage();
     }
 
@@ -4474,8 +4469,8 @@
         ? `<p class="pnl-note">Период: ${escapeHtml(report.period.from)} — ${escapeHtml(report.period.to)}</p>`
         : "";
       const syncNote =
-        report.sync && (report.sync.fetched || (report.sync.warnings || []).length)
-          ? `<p class="pnl-note">Догрузка позиций: запросов ${formatSeoNum(report.sync.fetched || 0)}, строк ${formatSeoNum(report.sync.rows || 0)}${(report.sync.warnings || []).length ? " · " + escapeHtml((report.sync.warnings || []).slice(0, 3).join("; ")) : ""}</p>`
+        report.sync && (report.sync.fetched || report.sync.wordstat?.fetched || (report.warnings || []).length)
+          ? `<p class="pnl-note">Догрузка: позиций ${formatSeoNum(report.sync.fetched || 0)}, Wordstat ${formatSeoNum(report.sync.wordstat?.fetched || 0)}${(report.warnings || []).length ? " · " + escapeHtml((report.warnings || []).slice(0, 2).join("; ")) : ""}</p>`
           : "";
 
       const dateHead = dates.map((d) => `<th class="pos-date">${formatPosDate(d)}</th>`).join("");
@@ -4484,12 +4479,17 @@
           const rows = (sec.queries || [])
             .map((q, i) => {
               const cells = (q.positions || []).map(renderPosCell).join("");
+              const freq =
+                q.frequency == null || !(q.frequency >= 0)
+                  ? `<td class="num pos-miss">—</td>`
+                  : `<td class="num" title="Wordstat, точная фраза (~30 дней)">${formatSeoNum(q.frequency)}</td>`;
               return `<tr>
                 <td class="num">${i + 1}</td>
                 <td class="name">${escapeHtml(q.query)}</td>
                 <td>${escapeHtml(q.source === "gsc" ? "GSC" : "Яндекс")}</td>
                 <td class="num">${formatSeoNum(q.clicks)}</td>
                 <td class="num">${formatSeoNum(q.impressions)}</td>
+                ${freq}
                 ${cells}
               </tr>`;
             })
@@ -4499,9 +4499,9 @@
               <h3 class="pos-product-title">${escapeHtml(sec.label)}</h3>
               <div class="pnl-scroll"><table class="pnl pos-table">
                 <thead><tr>
-                  <th>№</th><th>Запрос</th><th>Источник</th><th class="num">Клики</th><th class="num">Показы</th>${dateHead}
+                  <th>№</th><th>Запрос</th><th>Источник</th><th class="num">Клики</th><th class="num">Показы</th><th class="num">Частота</th>${dateHead}
                 </tr></thead>
-                <tbody>${rows || `<tr><td colspan="${5 + dates.length}">Нет топ-запросов</td></tr>`}</tbody>
+                <tbody>${rows || `<tr><td colspan="${6 + dates.length}">Нет топ-запросов</td></tr>`}</tbody>
               </table></div>
             </div>`;
         })

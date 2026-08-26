@@ -103,9 +103,7 @@ function gaugeSvg(value, max) {
 export function renderChartParts(data) {
   const c = data.charts || {};
   const k = data.kpis || {};
-  const when = data.generatedAt ? fmt.format(new Date(data.generatedAt)) : "";
   return {
-    meta: `<b>${escapeHtml(data.source || "1С")}</b> · ${when} · в работе ${data.totals?.tasks || 0} задач, ${data.totals?.employees || 0} сотрудников`,
     status: stackedChart("Часов в работе по статусам", c.hoursByStatus, "Нет часов в работе"),
     kpis: `${gaugeSvg(k.hoursCompleted || 0, k.gaugeMax || 1500)}
         <div class="gauge-value">${k.hoursCompleted ?? 0}</div>
