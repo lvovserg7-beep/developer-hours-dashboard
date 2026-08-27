@@ -571,6 +571,29 @@
       white-space: nowrap;
     }
     .who { font-size: 12px; color: var(--muted); padding: 8px 8px 10px; white-space: nowrap; }
+    body.is-full #seopositions-report .pnl-note:not(.pos-slide-label),
+    body.is-full #plan-report .pnl-note:not(.pos-slide-label) {
+      display: none;
+    }
+    body.is-full #seopositions-report .pos-slide-label,
+    body.is-full #plan-report .pos-slide-label {
+      margin: 0 0 0.35rem;
+      font-size: 0.85rem;
+      opacity: 0.85;
+    }
+    body.is-full #seopositions-report .pnl-section {
+      margin-bottom: 0.55rem;
+    }
+    body.is-full #seopositions-report .pos-product-title {
+      margin: 0 0 0.25rem;
+      font-size: 1rem;
+    }
+    body.is-full #seopositions-report .pnl-scroll,
+    body.is-full #plan-report .pnl-scroll {
+      max-height: none;
+      overflow: visible;
+    }
+
     .slide-bar {
       display: inline-flex;
       align-items: center;
@@ -1278,7 +1301,7 @@
     <div id="tab-activity" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Задачи в работе, последняя активность в чате</h2>
-        <p class="lead tab-intro">Только статусы с порядком 1–6. Номер, задача, клиент, статус, последний комментарий из чата, дата. Сверху — самые старые. Клик по номеру копирует ссылку 1С.</p>
+        <p class="lead tab-intro">Только статусы с порядком 1–6. Номер, задача, клиент, статус, последний комментарий из чата, дата. Сортировка по дате — в фильтре. Клик по номеру копирует ссылку 1С.</p>
         <form class="activity-filters" id="activity-filters">
           <div>
             <label for="f-number">Номер</label>
@@ -1312,6 +1335,13 @@
                 <input id="f-to" type="date">
               </div>
             </div>
+          </div>
+          <div>
+            <label for="f-date-sort">Сортировка</label>
+            <select id="f-date-sort">
+              <option value="asc" selected>Дата ↑ старые сверху</option>
+              <option value="desc">Дата ↓ новые сверху</option>
+            </select>
           </div>
           <div class="filter-reset">
             <button type="reset">Сбросить</button>
@@ -2072,7 +2102,8 @@
       const comment = document.getElementById("f-comment")?.value || "";
       const from = document.getElementById("f-from")?.value || "";
       const to = document.getElementById("f-to")?.value || "";
-      return rows.filter((row) => {
+      const sortDir = document.getElementById("f-date-sort")?.value === "desc" ? -1 : 1;
+      const filtered = rows.filter((row) => {
         if (!hasSub(row.number, number)) return false;
         if (!hasSub(row.title, title)) return false;
         if (!hasSub(row.comment, comment)) return false;
@@ -2086,6 +2117,14 @@
           if (to && day > to) return false;
         }
         return true;
+      });
+      return filtered.sort((a, b) => {
+        const da = Date.parse(a.date);
+        const db = Date.parse(b.date);
+        const ta = Number.isFinite(da) ? da : 0;
+        const tb = Number.isFinite(db) ? db : 0;
+        if (ta !== tb) return (ta - tb) * sortDir;
+        return String(a.number || "").localeCompare(String(b.number || ""), "ru") * sortDir;
       });
     }
 
@@ -2120,11 +2159,15 @@
       const count = rows.length === total
         ? `Всего ${total}.`
         : `Показано ${rows.length} из ${total}.`;
+      const sortLabel =
+        document.getElementById("f-date-sort")?.value === "desc"
+          ? "Сверху самые новые."
+          : "Сверху самые старые.";
       return `<div class="activity-scroll"><table class="activity">
         <thead><tr><th class="num">Номер</th><th class="title">Задача</th><th class="client">Клиент</th><th class="status">Статус</th><th class="comment">Последний комментарий</th><th class="when">Дата</th></tr></thead>
         <tbody>${body}</tbody>
       </table></div>
-      <p class="meta tab-intro">Только задачи в работе (порядок статуса 1–6). Сверху самые старые. ${count} Клик по номеру копирует ссылку 1С.</p>`;
+      <p class="meta tab-intro">Только задачи в работе (порядок статуса 1–6). ${sortLabel} ${count} Клик по номеру копирует ссылку 1С.</p>`;
     }
 
     let pnlLoaded = false;
@@ -2733,6 +2776,9 @@
     let planInflight = false;
     let planData = null;
     let planVariant = "rp";
+    /** 0 — разработка, 1 — поддержка (только полноэкранные слайды). */
+    let planSlideIndex = 0;
+    const PLAN_SLIDE_COUNT = 2;
 
     function defaultPlanRange() {
       const now = new Date();
@@ -2780,12 +2826,15 @@
     }
 
     function planVisibleStages(report) {
+      const full = document.body.classList.contains("is-full");
       return (report?.stages || []).filter((stage) => {
         const id = String(stage?.id || "").toLowerCase();
         const title = String(stage?.title || "").toLowerCase();
         if (id === "pay") return false;
         if (title.includes("согласован")) return false;
         if (title.includes("оплат") && title.includes("соглас")) return false;
+        // В полноэкране колонка «Пауза» не нужна — экономим ширину.
+        if (full && (id === "pause" || title === "пауза")) return false;
         return true;
       });
     }
@@ -2814,6 +2863,8 @@
         box.innerHTML = "";
         return;
       }
+      const full = document.body.classList.contains("is-full");
+      if (planSlideIndex < 0 || planSlideIndex >= PLAN_SLIDE_COUNT) planSlideIndex = 0;
       const stages = planVisibleStages(report);
       const variant = report.variants?.[planVariant] || report.variants?.rp;
       const byRp = planVariant === "rp";
@@ -2872,18 +2923,23 @@
         <td class="num money">${formatPlanMoney(st.factAmount)}</td>
         <td class="num">${formatPlanPct(st.percent)}</td>
       </tr>` : "";
-      const warn = (report.warnings || []).length
-        ? `<p class="pnl-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
+      const warn =
+        !full && (report.warnings || []).length
+          ? `<p class="pnl-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
+          : "";
+      const note = !full && report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      const slideLabel = full
+        ? `<p class="pnl-note pos-slide-label">План · ${planSlideIndex === 0 ? "разработка" : "поддержка"} · слайд ${planSlideIndex + 1} из ${PLAN_SLIDE_COUNT}</p>`
         : "";
-      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
-      box.innerHTML = warn + note + `
+      const devBlock = `
         <div class="pnl-section">
           <h2>${escapeHtml(variant?.title || "Разработка")}</h2>
           <div class="pnl-scroll"><table class="plan">
             <thead>${head}</thead>
             <tbody>${body.join("") || `<tr><td colspan="8">Нет данных за период</td></tr>`}</tbody>
           </table></div>
-        </div>
+        </div>`;
+      const supportBlock = `
         <div class="pnl-section">
           <h2>${escapeHtml(report.support?.title || "Поддержка")}</h2>
           <div class="pnl-scroll"><table class="plan">
@@ -2903,6 +2959,12 @@
             <tbody>${supportRows || `<tr><td colspan="9">Нет клиентов с поддержкой</td></tr>`}${supportTotal}</tbody>
           </table></div>
         </div>`;
+      const sections = full
+        ? planSlideIndex === 0
+          ? devBlock
+          : supportBlock
+        : devBlock + supportBlock;
+      box.innerHTML = slideLabel + warn + note + sections;
       afterReportPaint();
     }
 
@@ -4393,6 +4455,15 @@
 
     let seopositionsLoaded = false;
     let seopositionsInflight = false;
+    /** Последний отчёт позиций — для нарезки на ТВ-слайды по 3 продукта. */
+    let seopositionsLastReport = null;
+    let seopositionsSlideIndex = 0;
+    const SEOPOS_SLIDE_CHUNK = 3;
+
+    function seopositionsChunkCount(report = seopositionsLastReport) {
+      const n = Array.isArray(report?.sections) ? report.sections.length : 0;
+      return Math.max(1, Math.ceil(n / SEOPOS_SLIDE_CHUNK) || 1);
+    }
 
     function seopositionsErr(text) {
       const el = document.getElementById("seopositions-err");
@@ -4458,18 +4529,33 @@
     function renderSeoPositions(report) {
       const box = document.getElementById("seopositions-report");
       if (!report) {
+        seopositionsLastReport = null;
+        seopositionsSlideIndex = 0;
         box.innerHTML = "";
         return;
       }
+      seopositionsLastReport = report;
       fillSeoPositionsSites(report.sites);
       const dates = report.dates || [];
-      const sections = report.sections || [];
-      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      let sections = report.sections || [];
+      const full = document.body.classList.contains("is-full");
+      const chunks = seopositionsChunkCount(report);
+      if (seopositionsSlideIndex >= chunks) seopositionsSlideIndex = 0;
+      let slideLabel = "";
+      if (full && sections.length) {
+        const start = seopositionsSlideIndex * SEOPOS_SLIDE_CHUNK;
+        sections = sections.slice(start, start + SEOPOS_SLIDE_CHUNK);
+        slideLabel = `<p class="pnl-note pos-slide-label">Позиции · слайд ${seopositionsSlideIndex + 1} из ${chunks}</p>`;
+      }
+      const note =
+        !full && report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
       const period = report.period
         ? `<p class="pnl-note">Период: ${escapeHtml(report.period.from)} — ${escapeHtml(report.period.to)}</p>`
         : "";
       const syncNote =
-        report.sync && (report.sync.fetched || report.sync.wordstat?.fetched || (report.warnings || []).length)
+        !full &&
+        report.sync &&
+        (report.sync.fetched || report.sync.wordstat?.fetched || (report.warnings || []).length)
           ? `<p class="pnl-note">Догрузка: позиций ${formatSeoNum(report.sync.fetched || 0)}, Wordstat ${formatSeoNum(report.sync.wordstat?.fetched || 0)}${(report.warnings || []).length ? " · " + escapeHtml((report.warnings || []).slice(0, 2).join("; ")) : ""}</p>`
           : "";
 
@@ -4508,6 +4594,7 @@
         .join("");
 
       box.innerHTML =
+        slideLabel +
         note +
         period +
         syncNote +
@@ -4611,9 +4698,44 @@
       return visibleTabs().filter((name) => name !== "admin" && name !== "settings");
     }
 
+    /**
+     * Колода слайдов:
+     * — «Позиции» режутся на куски по SEOPOS_SLIDE_CHUNK продуктов;
+     * — «План» в полноэкране — два слайда: разработка / поддержка.
+     * Каждый кусок занимает полный интервал (как отдельная доска).
+     */
+    function slideDeck() {
+      const deck = [];
+      for (const name of slideTabs()) {
+        if (name === "seopositions") {
+          const n = seopositionsChunkCount();
+          for (let i = 0; i < n; i++) deck.push({ tab: "seopositions", chunk: i });
+        } else if (name === "plan") {
+          for (let i = 0; i < PLAN_SLIDE_COUNT; i++) deck.push({ tab: "plan", chunk: i });
+        } else {
+          deck.push({ tab: name, chunk: 0 });
+        }
+      }
+      return deck;
+    }
+
     function currentTabName() {
       const on = document.querySelector(".tab[data-tab].is-on");
       return on?.getAttribute("data-tab") || "hours";
+    }
+
+    function currentDeckIndex() {
+      const deck = slideDeck();
+      const tab = currentTabName();
+      if (tab === "seopositions") {
+        const i = deck.findIndex((d) => d.tab === "seopositions" && d.chunk === seopositionsSlideIndex);
+        return i >= 0 ? i : deck.findIndex((d) => d.tab === "seopositions");
+      }
+      if (tab === "plan") {
+        const i = deck.findIndex((d) => d.tab === "plan" && d.chunk === planSlideIndex);
+        return i >= 0 ? i : deck.findIndex((d) => d.tab === "plan");
+      }
+      return deck.findIndex((d) => d.tab === tab);
     }
 
     const SLIDE_SEC_KEY = "dashboard-slide-sec";
@@ -4640,25 +4762,39 @@
     function restartSlideTimer() {
       clearSlideTimer();
       if (!document.body.classList.contains("is-full") || slidePaused) return;
-      if (slideTabs().length < 2) return;
+      if (slideDeck().length < 2) return;
       slideTimer = setTimeout(() => {
         slideStep(1);
       }, slideSec * 1000);
     }
 
     function slideStep(dir) {
-      const tabs = slideTabs();
-      if (tabs.length < 2) return;
-      let i = tabs.indexOf(currentTabName());
+      const deck = slideDeck();
+      if (deck.length < 2) return;
+      let i = currentDeckIndex();
       if (i < 0) i = dir > 0 ? -1 : 0;
-      const next = tabs[(i + dir + tabs.length) % tabs.length];
-      showTab(next);
+      const next = deck[(i + dir + deck.length) % deck.length];
+      if (next.tab === "seopositions") {
+        seopositionsSlideIndex = next.chunk;
+        planSlideIndex = 0;
+        showTab("seopositions");
+        if (seopositionsLastReport) renderSeoPositions(seopositionsLastReport);
+      } else if (next.tab === "plan") {
+        planSlideIndex = next.chunk;
+        seopositionsSlideIndex = 0;
+        showTab("plan");
+        if (planData) renderPlan(planData);
+      } else {
+        seopositionsSlideIndex = 0;
+        planSlideIndex = 0;
+        showTab(next.tab);
+      }
     }
 
     function syncSlideBar() {
       const bar = document.getElementById("slide-bar");
       if (!bar) return;
-      const can = document.body.classList.contains("is-full") && slideTabs().length >= 2;
+      const can = document.body.classList.contains("is-full") && slideDeck().length >= 2;
       bar.hidden = !can;
       const sel = document.getElementById("slide-sec");
       if (sel && String(slideSec) !== sel.value) sel.value = String(slideSec);
@@ -5178,6 +5314,11 @@
         setFiltersOpen(false);
         clearChromeHide();
         document.body.classList.remove("chrome-open");
+        seopositionsSlideIndex = 0;
+        planSlideIndex = 0;
+      } else {
+        seopositionsSlideIndex = 0;
+        planSlideIndex = 0;
       }
       const btn = document.getElementById("btn-full");
       if (btn) btn.textContent = on ? "Окно" : "На весь экран";
@@ -5187,6 +5328,8 @@
       } else if (document.fullscreenElement) {
         document.exitFullscreen?.().catch(() => {});
       }
+      if (seopositionsLastReport) renderSeoPositions(seopositionsLastReport);
+      if (planData) renderPlan(planData);
       syncSlideBar();
       requestAnimationFrame(() => requestAnimationFrame(fitHoursStage));
     }
@@ -5206,7 +5349,18 @@
     }
 
     for (const btn of document.querySelectorAll(".tab[data-tab]")) {
-      btn.addEventListener("click", () => showTab(btn.getAttribute("data-tab")));
+      btn.addEventListener("click", () => {
+        const name = btn.getAttribute("data-tab");
+        seopositionsSlideIndex = 0;
+        planSlideIndex = 0;
+        showTab(name);
+        if (name === "seopositions" && seopositionsLastReport) {
+          renderSeoPositions(seopositionsLastReport);
+        }
+        if (name === "plan" && planData) {
+          renderPlan(planData);
+        }
+      });
     }
     document.getElementById("btn-logout").addEventListener("click", async () => {
       try {

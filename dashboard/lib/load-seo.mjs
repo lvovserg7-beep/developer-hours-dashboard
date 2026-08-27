@@ -1,6 +1,5 @@
 import { gscConfigured, gscSearchAnalyticsAll, gscSiteUrls } from "./gsc.mjs";
 import {
-  hasDailyDate,
   maxDailyDate,
   readDailyRows,
   readQueryRows,
@@ -34,6 +33,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_LOOKBACK = 90;
 const POSITIONS_TOP_PER_PRODUCT = 5;
 const WORDSTAT_CACHE_DAYS = 7;
+/** Сколько последних дней daily всегда перечитываем из API (лаг Вебмастера/GSC 1–3 дня). */
+const DAILY_TRAILING_RESYNC_DAYS = 7;
 
 function pad(n) {
   return String(n).padStart(2, "0");
@@ -61,6 +62,40 @@ function addDays(date, n) {
 function lookbackDays() {
   const n = Number(process.env.SEO_LOOKBACK_DAYS || DEFAULT_LOOKBACK);
   return Number.isFinite(n) && n > 0 ? Math.min(Math.floor(n), 450) : DEFAULT_LOOKBACK;
+}
+
+/**
+ * Диапазон суточной догрузки.
+ * Всегда включает скользящее окно последних DAILY_TRAILING_RESYNC_DAYS:
+ * иначе нулевой placeholder за «вчера» (API ещё молчит) навсегда блокирует день
+ * через hasDailyDate / maxDailyDate+1.
+ */
+function computeDailySyncRange(source, site, yesterday, force) {
+  const lookbackFrom = ymd(addDays(startOfLocalDay(), -lookbackDays()));
+  const trailingFrom = ymd(addDays(parseYmd(yesterday), -(DAILY_TRAILING_RESYNC_DAYS - 1)));
+  if (force) return { from: lookbackFrom, to: yesterday };
+
+  const max = maxDailyDate(source, site);
+  if (!max) return { from: lookbackFrom, to: yesterday };
+
+  const afterMax = ymd(addDays(parseYmd(max), 1));
+  let from = trailingFrom;
+  // дыра после max — тянем с max+1, даже если это раньше trailing window
+  if (afterMax <= yesterday && afterMax < from) from = afterMax;
+  if (from < lookbackFrom) from = lookbackFrom;
+  return { from, to: yesterday };
+}
+
+function mapHistoryToDaily(source, site, merged) {
+  return merged.map((r) => ({
+    source,
+    site,
+    date: r.date,
+    clicks: r.clicks,
+    impressions: r.impressions,
+    ctr: r.ctr,
+    position: r.position,
+  }));
 }
 
 /** Вчера по локальному календарю — целевой день суточной догрузки. */
@@ -110,15 +145,46 @@ function mergeYandexHistory(data) {
 
 async function syncGscSite(site, yesterday, opts = {}) {
   const force = Boolean(opts.force);
-  if (!force && hasDailyDate("gsc", site, yesterday)) {
-    return { site, skipped: true, reason: `есть данные за ${yesterday}` };
-  }
-  const max = force ? null : maxDailyDate("gsc", site);
-  const from = max
-    ? ymd(addDays(parseYmd(max), 1))
-    : ymd(addDays(startOfLocalDay(), -lookbackDays()));
-  const to = yesterday;
+  const { from, to } = computeDailySyncRange("gsc", site, yesterday, force);
+  const haveQueries = readQueryRows().some((r) => r.source === "gsc" && r.site === site);
+
   if (from > to) {
+    // не должно случаться при нормальном yesterday; каталог всё равно обновим при необходимости
+    if (!haveQueries) {
+      try {
+        const qFrom = ymd(addDays(startOfLocalDay(), -lookbackDays()));
+        const queryRows = await gscSearchAnalyticsAll(site, {
+          startDate: qFrom,
+          endDate: yesterday,
+          dimensions: ["query"],
+          rowLimit: 500,
+        });
+        const gscQueries = queryRows
+          .map((r) => {
+            const clicks = Number(r.clicks) || 0;
+            const impressions = Number(r.impressions) || 0;
+            return {
+              source: "gsc",
+              site,
+              period_from: qFrom,
+              period_to: yesterday,
+              query: String(r.keys?.[0] || ""),
+              clicks,
+              impressions,
+              ctr: Number(r.ctr) || (impressions > 0 ? clicks / impressions : 0),
+              position: Number(r.position) || 0,
+            };
+          })
+          .filter((r) => r.query);
+        if (gscQueries.length) {
+          replaceQueryRows("gsc", site, gscQueries);
+          ensureSeoQueryClasses(gscQueries.map((q) => q.query));
+        }
+        return { site, skipped: false, from, to, days: 0, queries: gscQueries.length, repaired: true };
+      } catch (err) {
+        return { site, skipped: true, reason: `период пуст, каталог: ${err.message || err}` };
+      }
+    }
     return { site, skipped: true, reason: "период пуст" };
   }
 
@@ -140,8 +206,9 @@ async function syncGscSite(site, yesterday, opts = {}) {
       ctr: Number(r.ctr) || (impressions > 0 ? clicks / impressions : 0),
       position: Number(r.position) || 0,
     };
-  });
-  // Если API молчит по дням — всё равно фиксируем вчера нулями, чтобы не крутить sync каждый старт
+  }).filter((r) => r.date);
+  // Placeholder только если API вовсе не отдал вчера — и только внутри trailing-окна,
+  // которое на следующих стартах перечитается (не «запечатывает» день навсегда).
   if (!daily.some((r) => r.date === yesterday)) {
     daily.push({
       source: "gsc",
@@ -155,58 +222,94 @@ async function syncGscSite(site, yesterday, opts = {}) {
   }
   upsertDailyRows(daily);
 
+  const qFrom = ymd(addDays(startOfLocalDay(), -lookbackDays()));
+  const qTo = yesterday;
   const queryRows = await gscSearchAnalyticsAll(site, {
-    startDate: from,
-    endDate: to,
+    startDate: qFrom,
+    endDate: qTo,
     dimensions: ["query"],
     rowLimit: 500,
   });
-  const gscQueries = queryRows.map((r) => {
-    const clicks = Number(r.clicks) || 0;
-    const impressions = Number(r.impressions) || 0;
-    return {
-      source: "gsc",
-      site,
-      period_from: from,
-      period_to: to,
-      query: String(r.keys?.[0] || ""),
-      clicks,
-      impressions,
-      ctr: Number(r.ctr) || (impressions > 0 ? clicks / impressions : 0),
-      position: Number(r.position) || 0,
-    };
-  });
-  replaceQueryRows("gsc", site, gscQueries);
-  ensureSeoQueryClasses(gscQueries.map((q) => q.query));
+  const gscQueries = queryRows
+    .map((r) => {
+      const clicks = Number(r.clicks) || 0;
+      const impressions = Number(r.impressions) || 0;
+      return {
+        source: "gsc",
+        site,
+        period_from: qFrom,
+        period_to: qTo,
+        query: String(r.keys?.[0] || ""),
+        clicks,
+        impressions,
+        ctr: Number(r.ctr) || (impressions > 0 ? clicks / impressions : 0),
+        position: Number(r.position) || 0,
+      };
+    })
+    .filter((r) => r.query);
+  if (gscQueries.length) {
+    replaceQueryRows("gsc", site, gscQueries);
+    ensureSeoQueryClasses(gscQueries.map((q) => q.query));
+  }
 
-  return { site, skipped: false, from, to, days: daily.length, queries: queryRows.length };
+  return { site, skipped: false, from, to, days: daily.length, queries: gscQueries.length };
+}
+
+async function refreshYandexQueryCatalog(hostId, yesterday) {
+  const qFrom = ymd(addDays(startOfLocalDay(), -lookbackDays()));
+  const qTo = yesterday;
+  const popular = await yandexPopularQueries(hostId, qFrom, qTo, { limit: 500 });
+  const list = popular.queries || popular.popular_queries || popular.items || [];
+  const queries = list
+    .map((q) => {
+      const ind = q.indicators || {};
+      const clicks = Number(q.clicks ?? q.TOTAL_CLICKS ?? ind.TOTAL_CLICKS) || 0;
+      const impressions = Number(q.impressions ?? q.TOTAL_SHOWS ?? ind.TOTAL_SHOWS) || 0;
+      const position =
+        Number(q.position ?? q.AVG_SHOW_POSITION ?? ind.AVG_SHOW_POSITION) || 0;
+      const text = String(q.query_text || q.query || q.text || "").trim();
+      return {
+        source: "yandex",
+        site: hostId,
+        period_from: String(popular.date_from || qFrom).slice(0, 10),
+        period_to: String(popular.date_to || qTo).slice(0, 10),
+        query: text,
+        clicks,
+        impressions,
+        ctr: impressions > 0 ? clicks / impressions : 0,
+        position,
+      };
+    })
+    .filter((r) => r.query);
+  if (queries.length) {
+    replaceQueryRows("yandex", hostId, queries);
+    ensureSeoQueryClasses(queries.map((q) => q.query));
+  }
+  return queries.length;
 }
 
 async function syncYandexHost(hostId, yesterday, opts = {}) {
   const force = Boolean(opts.force);
-  if (!force && hasDailyDate("yandex", hostId, yesterday)) {
-    return { site: hostId, skipped: true, reason: `есть данные за ${yesterday}` };
-  }
-  const max = force ? null : maxDailyDate("yandex", hostId);
-  const from = max
-    ? ymd(addDays(parseYmd(max), 1))
-    : ymd(addDays(startOfLocalDay(), -lookbackDays()));
-  const to = yesterday;
+  const haveQueries = readQueryRows().some((r) => r.source === "yandex" && r.site === hostId);
+  const { from, to } = computeDailySyncRange("yandex", hostId, yesterday, force);
+
   if (from > to) {
+    if (!haveQueries) {
+      try {
+        const n = await refreshYandexQueryCatalog(hostId, yesterday);
+        return { site: hostId, skipped: false, from, to, days: 0, queries: n, repaired: true };
+      } catch (err) {
+        return { site: hostId, skipped: true, reason: `период пуст, каталог: ${err.message || err}` };
+      }
+    }
     return { site: hostId, skipped: true, reason: "период пуст" };
   }
 
   const history = await yandexQueryHistory(hostId, from, to);
   const merged = mergeYandexHistory(history).filter((r) => r.date >= from && r.date <= to);
-  const daily = merged.map((r) => ({
-    source: "yandex",
-    site: hostId,
-    date: r.date,
-    clicks: r.clicks,
-    impressions: r.impressions,
-    ctr: r.ctr,
-    position: r.position,
-  }));
+  const daily = mapHistoryToDaily("yandex", hostId, merged);
+  // Нулевой placeholder за вчера — только временный: trailing-окно перечитает день,
+  // когда Вебмастер отдаст показы (раньше hasDailyDate навсегда пропускал sync).
   if (!daily.some((r) => r.date === yesterday)) {
     daily.push({
       source: "yandex",
@@ -220,43 +323,22 @@ async function syncYandexHost(hostId, yesterday, opts = {}) {
   }
   upsertDailyRows(daily);
 
-  let queries = [];
+  let queries = 0;
   try {
-    const popular = await yandexPopularQueries(hostId, from, to, { limit: 500 });
-    const list = popular.queries || popular.popular_queries || popular.items || [];
-    queries = list.map((q) => {
-      const ind = q.indicators || {};
-      const clicks = Number(q.clicks ?? q.TOTAL_CLICKS ?? ind.TOTAL_CLICKS) || 0;
-      const impressions = Number(q.impressions ?? q.TOTAL_SHOWS ?? ind.TOTAL_SHOWS) || 0;
-      const position =
-        Number(q.position ?? q.AVG_SHOW_POSITION ?? ind.AVG_SHOW_POSITION) || 0;
-      const text = String(q.query_text || q.query || q.text || "").trim();
-      return {
-        source: "yandex",
-        site: hostId,
-        period_from: String(popular.date_from || from).slice(0, 10),
-        period_to: String(popular.date_to || to).slice(0, 10),
-        query: text,
-        clicks,
-        impressions,
-        ctr: impressions > 0 ? clicks / impressions : 0,
-        position,
-      };
-    }).filter((r) => r.query);
-    replaceQueryRows("yandex", hostId, queries);
-    ensureSeoQueryClasses(queries.map((q) => q.query));
+    queries = await refreshYandexQueryCatalog(hostId, yesterday);
   } catch (err) {
     console.warn(`SEO Yandex queries ${hostId}:`, err.message || err);
   }
 
-  return { site: hostId, skipped: false, from, to, days: daily.length, queries: queries.length };
+  return { site: hostId, skipped: false, from, to, days: daily.length, queries };
 }
 
 let syncInflight = null;
 
 /**
- * Суточная догрузка CSV: если за вчера уже есть строки — пропуск;
- * иначе тянем весь пропуск с max(date)+1 (или lookback) по вчера.
+ * Суточная догрузка CSV.
+ * Последние DAILY_TRAILING_RESYNC_DAYS всегда перечитываются из API
+ * (лаг Вебмастера/GSC), чтобы нулевые placeholder’ы не «запечатывали» дни.
  */
 export async function syncSeoCsv(opts = {}) {
   if (syncInflight) return syncInflight;
@@ -697,7 +779,17 @@ function queryDailyCoverageOk(source, site, query, from, to) {
   // достаточно хотя бы половины дней или 3 точек — иначе догружаем
   let days = 0;
   for (let d = parseYmd(from); d && ymd(d) <= to; d = addDays(d, 1)) days += 1;
-  return dates.size >= Math.min(3, days) || dates.size >= Math.ceil(days * 0.4);
+  const densityOk = dates.size >= Math.min(3, days) || dates.size >= Math.ceil(days * 0.4);
+  if (!densityOk) return false;
+
+  // Свежие дни: Вебмастер/GSC обычно отстают на 1–2 суток, но если в CSV нет
+  // даже «вчера−1», старые точки не должны блокировать догрузку (иначе 24–25 пустые навсегда).
+  const yesterday = seoYesterday();
+  const targetTo = to < yesterday ? to : yesterday;
+  const maxHave = [...dates].sort().at(-1) || "";
+  const lagFloor = ymd(addDays(parseYmd(targetTo), -2));
+  if (!maxHave || (lagFloor && maxHave < lagFloor)) return false;
+  return true;
 }
 
 async function fetchGscQueryDaily(site, query, from, to) {

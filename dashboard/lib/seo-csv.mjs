@@ -172,7 +172,13 @@ export function upsertDailyRows(incoming) {
   for (const raw of incoming || []) {
     const row = normalizeDailyRow(raw);
     if (!row.source || !row.site || !row.date) continue;
-    map.set(`${row.source}\t${row.site}\t${row.date}`, row);
+    const key = `${row.source}\t${row.site}\t${row.date}`;
+    const prev = map.get(key);
+    const incomingBlank = !(row.impressions > 0 || row.clicks > 0);
+    const prevFilled = prev && (prev.impressions > 0 || prev.clicks > 0);
+    // Не затирать уже наполненный день пустым ответом / placeholder’ом.
+    if (prevFilled && incomingBlank) continue;
+    map.set(key, row);
   }
   const rows = [...map.values()].sort((a, b) =>
     a.source !== b.source
