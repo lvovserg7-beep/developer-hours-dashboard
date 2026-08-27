@@ -1,0 +1,17 @@
+---
+description: Автор коммита через env, без git config
+alwaysApply: true
+---
+
+# Идентичность Git при коммитах
+
+На этой машине `user.name` / `user.email` в git config могут быть пустыми. **Не вызывать** `git config` (ни local, ни global).
+
+Перед любым `git commit` в этом репозитории задать переменные окружения (как у прошлых коммитов агента):
+
+- `GIT_AUTHOR_NAME=Cursor Agent`
+- `GIT_AUTHOR_EMAIL=cursoragent@cursor.com`
+- `GIT_COMMITTER_NAME=Cursor Agent`
+- `GIT_COMMITTER_EMAIL=cursoragent@cursor.com`
+
+В PowerShell — через `$env:GIT_AUTHOR_NAME=...` (и остальные) в той же сессии перед `git commit`. Не полагаться на интерактивный ввод и не просить пользователя «настроить git», если можно закоммитить через эти переменные.

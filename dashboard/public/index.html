@@ -64,6 +64,7 @@
     body.wide-report:not(.is-full) #tab-ozon .panel,
     body.wide-report:not(.is-full) #tab-ozonfbs .panel,
     body.wide-report:not(.is-full) #tab-ozonfbo .panel,
+    body.wide-report:not(.is-full) #tab-ozonfbofilters .panel,
     body.wide-report:not(.is-full) #tab-units .panel,
     body.wide-report:not(.is-full) #tab-wb .panel,
     body.wide-report:not(.is-full) #tab-debtors .panel,
@@ -81,6 +82,8 @@
     body.wide-report:not(.is-full) #tab-ozonfbs .report-stage-inner,
     body.wide-report:not(.is-full) #tab-ozonfbo .report-stage,
     body.wide-report:not(.is-full) #tab-ozonfbo .report-stage-inner,
+    body.wide-report:not(.is-full) #tab-ozonfbofilters .report-stage,
+    body.wide-report:not(.is-full) #tab-ozonfbofilters .report-stage-inner,
     body.wide-report:not(.is-full) #tab-units .report-stage,
     body.wide-report:not(.is-full) #tab-units .report-stage-inner,
     body.wide-report:not(.is-full) #tab-wb .report-stage,
@@ -99,6 +102,7 @@
     body.wide-report:not(.is-full) #tab-ozon .pnl-scroll,
     body.wide-report:not(.is-full) #tab-ozonfbs .pnl-scroll,
     body.wide-report:not(.is-full) #tab-ozonfbo .pnl-scroll,
+    body.wide-report:not(.is-full) #tab-ozonfbofilters .pnl-scroll,
     body.wide-report:not(.is-full) #tab-units .pnl-scroll,
     body.wide-report:not(.is-full) #tab-wb .pnl-scroll,
     body.wide-report:not(.is-full) #tab-debtors .pnl-scroll,
@@ -113,6 +117,7 @@
     body.wide-report:not(.is-full) #tab-ozon table.ozon,
     body.wide-report:not(.is-full) #tab-ozonfbs table.ozon,
     body.wide-report:not(.is-full) #tab-ozonfbo table.ozon,
+    body.wide-report:not(.is-full) #tab-ozonfbofilters table.ozon,
     body.wide-report:not(.is-full) #tab-units table.pnl,
     body.wide-report:not(.is-full) #tab-wb table.ozon,
     body.wide-report:not(.is-full) #tab-debtors table.pnl,
@@ -127,6 +132,7 @@
     body.wide-report:not(.is-full) #tab-ozon table.ozon td.name,
     body.wide-report:not(.is-full) #tab-ozonfbs table.ozon td.name,
     body.wide-report:not(.is-full) #tab-ozonfbo table.ozon td.name,
+    body.wide-report:not(.is-full) #tab-ozonfbofilters table.ozon td.name,
     body.wide-report:not(.is-full) #tab-units table.pnl td.name,
     body.wide-report:not(.is-full) #tab-wb table.ozon td.name,
     body.wide-report:not(.is-full) #tab-debtors table.pnl td.name,
@@ -145,6 +151,8 @@
     body.wide-report:not(.is-full) #tab-ozonfbs table.ozon td.num,
     body.wide-report:not(.is-full) #tab-ozonfbo table.ozon th.num,
     body.wide-report:not(.is-full) #tab-ozonfbo table.ozon td.num,
+    body.wide-report:not(.is-full) #tab-ozonfbofilters table.ozon th.num,
+    body.wide-report:not(.is-full) #tab-ozonfbofilters table.ozon td.num,
     body.wide-report:not(.is-full) #tab-units table.pnl th.num,
     body.wide-report:not(.is-full) #tab-units table.pnl td.num,
     body.wide-report:not(.is-full) #tab-wb table.ozon th.num,
@@ -1184,6 +1192,123 @@
       .bar-row .lab { white-space: normal; }
       table.admin { min-width: 780px; }
       #admin-users { overflow: auto; -webkit-overflow-scrolling: touch; }
+
+      /* Отгрузки ФБО Озон — мобильный вид карточками */
+      #tab-ozonfbo .tab-intro { font-size: 18px; }
+      #tab-ozonfbo .lead.tab-intro { display: none; }
+      #tab-ozonfbo .pnl-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      #tab-ozonfbo .pnl-toolbar .filter-dates {
+        flex: none;
+        width: 100%;
+      }
+      #tab-ozonfbo .pnl-toolbar .dates {
+        grid-template-columns: 1fr;
+      }
+      #tab-ozonfbo .pnl-toolbar .dates input[type="date"] {
+        width: 100%;
+        min-height: 44px;
+        font-size: 16px;
+      }
+      #tab-ozonfbo .pnl-toolbar button {
+        width: 100%;
+        min-height: 44px;
+      }
+      #tab-ozonfbo .pnl-note { font-size: 12px; line-height: 1.35; }
+      #tab-ozonfbo .kpi-strip {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px;
+      }
+      #tab-ozonfbo .kpi-strip .bt {
+        flex: 1 1 calc(50% - 8px);
+        min-width: 0;
+        background: var(--th);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 8px;
+      }
+      #tab-ozonfbo .kpi-strip .bt .val { font-size: 22px; }
+      #tab-ozonfbo .ozon-fbo-desktop { display: none; }
+      #tab-ozonfbo .ozon-fbo-mobile { display: flex; flex-direction: column; gap: 10px; }
+      #tab-ozonfbo .ozon-fbo-card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px 14px;
+      }
+      #tab-ozonfbo .ozon-fbo-card-head {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--line);
+      }
+      #tab-ozonfbo .ozon-fbo-num {
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        word-break: break-all;
+      }
+      #tab-ozonfbo .ozon-fbo-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      #tab-ozonfbo .ozon-fbo-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.2;
+      }
+      #tab-ozonfbo .ozon-fbo-badge.is-muted {
+        background: var(--th);
+        color: var(--muted);
+      }
+      #tab-ozonfbo .ozon-fbo-meta {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 12px;
+        margin: 0;
+      }
+      #tab-ozonfbo .ozon-fbo-meta > div {
+        min-width: 0;
+      }
+      #tab-ozonfbo .ozon-fbo-meta > div.span-2 {
+        grid-column: 1 / -1;
+      }
+      #tab-ozonfbo .ozon-fbo-meta dt {
+        margin: 0 0 2px;
+        font-size: 11px;
+        color: var(--muted);
+        font-weight: 500;
+      }
+      #tab-ozonfbo .ozon-fbo-meta dd {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.3;
+        word-break: break-word;
+      }
+      #tab-ozonfbo .ozon-fbo-empty {
+        padding: 16px;
+        text-align: center;
+        color: var(--muted);
+        background: var(--card);
+        border: 1px dashed var(--line);
+        border-radius: 12px;
+      }
+    }
+    @media (min-width: 701px) {
+      #tab-ozonfbo .ozon-fbo-mobile { display: none; }
     }
   </style>
 </head>
@@ -1215,6 +1340,7 @@
         <button type="button" class="tab" data-tab="ozondrr" role="tab" aria-selected="false">Озон ДРР</button>
         <button type="button" class="tab" data-tab="ozonfbs" role="tab" aria-selected="false">Отгрузки ФБС ozon</button>
         <button type="button" class="tab" data-tab="ozonfbo" role="tab" aria-selected="false">Отгрузки ФБО Озон</button>
+        <button type="button" class="tab" data-tab="ozonfbofilters" role="tab" aria-selected="false">Поставки ФБО с фильтрами</button>
         <button type="button" class="tab" data-tab="wb" role="tab" aria-selected="false">WB рентабельность</button>
         <button type="button" class="tab" data-tab="debtors" role="tab" aria-selected="false">Задолженность клиентов</button>
         <button type="button" class="tab" data-tab="mbalance" role="tab" aria-selected="false">Управленческий баланс</button>
@@ -1303,6 +1429,7 @@
             <label><input type="checkbox" id="new-ozondrr"> Озон ДРР</label>
             <label><input type="checkbox" id="new-ozonfbs"> Отгрузки ФБС ozon</label>
             <label><input type="checkbox" id="new-ozonfbo"> Отгрузки ФБО Озон</label>
+            <label><input type="checkbox" id="new-ozonfbofilters"> Поставки ФБО с фильтрами</label>
             <label><input type="checkbox" id="new-wb"> WB рентабельность</label>
             <label><input type="checkbox" id="new-debtors"> Задолженность клиентов</label>
             <label><input type="checkbox" id="new-mbalance"> Управленческий баланс</label>
@@ -1649,6 +1776,70 @@
         </form>
         <div id="ozonfbo-err" class="err" hidden></div>
         <div id="ozonfbo-report"></div>
+      </section>
+    </div>
+    <div id="tab-ozonfbofilters" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Поставки ФБО с фильтрами</h2>
+        <p class="lead tab-intro">Полный список поставок FBO из 1С за период. Фильтры по дате отгрузки, статусу, кросс-докингу, особым условиям, кластеру и складам. По умолчанию — последний месяц.</p>
+        <form class="pnl-toolbar" id="ozonfbofilters-form">
+          <div class="filter-dates">
+            <label>Планируемая дата отгрузки</label>
+            <div class="dates">
+              <div>
+                <span>с</span>
+                <input id="ozonfbofilters-from" type="date" required>
+              </div>
+              <div>
+                <span>по</span>
+                <input id="ozonfbofilters-to" type="date" required>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label for="ozonfbofilters-status">Статус 1С</label>
+            <select id="ozonfbofilters-status">
+              <option value="">Все</option>
+            </select>
+          </div>
+          <div>
+            <label for="ozonfbofilters-crossdock">Кросс-докинг</label>
+            <select id="ozonfbofilters-crossdock">
+              <option value="">Все</option>
+              <option value="1">Да</option>
+              <option value="0">Нет</option>
+            </select>
+          </div>
+          <div>
+            <label for="ozonfbofilters-special">Особые условия</label>
+            <select id="ozonfbofilters-special">
+              <option value="">Все</option>
+              <option value="1">Да</option>
+              <option value="0">Нет</option>
+            </select>
+          </div>
+          <div>
+            <label for="ozonfbofilters-cluster">Кластер</label>
+            <select id="ozonfbofilters-cluster">
+              <option value="">Все</option>
+            </select>
+          </div>
+          <div>
+            <label for="ozonfbofilters-dropoff">Склад отгрузки</label>
+            <select id="ozonfbofilters-dropoff">
+              <option value="">Все</option>
+            </select>
+          </div>
+          <div>
+            <label for="ozonfbofilters-storage">Склад доставки</label>
+            <select id="ozonfbofilters-storage">
+              <option value="">Все</option>
+            </select>
+          </div>
+          <button type="submit" id="ozonfbofilters-run">Сформировать</button>
+        </form>
+        <div id="ozonfbofilters-err" class="err" hidden></div>
+        <div id="ozonfbofilters-report"></div>
       </section>
     </div>
     <div id="tab-wb" class="tab-panel" hidden>
@@ -3821,6 +4012,31 @@
           </tr>`
         )
         .join("");
+      const cards = rows.length
+        ? rows
+            .map((s) => {
+              const st1 = s.status1cLabel || s.status1c || "—";
+              const stO = s.statusOzonLabel || s.statusOzon || "";
+              const badges =
+                `<span class="ozon-fbo-badge">${escapeHtml(st1)}</span>` +
+                (stO ? `<span class="ozon-fbo-badge is-muted">${escapeHtml(stO)}</span>` : "");
+              return `<article class="ozon-fbo-card">
+                <div class="ozon-fbo-card-head">
+                  <div class="ozon-fbo-num">${escapeHtml(s.orderNumber || "—")}</div>
+                  <div class="ozon-fbo-badges">${badges}</div>
+                </div>
+                <dl class="ozon-fbo-meta">
+                  <div><dt>Дата отгрузки</dt><dd>${escapeHtml(formatOzonFbsDate(s.shipmentDate))}</dd></div>
+                  <div><dt>Грузомест</dt><dd>${formatSeoNum(s.cargoPlaces)}</dd></div>
+                  <div><dt>Товаров</dt><dd>${formatSeoNum(s.goodsCount)}</dd></div>
+                  <div><dt>Кластер</dt><dd>${escapeHtml(s.cluster || "—")}</dd></div>
+                  <div class="span-2"><dt>Пункт отгрузки</dt><dd>${escapeHtml(s.dropOffPoint || "—")}</dd></div>
+                  <div class="span-2"><dt>Водитель</dt><dd>${escapeHtml(s.driver || "—")}</dd></div>
+                </dl>
+              </article>`;
+            })
+            .join("")
+        : `<div class="ozon-fbo-empty">Нет поставок на выбранную дату</div>`;
       box.innerHTML =
         note +
         ozonWarn +
@@ -3829,7 +4045,8 @@
           <div class="bt"><div class="lab">Поставок</div><div class="val">${formatSeoNum(t.supplies)}</div></div>
           <div class="bt"><div class="lab">Всего грузомест</div><div class="val">${formatSeoNum(t.cargoPlaces)}</div></div>
         </div>
-        <div class="pnl-section">
+        <div class="pnl-section ozon-fbo-mobile">${cards}</div>
+        <div class="pnl-section ozon-fbo-desktop">
           <div class="pnl-scroll"><table class="ozon">
             <thead><tr>
               <th>Номер заявки на поставку</th>
@@ -3869,6 +4086,177 @@
         ozonfboErr(e.message || String(e));
       } finally {
         ozonfboInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    let ozonfbofiltersLoaded = false;
+    let ozonfbofiltersInflight = false;
+    let ozonfbofiltersRaw = null;
+    let ozonfbofiltersFacetLock = false;
+
+    function ozonfbofiltersErr(text) {
+      const el = document.getElementById("ozonfbofilters-err");
+      if (!el) return;
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function initOzonFboFiltersDates() {
+      const from = document.getElementById("ozonfbofilters-from");
+      const to = document.getElementById("ozonfbofilters-to");
+      if (!from || !to || from.value) return;
+      const now = new Date();
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const start = new Date(end.getFullYear(), end.getMonth() - 1, end.getDate());
+      const p = (n) => String(n).padStart(2, "0");
+      const ymd = (d) => d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+      from.value = ymd(start);
+      to.value = ymd(end);
+    }
+
+    function fillOzonFboFilterSelect(id, values, keepEmptyLabel = "Все") {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      const prev = sel.value;
+      const opts = [`<option value="">${escapeHtml(keepEmptyLabel)}</option>`].concat(
+        (values || []).map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`)
+      );
+      sel.innerHTML = opts.join("");
+      if (prev && [...sel.options].some((o) => o.value === prev)) sel.value = prev;
+      else sel.value = "";
+    }
+
+    function applyOzonFboFilterFacets(report) {
+      const f = report?.filters || {};
+      ozonfbofiltersFacetLock = true;
+      fillOzonFboFilterSelect("ozonfbofilters-status", f.statuses1c);
+      fillOzonFboFilterSelect("ozonfbofilters-cluster", f.clusters);
+      fillOzonFboFilterSelect("ozonfbofilters-dropoff", f.dropOffPoints);
+      fillOzonFboFilterSelect("ozonfbofilters-storage", f.storageWarehouses);
+      ozonfbofiltersFacetLock = false;
+    }
+
+    function filterOzonFboFilterRows(rows) {
+      const status = document.getElementById("ozonfbofilters-status")?.value || "";
+      const cross = document.getElementById("ozonfbofilters-crossdock")?.value || "";
+      const special = document.getElementById("ozonfbofilters-special")?.value || "";
+      const cluster = document.getElementById("ozonfbofilters-cluster")?.value || "";
+      const dropoff = document.getElementById("ozonfbofilters-dropoff")?.value || "";
+      const storage = document.getElementById("ozonfbofilters-storage")?.value || "";
+      return (rows || []).filter((s) => {
+        if (status && (s.status1cLabel || s.status1c) !== status) return false;
+        if (cross === "1" && !s.crossDock) return false;
+        if (cross === "0" && s.crossDock) return false;
+        if (special === "1" && !s.specialConditions) return false;
+        if (special === "0" && s.specialConditions) return false;
+        if (cluster && s.cluster !== cluster) return false;
+        if (dropoff && s.dropOffPoint !== dropoff) return false;
+        if (storage && s.storageWarehouse !== storage) return false;
+        return true;
+      });
+    }
+
+    function renderOzonFboFiltersSupplies(report) {
+      const box = document.getElementById("ozonfbofilters-report");
+      if (!box) return;
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      const all = report.supplies || [];
+      const rows = filterOzonFboFilterRows(all);
+      const cargoPlaces = rows.reduce((sum, s) => sum + (Number(s.cargoPlaces) || 0), 0);
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      const ozonWarn = report.ozonError
+        ? `<p class="pnl-note">Данные ЛК Ozon: ${escapeHtml(report.ozonError)}</p>`
+        : "";
+      const body = rows
+        .map((s) => {
+          const specialText = Array.isArray(s.specialConditionLabels) && s.specialConditionLabels.length
+            ? s.specialConditionLabels.join(", ")
+            : "—";
+          return `<tr>
+            <td>${escapeHtml(s.orderNumber || "—")}</td>
+            <td>${escapeHtml(s.status1cLabel || s.status1c || "—")}</td>
+            <td>${escapeHtml(s.statusOzonLabel || s.statusOzon || "—")}</td>
+            <td class="num">${formatSeoNum(s.cargoPlaces)}</td>
+            <td>${escapeHtml(s.cluster || "—")}</td>
+            <td>${escapeHtml(formatOzonFbsDate(s.shipmentDate))}</td>
+            <td class="name">${escapeHtml(s.dropOffPoint || "—")}</td>
+            <td>${escapeHtml(s.driver || "—")}</td>
+            <td class="num">${formatSeoNum(s.goodsCount)}</td>
+            <td class="name">${escapeHtml(specialText)}</td>
+          </tr>`;
+        })
+        .join("");
+      box.innerHTML =
+        note +
+        ozonWarn +
+        `
+        <div class="kpi-strip">
+          <div class="bt"><div class="lab">Показано</div><div class="val">${formatSeoNum(rows.length)}</div></div>
+          <div class="bt"><div class="lab">Всего за период</div><div class="val">${formatSeoNum(all.length)}</div></div>
+          <div class="bt"><div class="lab">Грузомест (показано)</div><div class="val">${formatSeoNum(cargoPlaces)}</div></div>
+        </div>
+        <div class="pnl-section">
+          <div class="pnl-scroll"><table class="ozon">
+            <thead><tr>
+              <th>Номер заявки на поставку</th>
+              <th>Статус 1С</th>
+              <th>Статус ЛК Ozon</th>
+              <th class="num">Всего грузомест</th>
+              <th>Кластер</th>
+              <th>Дата отгрузки</th>
+              <th>Пункт отгрузки</th>
+              <th>Водитель</th>
+              <th class="num">Товаров</th>
+              <th>Особые условия</th>
+            </tr></thead>
+            <tbody>${body || `<tr><td colspan="10">Нет поставок по выбранным фильтрам</td></tr>`}</tbody>
+          </table></div>
+        </div>`;
+    }
+
+    function rerenderOzonFboFilters() {
+      if (!ozonfbofiltersRaw) return;
+      renderOzonFboFiltersSupplies(ozonfbofiltersRaw);
+    }
+
+    async function loadOzonFboFiltersReport(force = false) {
+      if (USER.tabs?.ozonfbofilters === false || ozonfbofiltersInflight) return;
+      if (ozonfbofiltersLoaded && !force) {
+        rerenderOzonFboFilters();
+        return;
+      }
+      initOzonFboFiltersDates();
+      const from = document.getElementById("ozonfbofilters-from")?.value;
+      const to = document.getElementById("ozonfbofilters-to")?.value;
+      if (!from || !to) return;
+      ozonfbofiltersInflight = true;
+      const btn = document.getElementById("ozonfbofilters-run");
+      if (btn) btn.disabled = true;
+      ozonfbofiltersErr("");
+      document.getElementById("ozonfbofilters-report").innerHTML = `<p class="pnl-note">Загружаем поставки за период…</p>`;
+      try {
+        const q = new URLSearchParams({ from, to });
+        const report = await api(`/api/ozonfbofilters?${q}`, { method: "GET" });
+        ozonfbofiltersLoaded = true;
+        ozonfbofiltersRaw = report;
+        applyOzonFboFilterFacets(report);
+        renderOzonFboFiltersSupplies(report);
+      } catch (e) {
+        ozonfbofiltersLoaded = false;
+        ozonfbofiltersRaw = null;
+        renderOzonFboFiltersSupplies(null);
+        ozonfbofiltersErr(e.message || String(e));
+      } finally {
+        ozonfbofiltersInflight = false;
         if (btn) btn.disabled = false;
       }
     }
@@ -4975,7 +5363,7 @@
       }
     }
 
-    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "ozonfbs", "ozonfbo", "wb", "debtors", "mbalance", "clientpay", "seo", "seoqueries", "seoproducts", "seopositions"];
+    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "debtors", "mbalance", "clientpay", "seo", "seoqueries", "seoproducts", "seopositions"];
     const TAB_LABELS = {
       hours: "Часы",
       activity: "Активность",
@@ -4990,6 +5378,7 @@
       ozondrr: "Озон ДРР",
       ozonfbs: "Отгрузки ФБС ozon",
       ozonfbo: "Отгрузки ФБО Озон",
+      ozonfbofilters: "Поставки ФБО с фильтрами",
       wb: "WB",
       debtors: "Задолженность",
       mbalance: "Упр. баланс",
@@ -5222,6 +5611,11 @@
         await loadOzonFboReport();
         return;
       }
+      if (name === "ozonfbofilters") {
+        ozonfbofiltersLoaded = false;
+        await loadOzonFboFiltersReport();
+        return;
+      }
       if (name === "wb") {
         wbLoaded = false;
         await loadWbReport();
@@ -5329,6 +5723,7 @@
       document.getElementById("tab-ozondrr").hidden = name !== "ozondrr";
       document.getElementById("tab-ozonfbs").hidden = name !== "ozonfbs";
       document.getElementById("tab-ozonfbo").hidden = name !== "ozonfbo";
+      document.getElementById("tab-ozonfbofilters").hidden = name !== "ozonfbofilters";
       document.getElementById("tab-wb").hidden = name !== "wb";
       document.getElementById("tab-debtors").hidden = name !== "debtors";
       document.getElementById("tab-mbalance").hidden = name !== "mbalance";
@@ -5347,12 +5742,13 @@
       if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
       document.body.classList.toggle(
         "wide-report",
-        name === "plan" || name === "budget" || name === "ozon" || name === "ozondrr" || name === "ozonfbs" || name === "ozonfbo" || name === "units" || name === "wb" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
+        name === "plan" || name === "budget" || name === "ozon" || name === "ozondrr" || name === "ozonfbs" || name === "ozonfbo" || name === "ozonfbofilters" || name === "units" || name === "wb" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
       );
       document.body.classList.remove("wide-plan");
       if (name === "settings") loadSettingsTabOrder();
       if (name === "ozonfbs") loadOzonFbsActs();
       if (name === "ozonfbo") loadOzonFboReport();
+      if (name === "ozonfbofilters") loadOzonFboFiltersReport();
       if (name === "admin") loadAdminUsers();
       if (name === "activity" && data?.activity) fillActivityFilters(data.activity);
       // В обычном режиме отчёты только по «Сформировать»; часы/активность — при открытии вкладки.
@@ -5405,6 +5801,7 @@
         ["ozondrr", "Озон ДРР"],
         ["ozonfbs", "Отгрузки ФБС ozon"],
         ["ozonfbo", "Отгрузки ФБО Озон"],
+        ["ozonfbofilters", "Поставки ФБО с фильтрами"],
         ["wb", "WB"],
         ["debtors", "Задолженность"],
         ["mbalance", "Упр. баланс"],
@@ -5756,6 +6153,7 @@
               ozondrr: document.getElementById("new-ozondrr").checked,
               ozonfbs: document.getElementById("new-ozonfbs").checked,
               ozonfbo: document.getElementById("new-ozonfbo").checked,
+              ozonfbofilters: document.getElementById("new-ozonfbofilters").checked,
               wb: document.getElementById("new-wb").checked,
               debtors: document.getElementById("new-debtors").checked,
               mbalance: document.getElementById("new-mbalance").checked,
@@ -6197,6 +6595,28 @@
       e.preventDefault();
       loadOzonFboReport(true);
     });
+    document.getElementById("ozonfbo-day")?.addEventListener("change", () => {
+      if (!document.getElementById("ozonfbo-day")?.value) return;
+      loadOzonFboReport(true);
+    });
+    document.getElementById("ozonfbofilters-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      ozonfbofiltersLoaded = false;
+      loadOzonFboFiltersReport(true);
+    });
+    for (const id of [
+      "ozonfbofilters-status",
+      "ozonfbofilters-crossdock",
+      "ozonfbofilters-special",
+      "ozonfbofilters-cluster",
+      "ozonfbofilters-dropoff",
+      "ozonfbofilters-storage",
+    ]) {
+      document.getElementById(id)?.addEventListener("change", () => {
+        if (ozonfbofiltersFacetLock) return;
+        rerenderOzonFboFilters();
+      });
+    }
     document.getElementById("wb-form").addEventListener("submit", (e) => {
       e.preventDefault();
       wbLoaded = false;

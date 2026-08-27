@@ -49,6 +49,14 @@ export function defaultOzonFboRange() {
   return { from: day, to: day };
 }
 
+/** Период по умолчанию для вкладки «Поставки ФБО с фильтрами»: последний месяц. */
+export function defaultOzonFboFilterRange() {
+  const now = new Date();
+  const to = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const from = new Date(to.getFullYear(), to.getMonth() - 1, to.getDate());
+  return { from: ymd(from), to: ymd(to) };
+}
+
 function resolveRange(fromRaw, toRaw) {
   const fallback = defaultOzonFboRange();
   const from = parseYmd(fromRaw) || parseYmd(fallback.from);
@@ -146,6 +154,7 @@ async function fetchOzonStates(orderIds) {
       const supplyIds = (order.supplies || [])
         .map((s) => Number(s.supply_id))
         .filter((sid) => Number.isFinite(sid) && sid > 0);
+      const dropOff = order.drop_off_warehouse;
       const row = {
         state,
         stateLabel: ozonStateLabel(state),
@@ -153,6 +162,10 @@ async function fetchOzonStates(orderIds) {
         supplyIds,
         cargoPlaces: null,
         storageWarehouse: "",
+        dropOffPoint: dropOff && typeof dropOff === "object" ? String(dropOff.name || "").trim() : "",
+        crossDock: false,
+        specialConditions: false,
+        specialConditionLabels: [],
         macrolocalClusterIds: [],
       };
       for (const supply of order.supplies || []) {
@@ -160,11 +173,16 @@ async function fetchOzonStates(orderIds) {
         if (!row.storageWarehouse && wh && typeof wh === "object") {
           row.storageWarehouse = String(wh.name || wh.warehouse_name || "").trim();
         }
+        if (supply.is_crossdock === true) row.crossDock = true;
+        const tags = supply.supply_tags || {};
+        if (isSpecialFromTags(tags)) row.specialConditions = true;
+        row.specialConditionLabels.push(...labelsFromSupplyTags(tags));
         const clusterId = supply.macrolocal_cluster_id;
         if (clusterId != null && String(clusterId) !== "") {
           row.macrolocalClusterIds.push(String(clusterId));
         }
       }
+      row.specialConditionLabels = uniqueSorted(row.specialConditionLabels);
       if (Number.isFinite(id) && id > 0) map.set(id, row);
       if (number) map.set(number, row);
     }
@@ -282,11 +300,89 @@ function resolveStorageWarehouse(doc, ozon) {
   return String(ozon?.storageWarehouse || "").trim();
 }
 
+function labelsFromSupplyTags(tags) {
+  const out = [];
+  if (!tags || typeof tags !== "object") return out;
+  if (tags.is_marking_required) out.push("Маркировка обязательна");
+  if (tags.is_marking_possible && !tags.is_marking_required) out.push("Маркировка возможна");
+  if (tags.freeze_stock_for_marking) out.push("Заморозка остатков под маркировку");
+  if (tags.is_ettn_required) out.push("ЭТрН");
+  if (tags.is_evsd_required) out.push("Меркурий (ВСД)");
+  if (tags.is_jewelry) out.push("Ювелирные товары");
+  if (tags.is_utd) out.push("УПД до поставки");
+  return out;
+}
+
+function isSpecialFromTags(tags) {
+  if (!tags || typeof tags !== "object") return false;
+  return !!(
+    tags.is_marking_required ||
+    tags.is_ettn_required ||
+    tags.is_evsd_required ||
+    tags.is_jewelry ||
+    tags.freeze_stock_for_marking
+  );
+}
+
+function parseJsonSafe(raw) {
+  if (!raw || typeof raw !== "string") return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function uniqueLabels(list) {
+  return uniqueSorted(list);
+}
+
+/** Кросс-докинг и перечень «особых условий» — из ТЧ 1С / JSON / ответа Seller API. */
+function flagsFromDoc(doc, ozon) {
+  let crossDock = false;
+  const labels = [];
+  if (String(doc.ТипПоставки || "").toUpperCase() === "CROSSDOCK") crossDock = true;
+  const info = Array.isArray(doc.ИнформацияОПоставках) ? doc.ИнформацияОПоставках : [];
+  for (const row of info) {
+    if (row?.ПоставкаКроссДокинг === true) crossDock = true;
+    if (row?.ЕстьТоварыДляКоторыхМаркировкаОбязательна === true) labels.push("Маркировка обязательна");
+    else if (row?.ЕстьТоварыДляКоторыхВозможнаМаркировка === true) labels.push("Маркировка возможна");
+    if (row?.НужнаЭлектроннаяТТН === true) labels.push("ЭТрН");
+    if (row?.ЕстьТоварыССертификациейВСистемеМеркурий === true) labels.push("Меркурий (ВСД)");
+    if (row?.ЕстьЮвелирныеТовары === true) labels.push("Ювелирные товары");
+    if (row?.НужноПередатьУПД === true) labels.push("УПД до поставки");
+  }
+  const json = parseJsonSafe(doc.JSONИнформацияОЗаявкеНаПоставку);
+  if (json && typeof json === "object") {
+    for (const supply of json.supplies || []) {
+      if (supply?.is_crossdock === true) crossDock = true;
+      labels.push(...labelsFromSupplyTags(supply?.supply_tags));
+    }
+  }
+  if (ozon?.crossDock === true) crossDock = true;
+  if (Array.isArray(ozon?.specialConditionLabels)) labels.push(...ozon.specialConditionLabels);
+  const specialConditionLabels = uniqueLabels(labels);
+  const specialConditions =
+    specialConditionLabels.some((l) =>
+      /маркировка обязательна|этрн|меркурий|ювелир|заморозка/i.test(l)
+    ) || ozon?.specialConditions === true;
+  return { crossDock, specialConditions, specialConditionLabels };
+}
+
+function uniqueSorted(values) {
+  return [...new Set(values.map((v) => String(v || "").trim()).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, "ru")
+  );
+}
+
 function mapSupply(doc, ozonMap) {
   const orderId = num(doc.ИдентификаторЗаявкиНаПоставку);
   const orderNumber = String(doc.НомерЗаявкиНаПоставку || "").trim();
   const ozon = ozonMap.get(orderId) || ozonMap.get(orderNumber) || null;
   const emptyDriver = !doc.Водитель_Key || doc.Водитель_Key === EMPTY;
+  const flags = flagsFromDoc(doc, ozon);
+  const dropOff =
+    String(doc.НазваниеПунктаОтгрузки || "").trim() || String(ozon?.dropOffPoint || "").trim();
   return {
     ref: doc.Ref_Key,
     number: doc.Number || "",
@@ -301,11 +397,14 @@ function mapSupply(doc, ozonMap) {
     cargoPlacesSource: cargoPlaceCount(doc.Грузоместа) > 0 ? "1c" : ozon?.cargoPlaces > 0 ? "ozon" : "",
     createdAt: doc.ДатаСозданияЗаявкиНаПоставку || doc.Date || "",
     shipmentDate: doc.ПланируемаяДатаОтгрузки || "",
-    dropOffPoint: String(doc.НазваниеПунктаОтгрузки || "").trim(),
+    dropOffPoint: dropOff,
     storageWarehouse: resolveStorageWarehouse(doc, ozon),
     cluster: String(doc.НазваниеКластера || "").trim(),
     driver: emptyDriver ? "" : driverName(doc),
     goodsCount: goodsCount(doc),
+    crossDock: flags.crossDock,
+    specialConditions: flags.specialConditions,
+    specialConditionLabels: flags.specialConditionLabels,
   };
 }
 
@@ -341,6 +440,11 @@ export async function loadOzonFboSupplies(fromRaw, toRaw) {
   });
   const withOzon = supplies.filter((s) => s.statusOzon).length;
   const cargoPlaces = supplies.reduce((sum, s) => sum + (Number(s.cargoPlaces) || 0), 0);
+  const statuses1c = uniqueSorted(supplies.map((s) => s.status1cLabel || s.status1c));
+  const statusesOzon = uniqueSorted(supplies.map((s) => s.statusOzonLabel || s.statusOzon));
+  const clusters = uniqueSorted(supplies.map((s) => s.cluster));
+  const dropOffPoints = uniqueSorted(supplies.map((s) => s.dropOffPoint));
+  const storageWarehouses = uniqueSorted(supplies.map((s) => s.storageWarehouse));
   return {
     generatedAt: new Date().toISOString(),
     period: { from: range.from, to: range.to },
@@ -348,6 +452,15 @@ export async function loadOzonFboSupplies(fromRaw, toRaw) {
       supplies: supplies.length,
       withOzonStatus: withOzon,
       cargoPlaces,
+      crossDock: supplies.filter((s) => s.crossDock).length,
+      specialConditions: supplies.filter((s) => s.specialConditions).length,
+    },
+    filters: {
+      statuses1c,
+      statusesOzon,
+      clusters,
+      dropOffPoints,
+      storageWarehouses,
     },
     ozonConfigured: ozonSellerConfigured(),
     ozonError,
@@ -355,6 +468,7 @@ export async function loadOzonFboSupplies(fromRaw, toRaw) {
     note:
       "Поставки из документа 1С Alsn_ПоставкаOzon, база Первый интегратор (ecotidy). " +
       "Фильтр — реквизит ПланируемаяДатаОтгрузки. " +
-      "Грузоместа: сначала табличная часть 1С, если пусто — /v1/cargoes/supplies/get из ЛК Ozon.",
+      "Грузоместа: сначала табличная часть 1С, если пусто — /v1/cargoes/supplies/get из ЛК Ozon. " +
+      "Особые условия — маркировка / ЭТрН / Меркурий / ювелирка (1С и supply_tags Ozon).",
   };
 }

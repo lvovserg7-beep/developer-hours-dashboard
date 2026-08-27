@@ -14,7 +14,7 @@ import { loadBitrixFrequency } from "./lib/load-bitrix-freq.mjs";
 import { loadOzonCost, defaultOzonRange } from "./lib/load-ozon.mjs";
 import { loadOzonDrr, defaultOzonDrrRange } from "./lib/load-ozon-drr.mjs";
 import { loadOzonFbsDashboard } from "./lib/load-ozon-fbs-acts.mjs";
-import { loadOzonFboSupplies, defaultOzonFboRange } from "./lib/load-ozon-fbo.mjs";
+import { loadOzonFboSupplies, defaultOzonFboRange, defaultOzonFboFilterRange } from "./lib/load-ozon-fbo.mjs";
 import { loadWbProfit, defaultWbRange } from "./lib/load-wb.mjs";
 import { loadDebtors } from "./lib/load-debtors.mjs";
 import { loadMBalance } from "./lib/load-mbalance.mjs";
@@ -625,10 +625,28 @@ const server = createServer(async (req, res) => {
 
     if (path === "/api/ozonfbo") {
       if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
-      if (!userHasTab(user, "ozonfbo")) {
+      if (!userHasTab(user, "ozonfbo") && !userHasTab(user, "ozonfbofilters")) {
         return json(res, 403, { error: "Нет доступа к вкладке «Отгрузки ФБО Озон»." });
       }
       const range = defaultOzonFboRange();
+      const from = String(url.searchParams.get("from") || range.from);
+      const to = String(url.searchParams.get("to") || range.to);
+      try {
+        const data = await loadOzonFboSupplies(from, to);
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /дата/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/ozonfbofilters") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "ozonfbofilters")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Поставки ФБО с фильтрами»." });
+      }
+      const range = defaultOzonFboFilterRange();
       const from = String(url.searchParams.get("from") || range.from);
       const to = String(url.searchParams.get("to") || range.to);
       try {
