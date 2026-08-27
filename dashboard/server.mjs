@@ -13,12 +13,13 @@ import { loadBitrixAnalytics, defaultBitrixRange } from "./lib/load-bitrix.mjs";
 import { loadBitrixFrequency } from "./lib/load-bitrix-freq.mjs";
 import { loadOzonCost, defaultOzonRange } from "./lib/load-ozon.mjs";
 import { loadOzonDrr, defaultOzonDrrRange } from "./lib/load-ozon-drr.mjs";
+import { loadOzonFbsDashboard } from "./lib/load-ozon-fbs-acts.mjs";
+import { loadOzonFboSupplies, defaultOzonFboRange } from "./lib/load-ozon-fbo.mjs";
 import { loadWbProfit, defaultWbRange } from "./lib/load-wb.mjs";
 import { loadDebtors } from "./lib/load-debtors.mjs";
 import { loadMBalance } from "./lib/load-mbalance.mjs";
 import { loadClientPayments } from "./lib/load-client-payments.mjs";
-import { loadSeoReport, loadSeoProductsReport, loadSeoPositionsReport, syncSeoCsv, ensureSeoQueryClasses, ensureSeoQueryPositions, reclassifyBrandSeoQueries, reclassifyBoxesSeoQueries } from "./lib/load-seo.mjs";
-import { readQueryRows } from "./lib/seo-csv.mjs";
+import { loadSeoReport, loadSeoProductsReport, loadSeoPositionsReport, refreshSeoTrailingCache } from "./lib/load-seo.mjs";
 import {
   cookieName,
   ensureAuthReady,
@@ -43,6 +44,10 @@ const root = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
 const IIS_DIR = process.env.IIS_PUBLISH_DIR || "C:\\inetpub\\wwwroot\\employees";
 const CACHE_MS = 10 * 60 * 1000;
+const SEO_REFRESH_MS = (() => {
+  const n = Number(process.env.SEO_REFRESH_MS);
+  return Number.isFinite(n) && n > 0 ? n : 24 * 60 * 60 * 1000;
+})();
 const RETRY_MS = 30 * 1000;
 const SNAPSHOT_PATH = join(root, "data", "snapshot.json");
 
@@ -170,6 +175,46 @@ function startHoursRefreshLoop() {
       })
       .catch((err) => console.warn("hours refresh loop:", err.message || err));
   }, CACHE_MS);
+}
+
+function logSeoTrailing(result, reason) {
+  const seo = result.seo || {};
+  const pos = result.pos || {};
+  const wordstat = result.wordstat || {};
+  const classes = result.classes || {};
+  const gscDone = (seo.gsc || []).filter((x) => !x.skipped).length;
+  const yaDone = (seo.yandex || []).filter((x) => !x.skipped).length;
+  console.log(
+    `SEO trailing ${reason}: ${result.from}…${result.to}, gsc=${gscDone}, yandex=${yaDone}, ` +
+      `positions fetched=${pos.fetched || 0} rows=${pos.rows || 0}, ` +
+      `wordstat fetched=${wordstat.fetched || 0} skipped=${wordstat.skipped || 0}`
+  );
+  const cls = classes.cls || {};
+  console.log(`SEO product classes: total=${cls.total || 0}, added=${cls.added || 0}`);
+  const brand = classes.brand || {};
+  console.log(`SEO brand reclass: updated=${brand.updated || 0}, added=${brand.added || 0}, total=${brand.total || 0}`);
+  const boxes = classes.boxes || {};
+  console.log(`SEO boxes reclass: updated=${boxes.updated || 0}, added=${boxes.added || 0}, total=${boxes.total || 0}`);
+  for (const w of seo.warnings || []) console.warn("SEO:", w);
+  for (const w of pos.warnings || []) console.warn("SEO positions:", w);
+  for (const w of wordstat.warnings || []) console.warn("SEO wordstat:", w);
+}
+
+function runSeoTrailingRefresh(reason) {
+  console.log(`SEO trailing refresh (${reason}, last 7 days overwrite)...`);
+  return refreshSeoTrailingCache({
+    force: reason === "startup" && process.env.SEO_FORCE_SYNC === "1",
+  })
+    .then((result) => logSeoTrailing(result, reason))
+    .catch((err) => console.warn(`SEO trailing ${reason} failed:`, err.message || err));
+}
+
+function startSeoRefreshLoop() {
+  setInterval(() => {
+    runSeoTrailingRefresh("daily");
+  }, SEO_REFRESH_MS);
+  const hours = Math.round(SEO_REFRESH_MS / 3600000);
+  console.log(`SEO trailing refresh every ${hours}h (last 7 days overwrite)`);
 }
 
 function publishToIis() {
@@ -560,6 +605,42 @@ const server = createServer(async (req, res) => {
       }
     }
 
+    if (path === "/api/ozonfbs") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "ozonfbs")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Отгрузки ФБС ozon»." });
+      }
+      try {
+        const daysRaw = Number(url.searchParams.get("days"));
+        const data = await loadOzonFbsDashboard({
+          days: Number.isFinite(daysRaw) && daysRaw > 0 ? daysRaw : undefined,
+        });
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/ozonfbo") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "ozonfbo")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Отгрузки ФБО Озон»." });
+      }
+      const range = defaultOzonFboRange();
+      const from = String(url.searchParams.get("from") || range.from);
+      const to = String(url.searchParams.get("to") || range.to);
+      try {
+        const data = await loadOzonFboSupplies(from, to);
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /дата/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
     if (path === "/api/wb") {
       if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
       if (!userHasTab(user, "wb")) {
@@ -693,7 +774,7 @@ const server = createServer(async (req, res) => {
         const source = String(url.searchParams.get("source") || "all").trim();
         const site = String(url.searchParams.get("site") || "").trim();
         const product = String(url.searchParams.get("product") || "all").trim();
-        const data = loadSeoProductsReport({
+        const data = await loadSeoProductsReport({
           from: from || undefined,
           to: to || undefined,
           source,
@@ -797,45 +878,13 @@ refresh(true)
     console.warn("Startup hours refresh failed:", err.message || err);
   })
   .finally(() => {
-    console.log("SEO CSV sync on startup...");
-    syncSeoCsv({ force: process.env.SEO_FORCE_SYNC === "1" })
-      .then((seo) => {
-        const gscDone = (seo.gsc || []).filter((x) => !x.skipped).length;
-        const yaDone = (seo.yandex || []).filter((x) => !x.skipped).length;
-        const gscSkip = (seo.gsc || []).filter((x) => x.skipped).length;
-        const yaSkip = (seo.yandex || []).filter((x) => x.skipped).length;
-        console.log(
-          `SEO sync: yesterday=${seo.yesterday}, gsc loaded=${gscDone} skip=${gscSkip}, yandex loaded=${yaDone} skip=${yaSkip}`
-        );
-        for (const w of seo.warnings || []) console.warn("SEO:", w);
-        try {
-          const cls = ensureSeoQueryClasses(readQueryRows().map((r) => r.query));
-          console.log(`SEO product classes: total=${cls.total}, added=${cls.added}`);
-          const brand = reclassifyBrandSeoQueries();
-          console.log(`SEO brand reclass: updated=${brand.updated}, added=${brand.added}, total=${brand.total}`);
-          const boxes = reclassifyBoxesSeoQueries();
-          console.log(`SEO boxes reclass: updated=${boxes.updated}, added=${boxes.added}, total=${boxes.total}`);
-        } catch (err) {
-          console.warn("SEO product classes:", err.message || err);
-        }
-      })
-      .catch((err) => console.warn("SEO sync failed:", err.message || err))
-      .finally(() => {
-        server.listen(PORT, "0.0.0.0", () => {
-          console.log(`Dashboard http://localhost:${PORT}/`);
-          if (existsSync(join(IIS_DIR, "index.html"))) {
-            console.log(`IIS snapshot http://localhost/employees/`);
-          }
-          startHoursRefreshLoop();
-          console.log("SEO positions sync (top keys)...");
-          ensureSeoQueryPositions({ force: false })
-            .then((pos) => {
-              console.log(
-                `SEO positions: fetched=${pos.fetched}, skipped=${pos.skipped}, rows=${pos.rows || 0}`
-              );
-              for (const w of pos.warnings || []) console.warn("SEO positions:", w);
-            })
-            .catch((err) => console.warn("SEO positions:", err.message || err));
-        });
-      });
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`Dashboard http://localhost:${PORT}/`);
+      if (existsSync(join(IIS_DIR, "index.html"))) {
+        console.log(`IIS snapshot http://localhost/employees/`);
+      }
+      startHoursRefreshLoop();
+      startSeoRefreshLoop();
+      runSeoTrailingRefresh("startup");
+    });
   });

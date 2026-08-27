@@ -305,7 +305,12 @@ export function upsertQueryDailyRows(incoming) {
     const row = normalizeQueryDailyRow(raw);
     if (!row.source || !row.site || !row.date || !row.query) continue;
     const key = `${row.source}\t${row.site}\t${row.date}\t${row.query.toLowerCase()}`;
-    if (!map.has(key)) added += 1;
+    const prev = map.get(key);
+    const incomingBlank = !(row.impressions > 0 || row.clicks > 0 || row.position > 0);
+    const prevFilled = prev && (prev.impressions > 0 || prev.clicks > 0 || prev.position > 0);
+    // Не затирать уже наполненный день пустым ответом API (лаг Вебмастера/GSC).
+    if (prevFilled && incomingBlank) continue;
+    if (!prev) added += 1;
     map.set(key, row);
   }
   const rows = [...map.values()].sort((a, b) =>

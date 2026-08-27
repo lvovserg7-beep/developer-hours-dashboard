@@ -334,6 +334,51 @@ async function syncYandexHost(hostId, yesterday, opts = {}) {
 }
 
 let syncInflight = null;
+let trailingInflight = null;
+
+function trailingWindow(yesterday) {
+  const to = yesterday || seoYesterday();
+  const from = ymd(addDays(parseYmd(to), -(DAILY_TRAILING_RESYNC_DAYS - 1)));
+  return { from, to };
+}
+
+function applySeoQueryClasses() {
+  const cls = ensureSeoQueryClasses(readQueryRows().map((r) => r.query));
+  const brand = reclassifyBrandSeoQueries();
+  const boxes = reclassifyBoxesSeoQueries();
+  return { cls, brand, boxes };
+}
+
+/**
+ * Перечитать и перезаписать кэш за последние 7 дней:
+ * суточные CSV сайта, позиции топ-ключей и частоты Wordstat.
+ * Вызывать при старте и раз в сутки — Вебмастер/GSC догоняют лаг 1–3 дня.
+ */
+export async function refreshSeoTrailingCache(opts = {}) {
+  if (trailingInflight) return trailingInflight;
+  trailingInflight = (async () => {
+    const { from, to } = trailingWindow(opts.yesterday);
+    const seo = await syncSeoCsv({ yesterday: to, force: Boolean(opts.force) });
+    let classes = { cls: { total: 0, added: 0 }, brand: { updated: 0, added: 0, total: 0 }, boxes: { updated: 0, added: 0, total: 0 } };
+    try {
+      classes = applySeoQueryClasses();
+    } catch (err) {
+      const msg = `классификация: ${err.message || err}`;
+      seo.warnings = [...(seo.warnings || []), msg];
+      console.warn("SEO product classes:", err.message || err);
+    }
+    const pos = await ensureSeoQueryPositions({ from, to, force: true });
+    const picked = pickTopQueriesByProduct({ from, to });
+    const wordstatList = opts.allWordstat
+      ? [...new Set(readQueryRows().map((r) => r.query))]
+      : picked.flat.map((q) => q.query);
+    const wordstat = await ensureWordstatFrequencies(wordstatList, { force: true });
+    return { from, to, seo, pos, wordstat, classes };
+  })().finally(() => {
+    trailingInflight = null;
+  });
+  return trailingInflight;
+}
 
 /**
  * Суточная догрузка CSV.
@@ -575,16 +620,153 @@ function reclassifySeoQueriesForProduct(productId, queries) {
   return overwriteQueryClasses(incoming);
 }
 
+function periodQueryKey(source, site, query) {
+  return `${source}\t${site}\t${String(query || "").toLowerCase()}`;
+}
+
+function yandexPopularMetrics(q) {
+  const ind = q.indicators && !Array.isArray(q.indicators) ? q.indicators : {};
+  const fromArr = (name) => {
+    if (!Array.isArray(q.indicators)) return null;
+    const hit = q.indicators.find((x) => (x.name || x.indicator || x.query_indicator) === name);
+    return hit == null ? null : hit.value ?? hit.count;
+  };
+  const clicks = Number(q.clicks ?? q.TOTAL_CLICKS ?? ind.TOTAL_CLICKS ?? fromArr("TOTAL_CLICKS")) || 0;
+  const impressions = Number(q.impressions ?? q.TOTAL_SHOWS ?? ind.TOTAL_SHOWS ?? fromArr("TOTAL_SHOWS")) || 0;
+  const position =
+    Number(q.position ?? q.AVG_SHOW_POSITION ?? ind.AVG_SHOW_POSITION ?? fromArr("AVG_SHOW_POSITION")) || 0;
+  return { clicks, impressions, position };
+}
+
+function queryDailyPeriodMap(from, to, srcFilter, siteFilter) {
+  const map = new Map();
+  for (const r of readQueryDailyRows()) {
+    if (r.date < from || r.date > to) continue;
+    if (srcFilter !== "all" && r.source !== srcFilter) continue;
+    if (siteFilter && r.site !== siteFilter) continue;
+    const key = periodQueryKey(r.source, r.site, r.query);
+    const prev = map.get(key) || {
+      query: r.query,
+      source: r.source,
+      site: r.site,
+      clicks: 0,
+      impressions: 0,
+      positionSum: 0,
+      days: 0,
+    };
+    prev.clicks += r.clicks;
+    prev.impressions += r.impressions;
+    if (r.position > 0) {
+      prev.positionSum += r.position;
+      prev.days += 1;
+    }
+    map.set(key, prev);
+  }
+  for (const [key, v] of map) {
+    map.set(key, {
+      query: v.query,
+      source: v.source,
+      site: v.site,
+      clicks: v.clicks,
+      impressions: v.impressions,
+      position: v.days > 0 ? v.positionSum / v.days : 0,
+    });
+  }
+  return map;
+}
+
+/**
+ * Показы/клики по ключам за выбранный период из Вебмастера и GSC.
+ */
+async function fetchPeriodQueryStats({ from, to, source = "all", site = "" }) {
+  const srcFilter = String(source || "all").toLowerCase();
+  const siteFilter = String(site || "").trim();
+  const map = queryDailyPeriodMap(from, to, srcFilter, siteFilter);
+  const warnings = [];
+  const tasks = [];
+
+  const put = (sourceName, siteId, query, metrics) => {
+    const text = String(query || "").trim();
+    if (!text) return;
+    map.set(periodQueryKey(sourceName, siteId, text), {
+      clicks: metrics.clicks,
+      impressions: metrics.impressions,
+      position: metrics.position,
+      query: text,
+      source: sourceName,
+      site: siteId,
+    });
+  };
+
+  if ((srcFilter === "all" || srcFilter === "yandex") && envFlag("SEO_YANDEX_ENABLED", true) && yandexConfigured()) {
+    tasks.push(
+      (async () => {
+        try {
+          const hosts = await yandexResolveHostIds();
+          const list = siteFilter ? hosts.filter((h) => h === siteFilter) : hosts;
+          if (siteFilter && !list.length) return;
+          for (const hostId of list) {
+            const popular = await yandexPopularQueries(hostId, from, to, { limit: 500 });
+            const rows = popular.queries || popular.popular_queries || popular.items || [];
+            for (const q of rows) {
+              const text = String(q.query_text || q.query || q.text || "").trim();
+              put("yandex", hostId, text, yandexPopularMetrics(q));
+            }
+          }
+        } catch (err) {
+          warnings.push(`Яндекс.Вебмастер за период: ${err.message || err}`);
+        }
+      })()
+    );
+  }
+
+  if ((srcFilter === "all" || srcFilter === "gsc") && envFlag("SEO_GSC_ENABLED", true) && gscConfigured()) {
+    tasks.push(
+      (async () => {
+        try {
+          const sites = siteFilter ? gscSiteUrls().filter((s) => s === siteFilter) : gscSiteUrls();
+          if (siteFilter && !sites.length) return;
+          for (const siteUrl of sites) {
+            const rows = await gscSearchAnalyticsAll(siteUrl, {
+              startDate: from,
+              endDate: to,
+              dimensions: ["query"],
+              rowLimit: 500,
+            });
+            for (const r of rows) {
+              const text = String(r.keys?.[0] || "").trim();
+              const clicks = Number(r.clicks) || 0;
+              const impressions = Number(r.impressions) || 0;
+              put("gsc", siteUrl, text, {
+                clicks,
+                impressions,
+                position: Number(r.position) || 0,
+              });
+            }
+          }
+        } catch (err) {
+          warnings.push(`GSC за период: ${err.message || err}`);
+        }
+      })()
+    );
+  }
+
+  if (tasks.length) await Promise.all(tasks);
+  return { map, warnings };
+}
+
 /**
  * Отчёт «Все запросы по продуктам»: классификация + дневная статистика
  * (дневные итоги сайта распределяются по доле кликов/показов запросов продукта).
+ * По каждому ключу — показы/клики Вебмастера и GSC за выбранный период.
  */
-export function loadSeoProductsReport({
+export async function loadSeoProductsReport({
   from,
   to,
   source = "all",
   site = "",
   product = "all",
+  forceWordstat = false,
 } = {}) {
   const range = defaultSeoRange();
   const dateFrom = parseYmd(from) ? String(from).slice(0, 10) : range.from;
@@ -598,27 +780,83 @@ export function loadSeoProductsReport({
     throw new Error("Неизвестный продукт");
   }
 
+  const periodStats = await fetchPeriodQueryStats({
+    from: dateFrom,
+    to: dateTo,
+    source: srcFilter,
+    site: siteFilter,
+  });
+
   // подтянуть классы для всех известных запросов
   ensureSeoQueryClasses(readQueryRows().map((r) => r.query));
   const exact = readQueryClassMap();
 
-  const queryRows = readQueryRows()
-    .filter((r) => {
-      if (srcFilter !== "all" && r.source !== srcFilter) return false;
-      if (siteFilter && r.site !== siteFilter) return false;
-      if (r.period_to < dateFrom || r.period_from > dateTo) return false;
-      return true;
-    })
-    .map((r) => {
-      const productId = classifyQuery(r.query, exact);
-      return { ...r, product: productId, productLabel: productLabel(productId) };
+  const seenKeys = new Set();
+  const queryRows = [];
+  for (const r of readQueryRows()) {
+    if (srcFilter !== "all" && r.source !== srcFilter) continue;
+    if (siteFilter && r.site !== siteFilter) continue;
+    if (r.period_to < dateFrom || r.period_from > dateTo) continue;
+    const productId = classifyQuery(r.query, exact);
+    const key = periodQueryKey(r.source, r.site, r.query);
+    seenKeys.add(key);
+    const wm = periodStats.map.get(key);
+    queryRows.push({
+      ...r,
+      product: productId,
+      productLabel: productLabel(productId),
+      webmasterImpressions: wm ? wm.impressions : null,
+      webmasterClicks: wm ? wm.clicks : null,
+      webmasterPosition: wm && wm.position > 0 ? wm.position : null,
     });
+  }
+  for (const [key, wm] of periodStats.map) {
+    if (seenKeys.has(key)) continue;
+    if (!wm?.query) continue;
+    const productId = classifyQuery(wm.query, exact);
+    queryRows.push({
+      source: wm.source,
+      site: wm.site,
+      period_from: dateFrom,
+      period_to: dateTo,
+      query: wm.query,
+      clicks: wm.clicks,
+      impressions: wm.impressions,
+      ctr: wm.impressions > 0 ? wm.clicks / wm.impressions : 0,
+      position: wm.position,
+      product: productId,
+      productLabel: productLabel(productId),
+      webmasterImpressions: wm.impressions,
+      webmasterClicks: wm.clicks,
+      webmasterPosition: wm.position > 0 ? wm.position : null,
+    });
+  }
+
+  const wordstat = await ensureWordstatFrequencies(
+    [...queryRows]
+      .sort((a, b) => (b.webmasterImpressions || 0) - (a.webmasterImpressions || 0))
+      .map((q) => q.query),
+    { force: Boolean(forceWordstat), limit: forceWordstat ? 0 : 25 }
+  );
+  const freqMap = readWordstatMap();
+  for (const q of queryRows) {
+    const ws = freqMap.get(q.query.toLowerCase());
+    q.frequency = ws && Number.isFinite(Number(ws.frequency)) ? Number(ws.frequency) : null;
+  }
 
   const weightClicks = Object.fromEntries(SEO_PRODUCT_IDS.map((id) => [id, 0]));
   const weightImp = Object.fromEntries(SEO_PRODUCT_IDS.map((id) => [id, 0]));
+  const weightWmImp = Object.fromEntries(SEO_PRODUCT_IDS.map((id) => [id, 0]));
+  const weightWmClicks = Object.fromEntries(SEO_PRODUCT_IDS.map((id) => [id, 0]));
   for (const q of queryRows) {
-    weightClicks[q.product] += q.clicks;
-    weightImp[q.product] += q.impressions;
+    if (q.webmasterImpressions != null) {
+      weightWmImp[q.product] += q.webmasterImpressions;
+      weightImp[q.product] += q.webmasterImpressions;
+    }
+    if (q.webmasterClicks != null) {
+      weightWmClicks[q.product] += q.webmasterClicks;
+      weightClicks[q.product] += q.webmasterClicks;
+    }
   }
   const sumClicks = SEO_PRODUCT_IDS.reduce((s, id) => s + weightClicks[id], 0) || 1;
   const sumImp = SEO_PRODUCT_IDS.reduce((s, id) => s + weightImp[id], 0) || 1;
@@ -667,18 +905,40 @@ export function loadSeoProductsReport({
 
   const filteredQueries = queryRows
     .filter((q) => productFilter === "all" || q.product === productFilter)
-    .sort((a, b) => b.clicks - a.clicks || b.impressions - a.impressions);
+    .sort(
+      (a, b) =>
+        (b.webmasterImpressions || 0) - (a.webmasterImpressions || 0) ||
+        (b.frequency || 0) - (a.frequency || 0) ||
+        b.clicks - a.clicks
+    );
 
   const productTotals = SEO_PRODUCTS.map((p) => {
-    const clicks = weightClicks[p.id] || 0;
-    const impressions = weightImp[p.id] || 0;
+    const clicks = weightWmClicks[p.id] || 0;
+    const impressions = weightWmImp[p.id] || 0;
     return {
       id: p.id,
       label: p.label,
       clicks,
       impressions,
+      webmasterImpressions: impressions,
+      webmasterClicks: clicks,
       ctr: impressions > 0 ? clicks / impressions : 0,
       queries: queryRows.filter((q) => q.product === p.id).length,
+    };
+  });
+
+  const sections = SEO_PRODUCTS.filter((p) => productFilter === "all" || p.id === productFilter).map((p) => {
+    const queries = filteredQueries.filter((q) => q.product === p.id);
+    const tot = productTotals.find((x) => x.id === p.id) || {};
+    return {
+      id: p.id,
+      label: p.label,
+      queries,
+      clicks: tot.clicks || 0,
+      impressions: tot.impressions || 0,
+      webmasterImpressions: tot.webmasterImpressions || 0,
+      webmasterClicks: tot.webmasterClicks || 0,
+      queriesCount: queries.length,
     };
   });
 
@@ -687,11 +947,15 @@ export function loadSeoProductsReport({
       ? {
           clicks: productTotals.reduce((s, p) => s + p.clicks, 0),
           impressions: productTotals.reduce((s, p) => s + p.impressions, 0),
+          webmasterImpressions: productTotals.reduce((s, p) => s + (p.webmasterImpressions || 0), 0),
+          webmasterClicks: productTotals.reduce((s, p) => s + (p.webmasterClicks || 0), 0),
           queries: queryRows.length,
         }
       : productTotals.find((p) => p.id === productFilter) || {
           clicks: 0,
           impressions: 0,
+          webmasterImpressions: 0,
+          webmasterClicks: 0,
           queries: 0,
         };
   selected.ctr = selected.impressions > 0 ? selected.clicks / selected.impressions : 0;
@@ -702,14 +966,17 @@ export function loadSeoProductsReport({
     product: productFilter,
     products: SEO_PRODUCTS,
     productTotals,
+    sections,
     totals: selected,
     series,
     queries: filteredQueries,
     sites: [...new Set(readDailyRows().map((r) => r.site))].sort(),
+    warnings: [...(periodStats.warnings || []), ...(wordstat.warnings || [])].slice(0, 8),
     note:
-      "Текущие запросы разложены по продуктам (правила + data/seo-query-class.csv). " +
-      "Новые запросы после первого прогона попадают в «Прочее» — их можно переклассифицировать позже. " +
-      "Дневная статистика — доля продукта в дневных показах/кликах сайта по весам запросов.",
+      "«Запросов» — Wordstat, точная фраза в кавычках (~30 дней по России). " +
+      "«Показы» и «Клики» — сколько раз сайт показался / кликнули в Яндекс.Вебмастере или GSC за выбранный период (не за 90 дней каталога). " +
+      "Wordstat может быть меньше показов, если период длиннее месяца: это разные окна. " +
+      "Дневная статистика — доля продукта в дневных показах сайта по весам ключей за период.",
   };
 }
 
@@ -957,9 +1224,13 @@ export async function ensureWordstatFrequencies(queries, opts = {}) {
     need.push(query);
   }
 
+  const limitRaw = Number(opts.limit);
+  const fetchLimit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.floor(limitRaw) : need.length;
+  const toFetch = need.slice(0, fetchLimit);
+
   const warnings = [];
   const incoming = [];
-  for (const query of need) {
+  for (const query of toFetch) {
     try {
       const { frequency, backend } = await fetchWordstatFrequency(query);
       incoming.push({
@@ -968,10 +1239,16 @@ export async function ensureWordstatFrequencies(queries, opts = {}) {
         fetched_at: new Date().toISOString(),
         backend,
       });
-      // пауза против rate limit (~10/s)
       await new Promise((r) => setTimeout(r, 120));
     } catch (err) {
-      warnings.push(`Wordstat «${query}»: ${err.message || err}`);
+      const msg = String(err.message || err);
+      if (/429|quota|rate/i.test(msg)) {
+        warnings.push(
+          `Wordstat: лимит API (100 запросов в час). Частоты подтянутся с кэша и следующих прогонов. Осталось без кэша: ${need.length - incoming.length}`
+        );
+        break;
+      }
+      warnings.push(`Wordstat «${query}»: ${msg}`);
     }
   }
   if (incoming.length) upsertWordstatRows(incoming);

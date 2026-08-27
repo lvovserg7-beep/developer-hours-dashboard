@@ -62,6 +62,8 @@
     body.wide-report:not(.is-full) #tab-plan .panel,
     body.wide-report:not(.is-full) #tab-budget .panel,
     body.wide-report:not(.is-full) #tab-ozon .panel,
+    body.wide-report:not(.is-full) #tab-ozonfbs .panel,
+    body.wide-report:not(.is-full) #tab-ozonfbo .panel,
     body.wide-report:not(.is-full) #tab-units .panel,
     body.wide-report:not(.is-full) #tab-wb .panel,
     body.wide-report:not(.is-full) #tab-debtors .panel,
@@ -75,6 +77,10 @@
     body.wide-report:not(.is-full) #tab-budget .report-stage-inner,
     body.wide-report:not(.is-full) #tab-ozon .report-stage,
     body.wide-report:not(.is-full) #tab-ozon .report-stage-inner,
+    body.wide-report:not(.is-full) #tab-ozonfbs .report-stage,
+    body.wide-report:not(.is-full) #tab-ozonfbs .report-stage-inner,
+    body.wide-report:not(.is-full) #tab-ozonfbo .report-stage,
+    body.wide-report:not(.is-full) #tab-ozonfbo .report-stage-inner,
     body.wide-report:not(.is-full) #tab-units .report-stage,
     body.wide-report:not(.is-full) #tab-units .report-stage-inner,
     body.wide-report:not(.is-full) #tab-wb .report-stage,
@@ -91,6 +97,8 @@
     body.wide-report:not(.is-full) #tab-plan .pnl-scroll,
     body.wide-report:not(.is-full) #tab-budget .pnl-scroll,
     body.wide-report:not(.is-full) #tab-ozon .pnl-scroll,
+    body.wide-report:not(.is-full) #tab-ozonfbs .pnl-scroll,
+    body.wide-report:not(.is-full) #tab-ozonfbo .pnl-scroll,
     body.wide-report:not(.is-full) #tab-units .pnl-scroll,
     body.wide-report:not(.is-full) #tab-wb .pnl-scroll,
     body.wide-report:not(.is-full) #tab-debtors .pnl-scroll,
@@ -103,6 +111,8 @@
     body.wide-report:not(.is-full) #tab-plan table.plan,
     body.wide-report:not(.is-full) #tab-budget table.budget,
     body.wide-report:not(.is-full) #tab-ozon table.ozon,
+    body.wide-report:not(.is-full) #tab-ozonfbs table.ozon,
+    body.wide-report:not(.is-full) #tab-ozonfbo table.ozon,
     body.wide-report:not(.is-full) #tab-units table.pnl,
     body.wide-report:not(.is-full) #tab-wb table.ozon,
     body.wide-report:not(.is-full) #tab-debtors table.pnl,
@@ -115,6 +125,8 @@
     body.wide-report:not(.is-full) #tab-plan table.plan td.name,
     body.wide-report:not(.is-full) #tab-budget table.budget td.name,
     body.wide-report:not(.is-full) #tab-ozon table.ozon td.name,
+    body.wide-report:not(.is-full) #tab-ozonfbs table.ozon td.name,
+    body.wide-report:not(.is-full) #tab-ozonfbo table.ozon td.name,
     body.wide-report:not(.is-full) #tab-units table.pnl td.name,
     body.wide-report:not(.is-full) #tab-wb table.ozon td.name,
     body.wide-report:not(.is-full) #tab-debtors table.pnl td.name,
@@ -129,6 +141,10 @@
     body.wide-report:not(.is-full) #tab-budget table.budget td.num,
     body.wide-report:not(.is-full) #tab-ozon table.ozon th.num,
     body.wide-report:not(.is-full) #tab-ozon table.ozon td.num,
+    body.wide-report:not(.is-full) #tab-ozonfbs table.ozon th.num,
+    body.wide-report:not(.is-full) #tab-ozonfbs table.ozon td.num,
+    body.wide-report:not(.is-full) #tab-ozonfbo table.ozon th.num,
+    body.wide-report:not(.is-full) #tab-ozonfbo table.ozon td.num,
     body.wide-report:not(.is-full) #tab-units table.pnl th.num,
     body.wide-report:not(.is-full) #tab-units table.pnl td.num,
     body.wide-report:not(.is-full) #tab-wb table.ozon th.num,
@@ -836,6 +852,7 @@
     .pnl-warn { color: var(--bad); }
     .pnl-section { margin-bottom: 18px; }
     .pnl-section h2 { margin: 0 0 8px; }
+    .pnl-section h3 .meta { margin: 0; font-weight: 400; }
     .pnl-scroll {
       overflow: auto;
       -webkit-overflow-scrolling: touch;
@@ -1196,6 +1213,8 @@
         <button type="button" class="tab" data-tab="bitrixfreq" role="tab" aria-selected="false">Чистота ведения Битрикс</button>
         <button type="button" class="tab" data-tab="ozon" role="tab" aria-selected="false">Озон себестоимость</button>
         <button type="button" class="tab" data-tab="ozondrr" role="tab" aria-selected="false">Озон ДРР</button>
+        <button type="button" class="tab" data-tab="ozonfbs" role="tab" aria-selected="false">Отгрузки ФБС ozon</button>
+        <button type="button" class="tab" data-tab="ozonfbo" role="tab" aria-selected="false">Отгрузки ФБО Озон</button>
         <button type="button" class="tab" data-tab="wb" role="tab" aria-selected="false">WB рентабельность</button>
         <button type="button" class="tab" data-tab="debtors" role="tab" aria-selected="false">Задолженность клиентов</button>
         <button type="button" class="tab" data-tab="mbalance" role="tab" aria-selected="false">Управленческий баланс</button>
@@ -1282,6 +1301,8 @@
             <label><input type="checkbox" id="new-bitrixfreq"> Чистота ведения Битрикс</label>
             <label><input type="checkbox" id="new-ozon"> Озон себестоимость</label>
             <label><input type="checkbox" id="new-ozondrr"> Озон ДРР</label>
+            <label><input type="checkbox" id="new-ozonfbs"> Отгрузки ФБС ozon</label>
+            <label><input type="checkbox" id="new-ozonfbo"> Отгрузки ФБО Озон</label>
             <label><input type="checkbox" id="new-wb"> WB рентабельность</label>
             <label><input type="checkbox" id="new-debtors"> Задолженность клиентов</label>
             <label><input type="checkbox" id="new-mbalance"> Управленческий баланс</label>
@@ -1600,6 +1621,36 @@
         <div id="ozondrr-report"></div>
       </section>
     </div>
+    <div id="tab-ozonfbs" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Отгрузки ФБС ozon</h2>
+        <p class="lead tab-intro">Отправления, которые сейчас ждут отгрузки в кабинете Ozon, и незакрытые акты FBS. Данные из Seller API.</p>
+        <form class="pnl-toolbar" id="ozonfbs-form">
+          <button type="submit" id="ozonfbs-run">Обновить</button>
+        </form>
+        <div id="ozonfbs-err" class="err" hidden></div>
+        <div id="ozonfbs-report"></div>
+      </section>
+    </div>
+    <div id="tab-ozonfbo" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Отгрузки ФБО Озон</h2>
+        <p class="lead tab-intro">Поставки FBO из 1С (документ Alsn_ПоставкаOzon) и текущий статус заявки в личном кабинете Ozon. Фильтр — планируемая дата отгрузки.</p>
+        <form class="pnl-toolbar" id="ozonfbo-form">
+          <div class="filter-dates">
+            <label for="ozonfbo-day">Планируемая дата отгрузки</label>
+            <div class="dates">
+              <div>
+                <input id="ozonfbo-day" type="date" required>
+              </div>
+            </div>
+          </div>
+          <button type="submit" id="ozonfbo-run">Сформировать</button>
+        </form>
+        <div id="ozonfbo-err" class="err" hidden></div>
+        <div id="ozonfbo-report"></div>
+      </section>
+    </div>
     <div id="tab-wb" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Расчёт рентабельности WB</h2>
@@ -1764,7 +1815,7 @@
     <div id="tab-seoproducts" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Все запросы по продуктам</h2>
-        <p class="lead tab-intro">Запросы из CSV с разбивкой по продуктам: бренд, маркетплейсы, поставщики, 1С-коробки, разработка, поддержка. Новые без правила — в «Прочее». Дневная статистика — доля продукта в дневных показах/кликах.</p>
+        <p class="lead tab-intro">Запросы по продуктам. Колонка «Запросов» — Wordstat (точная фраза, ~30 дней). «Показы» и «Клики» — Яндекс.Вебмастер / GSC за выбранный период. Новые без правила — в «Прочее».</p>
         <form class="pnl-toolbar" id="seoproducts-form">
           <div class="filter-dates">
             <label>Период</label>
@@ -3559,6 +3610,269 @@
       loadOzonDrrReport();
     }
 
+    let ozonfbsLoaded = false;
+    let ozonfbsInflight = false;
+
+    function ozonfbsErr(text) {
+      const el = document.getElementById("ozonfbs-err");
+      if (!el) return;
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function formatOzonFbsDate(value) {
+      const s = String(value || "").trim();
+      if (!s) return "—";
+      if (s.includes("T")) {
+        const d = new Date(s);
+        if (!Number.isNaN(d.getTime())) return fmt.format(d);
+      }
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) return `${m[3]}.${m[2]}.${m[1]}`;
+      return s;
+    }
+
+    function formatOzonFbsAccepted(value) {
+      const d = new Date(value);
+      if (!value || Number.isNaN(d.getTime())) return "—";
+      return new Intl.DateTimeFormat("ru-RU", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(d);
+    }
+
+    function ozonFbsProductHtml(products) {
+      if (!Array.isArray(products) || !products.length) return "—";
+      return products
+        .map((p) => {
+          const qty = `${formatSeoNum(p.quantity || 0)} шт`;
+          const offer = escapeHtml(p.offerId || "");
+          const name = escapeHtml(p.name || "");
+          return `<div>${qty}</div>${offer ? `<div>${offer}</div>` : ""}${name ? `<div>${name}</div>` : ""}`;
+        })
+        .join("");
+    }
+
+    function renderOzonFbsActs(report) {
+      const box = document.getElementById("ozonfbs-report");
+      if (!box) return;
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      const acts = report.acts || [];
+      const postings = report.postings || [];
+      const t = report.totals || {};
+      const postingNote = report.postingNote ? `<p class="pnl-note">${escapeHtml(report.postingNote)}</p>` : "";
+      const actNote = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      const actPeriod = report.period
+        ? `<p class="pnl-note">Период актов: ${escapeHtml(report.period.from)} — ${escapeHtml(report.period.to)} · просмотрено актов: ${formatSeoNum(t.fetched)}</p>`
+        : "";
+      const postingRows = postings
+        .map(
+          (p) => `<tr>
+            <td>${escapeHtml(p.postingNumber || "—")}</td>
+            <td>${escapeHtml(p.statusLabel || p.status || "—")}</td>
+            <td>${escapeHtml(formatOzonFbsAccepted(p.inProcessAt))}</td>
+            <td>${escapeHtml(p.tariffLabel || "—")}</td>
+            <td>${escapeHtml(p.shipmentDeadlineLabel || formatOzonFbsDate(p.shipmentDateWithoutDelay || p.shipmentDate))}</td>
+            <td class="name">${ozonFbsProductHtml(p.products)}</td>
+            <td>${escapeHtml(p.trackingNumber || "—")}</td>
+            <td class="num">${formatRub(p.price)}</td>
+            <td>${escapeHtml(p.warehouse || "—")}</td>
+            <td>${escapeHtml(p.deliveryService || p.deliveryMethodName || "—")}</td>
+          </tr>`
+        )
+        .join("");
+      const actRows = acts
+        .map(
+          (a) => `<tr>
+            <td class="num">${escapeHtml(String(a.id ?? ""))}</td>
+            <td>${escapeHtml(a.statusLabel || a.status || "—")}</td>
+            <td class="name">${escapeHtml(a.deliveryMethodName || "—")}</td>
+            <td>${escapeHtml(formatOzonFbsDate(a.departureDate))}</td>
+            <td>${escapeHtml(formatOzonFbsDate(a.createdAt))}</td>
+            <td>${escapeHtml(a.actTypeLabel || a.actType || "—")}</td>
+            <td class="num">${a.isPartial ? (a.partialNum || "да") : "—"}</td>
+            <td class="num">${formatSeoNum(a.containersCount)}</td>
+          </tr>`
+        )
+        .join("");
+      box.innerHTML = `
+        <div class="kpi-strip">
+          <div class="bt"><div class="lab">Ждут отгрузки</div><div class="val">${formatSeoNum(t.awaiting)}</div></div>
+          <div class="bt"><div class="lab">Незакрытых актов</div><div class="val">${formatSeoNum(t.open)}</div></div>
+        </div>
+        <div class="pnl-section">
+          <h2>Ожидают отгрузки</h2>
+          ${postingNote}
+          <div class="pnl-scroll"><table class="ozon">
+            <thead><tr>
+              <th>Номер отправления</th>
+              <th>Статус</th>
+              <th>Принят</th>
+              <th>Тариф отгрузки</th>
+              <th>Дата отгрузки</th>
+              <th>Количество, артикул</th>
+              <th>Трек-номер</th>
+              <th class="num">Стоимость</th>
+              <th>Склад</th>
+              <th>Служба доставки</th>
+            </tr></thead>
+            <tbody>${postingRows || `<tr><td colspan="10">Сейчас нет отправлений, которые ждут отгрузки</td></tr>`}</tbody>
+          </table></div>
+        </div>
+        <div class="pnl-section">
+          <h2>Незакрытые акты</h2>
+          ${actNote}${actPeriod}
+          <div class="pnl-scroll"><table class="ozon">
+            <thead><tr>
+              <th class="num">№ акта</th>
+              <th>Статус</th>
+              <th>Метод доставки</th>
+              <th>Дата отгрузки</th>
+              <th>Создан</th>
+              <th>Тип</th>
+              <th class="num">Частичная</th>
+              <th class="num">Грузомест</th>
+            </tr></thead>
+            <tbody>${actRows || `<tr><td colspan="8">Сейчас нет незакрытых актов ФБС за выбранный период</td></tr>`}</tbody>
+          </table></div>
+        </div>`;
+    }
+
+    async function loadOzonFbsActs(force = false) {
+      if (USER.tabs?.ozonfbs === false || ozonfbsInflight) return;
+      if (ozonfbsLoaded && !force) return;
+      ozonfbsInflight = true;
+      const btn = document.getElementById("ozonfbs-run");
+      if (btn) btn.disabled = true;
+      ozonfbsErr("");
+      document.getElementById("ozonfbs-report").innerHTML = `<p class="pnl-note">Запрашиваем отгрузки и акты ФБС в Ozon…</p>`;
+      try {
+        const report = await api("/api/ozonfbs", { method: "GET" });
+        ozonfbsLoaded = true;
+        renderOzonFbsActs(report);
+      } catch (e) {
+        ozonfbsLoaded = false;
+        renderOzonFbsActs(null);
+        ozonfbsErr(e.message || String(e));
+      } finally {
+        ozonfbsInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    let ozonfboLoaded = false;
+    let ozonfboInflight = false;
+
+    function ozonfboErr(text) {
+      const el = document.getElementById("ozonfbo-err");
+      if (!el) return;
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function initOzonFboDates() {
+      const day = document.getElementById("ozonfbo-day");
+      if (!day || day.value) return;
+      const now = new Date();
+      const p = (n) => String(n).padStart(2, "0");
+      day.value = now.getFullYear() + "-" + p(now.getMonth() + 1) + "-" + p(now.getDate());
+    }
+
+    function renderOzonFboSupplies(report) {
+      const box = document.getElementById("ozonfbo-report");
+      if (!box) return;
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      const rows = report.supplies || [];
+      const t = report.totals || {};
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      const ozonWarn = report.ozonError
+        ? `<p class="pnl-note">Данные ЛК Ozon: ${escapeHtml(report.ozonError)}</p>`
+        : "";
+      const body = rows
+        .map(
+          (s) => `<tr>
+            <td>${escapeHtml(s.orderNumber || "—")}</td>
+            <td>${escapeHtml(s.status1cLabel || s.status1c || "—")}</td>
+            <td>${escapeHtml(s.statusOzonLabel || s.statusOzon || "—")}</td>
+            <td class="num">${formatSeoNum(s.cargoPlaces)}</td>
+            <td>${escapeHtml(s.cluster || "—")}</td>
+            <td>${escapeHtml(formatOzonFbsDate(s.shipmentDate))}</td>
+            <td class="name">${escapeHtml(s.dropOffPoint || "—")}</td>
+            <td>${escapeHtml(s.driver || "—")}</td>
+            <td class="num">${formatSeoNum(s.goodsCount)}</td>
+          </tr>`
+        )
+        .join("");
+      box.innerHTML =
+        note +
+        ozonWarn +
+        `
+        <div class="kpi-strip">
+          <div class="bt"><div class="lab">Поставок</div><div class="val">${formatSeoNum(t.supplies)}</div></div>
+          <div class="bt"><div class="lab">Всего грузомест</div><div class="val">${formatSeoNum(t.cargoPlaces)}</div></div>
+        </div>
+        <div class="pnl-section">
+          <div class="pnl-scroll"><table class="ozon">
+            <thead><tr>
+              <th>Номер заявки на поставку</th>
+              <th>Статус 1С</th>
+              <th>Статус ЛК Ozon</th>
+              <th class="num">Всего грузомест</th>
+              <th>Кластер</th>
+              <th>Дата отгрузки</th>
+              <th>Пункт отгрузки</th>
+              <th>Водитель</th>
+              <th class="num">Товаров</th>
+            </tr></thead>
+            <tbody>${body || `<tr><td colspan="9">Нет поставок на выбранную планируемую дату отгрузки</td></tr>`}</tbody>
+          </table></div>
+        </div>`;
+    }
+
+    async function loadOzonFboReport(force = false) {
+      if (USER.tabs?.ozonfbo === false || ozonfboInflight) return;
+      if (ozonfboLoaded && !force) return;
+      initOzonFboDates();
+      const day = document.getElementById("ozonfbo-day")?.value;
+      if (!day) return;
+      ozonfboInflight = true;
+      const btn = document.getElementById("ozonfbo-run");
+      if (btn) btn.disabled = true;
+      ozonfboErr("");
+      document.getElementById("ozonfbo-report").innerHTML = `<p class="pnl-note">Загружаем поставки из 1С и грузоместа Ozon…</p>`;
+      try {
+        const q = new URLSearchParams({ from: day, to: day });
+        const report = await api(`/api/ozonfbo?${q}`, { method: "GET" });
+        ozonfboLoaded = true;
+        renderOzonFboSupplies(report);
+      } catch (e) {
+        ozonfboLoaded = false;
+        renderOzonFboSupplies(null);
+        ozonfboErr(e.message || String(e));
+      } finally {
+        ozonfboInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
     let wbLoaded = false;
     let wbInflight = false;
 
@@ -4301,14 +4615,14 @@
       const productTotals = report.productTotals || [];
       const series = report.series || [];
 
-      const pHead = `<tr><th>Продукт</th><th class="num">Запросов</th><th class="num">Клики</th><th class="num">Показы</th><th class="num">CTR</th></tr>`;
+      const pHead = `<tr><th>Продукт</th><th class="num">Ключей</th><th class="num">Показы</th><th class="num">Клики</th><th class="num">CTR</th></tr>`;
       const pBody = productTotals
         .map(
           (p) => `<tr>
           <td class="name">${escapeHtml(p.label)}</td>
           <td class="num">${formatSeoNum(p.queries)}</td>
-          <td class="num">${formatSeoNum(p.clicks)}</td>
-          <td class="num">${formatSeoNum(p.impressions)}</td>
+          <td class="num" title="Показы в Вебмастере/GSC за выбранный период">${formatSeoNum(p.webmasterImpressions)}</td>
+          <td class="num">${formatSeoNum(p.webmasterClicks != null ? p.webmasterClicks : p.clicks)}</td>
           <td class="num">${formatSeoPct(p.ctr)}</td>
         </tr>`
         )
@@ -4363,26 +4677,62 @@
           .join("");
       }
 
-      const qHead = `<tr><th>№</th><th>Продукт</th><th>Источник</th><th>Сайт</th><th>Запрос</th><th class="num">Клики</th><th class="num">Показы</th><th class="num">CTR</th><th class="num">Позиция</th></tr>`;
-      const qBody = (report.queries || [])
-        .map(
-          (q, i) => `<tr>
+      const qHead = `<tr><th>№</th><th>Запрос</th><th>Источник</th><th>Сайт</th><th class="num">Запросов</th><th class="num">Показы</th><th class="num">Клики</th><th class="num">CTR</th><th class="num">Позиция</th></tr>`;
+      function renderProductQueryRows(list) {
+        return (list || [])
+          .map((q, i) => {
+            const freq =
+              q.frequency == null || !(q.frequency >= 0)
+                ? `<td class="num pos-miss" title="Wordstat: нет данных">—</td>`
+                : `<td class="num" title="Wordstat, точная фраза (~30 дней)">${formatSeoNum(q.frequency)}</td>`;
+            const wmImp =
+              q.webmasterImpressions == null
+                ? `<td class="num pos-miss" title="Нет показов Вебмастера/GSC за период">—</td>`
+                : `<td class="num" title="Показы сайта по ключу в Вебмастере/GSC за период">${formatSeoNum(q.webmasterImpressions)}</td>`;
+            const wmClk =
+              q.webmasterClicks == null
+                ? `<td class="num pos-miss">—</td>`
+                : `<td class="num">${formatSeoNum(q.webmasterClicks)}</td>`;
+            const ctr =
+              q.webmasterImpressions > 0
+                ? (q.webmasterClicks || 0) / q.webmasterImpressions
+                : null;
+            return `<tr>
           <td class="num">${i + 1}</td>
-          <td>${escapeHtml(q.productLabel || q.product || "")}</td>
+          <td class="name">${escapeHtml(q.query)}</td>
           <td>${escapeHtml(q.source === "gsc" ? "GSC" : "Яндекс")}</td>
           <td>${escapeHtml(q.site || "")}</td>
-          <td class="name">${escapeHtml(q.query)}</td>
-          <td class="num">${formatSeoNum(q.clicks)}</td>
-          <td class="num">${formatSeoNum(q.impressions)}</td>
-          <td class="num">${formatSeoPct(q.ctr)}</td>
-          <td class="num">${formatSeoNum(q.position, 1)}</td>
-        </tr>`
-        )
+          ${freq}
+          ${wmImp}
+          ${wmClk}
+          <td class="num">${ctr == null ? "—" : formatSeoPct(ctr)}</td>
+          <td class="num">${q.webmasterPosition != null ? formatSeoNum(q.webmasterPosition, 1) : "—"}</td>
+        </tr>`;
+          })
+          .join("");
+      }
+      const sections = report.sections || [];
+      const queryBlocks = sections
+        .map((sec) => {
+          const rows = renderProductQueryRows(sec.queries);
+          return `
+            <div class="pnl-section">
+              <h3>${escapeHtml(sec.label)} <span class="meta">· показы ${formatSeoNum(sec.webmasterImpressions)} · ключей ${formatSeoNum(sec.queriesCount)}</span></h3>
+              <div class="pnl-scroll"><table class="pnl">
+                <thead>${qHead}</thead>
+                <tbody>${rows || `<tr><td colspan="9">Нет запросов</td></tr>`}</tbody>
+              </table></div>
+            </div>`;
+        })
         .join("");
 
       const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      const warn =
+        (report.warnings || []).length
+          ? `<p class="pnl-note">${escapeHtml((report.warnings || []).slice(0, 3).join("; "))}</p>`
+          : "";
       const period = report.period
-        ? `<p class="pnl-note">Период: ${escapeHtml(report.period.from)} — ${escapeHtml(report.period.to)} · запросов в отборе: ${formatSeoNum((report.queries || []).length)}</p>`
+        ? `<p class="pnl-note">Период: ${escapeHtml(report.period.from)} — ${escapeHtml(report.period.to)} · ключей в отборе: ${formatSeoNum((report.queries || []).length)}</p>`
         : "";
       const dayColspan = product === "all" ? 2 + products.length * 2 + 2 : 3;
       const barsBlock =
@@ -4392,13 +4742,14 @@
 
       box.innerHTML =
         note +
+        warn +
         period +
         `
         <div class="kpi-strip">
-          <div class="bt"><div class="lab">Показы</div><div class="val">${formatSeoNum(t.impressions)}</div></div>
-          <div class="bt"><div class="lab">Клики</div><div class="val">${formatSeoNum(t.clicks)}</div></div>
+          <div class="bt"><div class="lab">Показы</div><div class="val">${formatSeoNum(t.webmasterImpressions != null ? t.webmasterImpressions : t.impressions)}</div></div>
+          <div class="bt"><div class="lab">Клики</div><div class="val">${formatSeoNum(t.webmasterClicks != null ? t.webmasterClicks : t.clicks)}</div></div>
           <div class="bt"><div class="lab">CTR</div><div class="val">${formatSeoPct(t.ctr)}</div></div>
-          <div class="bt"><div class="lab">Запросов</div><div class="val">${formatSeoNum(t.queries)}</div></div>
+          <div class="bt"><div class="lab">Ключей</div><div class="val">${formatSeoNum(t.queries)}</div></div>
         </div>
         <div class="pnl-section">
           <h3>Сводка по продуктам</h3>
@@ -4415,13 +4766,7 @@
             <tbody>${dayBody || `<tr><td colspan="${dayColspan}">Нет дневных строк в CSV за период</td></tr>`}</tbody>
           </table></div>
         </div>
-        <div class="pnl-section">
-          <h3>Запросы${product === "all" ? "" : " выбранного продукта"}</h3>
-          <div class="pnl-scroll"><table class="pnl">
-            <thead>${qHead}</thead>
-            <tbody>${qBody || `<tr><td colspan="9">Нет запросов</td></tr>`}</tbody>
-          </table></div>
-        </div>`;
+        ${queryBlocks || `<div class="pnl-section"><h3>Запросы</h3><p class="meta">Нет запросов</p></div>`}`;
       afterReportPaint();
     }
 
@@ -4431,7 +4776,7 @@
       const btn = document.getElementById("seoproducts-run");
       if (btn) btn.disabled = true;
       seoproductsErr("");
-      document.getElementById("seoproducts-report").innerHTML = `<p class="pnl-note">Считаем запросы по продуктам…</p>`;
+      document.getElementById("seoproducts-report").innerHTML = `<p class="pnl-note">Считаем запросы по продуктам и догружаем Вебмастер за период…</p>`;
       try {
         const from = document.getElementById("seoproducts-from").value;
         const to = document.getElementById("seoproducts-to").value;
@@ -4630,7 +4975,7 @@
       }
     }
 
-    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "wb", "debtors", "mbalance", "clientpay", "seo", "seoqueries", "seoproducts", "seopositions"];
+    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "ozonfbs", "ozonfbo", "wb", "debtors", "mbalance", "clientpay", "seo", "seoqueries", "seoproducts", "seopositions"];
     const TAB_LABELS = {
       hours: "Часы",
       activity: "Активность",
@@ -4643,6 +4988,8 @@
       bitrixfreq: "Чистота Битрикс",
       ozon: "Озон",
       ozondrr: "Озон ДРР",
+      ozonfbs: "Отгрузки ФБС ozon",
+      ozonfbo: "Отгрузки ФБО Озон",
       wb: "WB",
       debtors: "Задолженность",
       mbalance: "Упр. баланс",
@@ -4865,6 +5212,16 @@
         await loadOzonDrrReport();
         return;
       }
+      if (name === "ozonfbs") {
+        ozonfbsLoaded = false;
+        await loadOzonFbsActs();
+        return;
+      }
+      if (name === "ozonfbo") {
+        ozonfboLoaded = false;
+        await loadOzonFboReport();
+        return;
+      }
       if (name === "wb") {
         wbLoaded = false;
         await loadWbReport();
@@ -4970,6 +5327,8 @@
       document.getElementById("tab-bitrixfreq").hidden = name !== "bitrixfreq";
       document.getElementById("tab-ozon").hidden = name !== "ozon";
       document.getElementById("tab-ozondrr").hidden = name !== "ozondrr";
+      document.getElementById("tab-ozonfbs").hidden = name !== "ozonfbs";
+      document.getElementById("tab-ozonfbo").hidden = name !== "ozonfbo";
       document.getElementById("tab-wb").hidden = name !== "wb";
       document.getElementById("tab-debtors").hidden = name !== "debtors";
       document.getElementById("tab-mbalance").hidden = name !== "mbalance";
@@ -4988,10 +5347,12 @@
       if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
       document.body.classList.toggle(
         "wide-report",
-        name === "plan" || name === "budget" || name === "ozon" || name === "units" || name === "wb" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
+        name === "plan" || name === "budget" || name === "ozon" || name === "ozondrr" || name === "ozonfbs" || name === "ozonfbo" || name === "units" || name === "wb" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
       );
       document.body.classList.remove("wide-plan");
       if (name === "settings") loadSettingsTabOrder();
+      if (name === "ozonfbs") loadOzonFbsActs();
+      if (name === "ozonfbo") loadOzonFboReport();
       if (name === "admin") loadAdminUsers();
       if (name === "activity" && data?.activity) fillActivityFilters(data.activity);
       // В обычном режиме отчёты только по «Сформировать»; часы/активность — при открытии вкладки.
@@ -5042,6 +5403,8 @@
         ["bitrixfreq", "Чистота Битрикс"],
         ["ozon", "Озон"],
         ["ozondrr", "Озон ДРР"],
+        ["ozonfbs", "Отгрузки ФБС ozon"],
+        ["ozonfbo", "Отгрузки ФБО Озон"],
         ["wb", "WB"],
         ["debtors", "Задолженность"],
         ["mbalance", "Упр. баланс"],
@@ -5391,6 +5754,8 @@
               bitrixfreq: document.getElementById("new-bitrixfreq").checked,
               ozon: document.getElementById("new-ozon").checked,
               ozondrr: document.getElementById("new-ozondrr").checked,
+              ozonfbs: document.getElementById("new-ozonfbs").checked,
+              ozonfbo: document.getElementById("new-ozonfbo").checked,
               wb: document.getElementById("new-wb").checked,
               debtors: document.getElementById("new-debtors").checked,
               mbalance: document.getElementById("new-mbalance").checked,
@@ -5824,6 +6189,14 @@
       ozondrrLoaded = false;
       loadOzonDrrReport();
     });
+    document.getElementById("ozonfbs-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      loadOzonFbsActs(true);
+    });
+    document.getElementById("ozonfbo-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      loadOzonFboReport(true);
+    });
     document.getElementById("wb-form").addEventListener("submit", (e) => {
       e.preventDefault();
       wbLoaded = false;
@@ -5872,6 +6245,7 @@
     initPlanDates();
     initOzonDates();
     initOzonDrrDates();
+    initOzonFboDates();
     initWbDates();
     initMBalanceDates();
     initClientPayDates();
