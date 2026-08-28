@@ -374,3 +374,51 @@ export function upsertWordstatRows(incoming) {
   writeCsv(SEO_WORDSTAT_CSV, WORDSTAT_HEADER, rows);
   return { total: rows.length, updated };
 }
+
+function inDateRange(ymd, from, to) {
+  const d = String(ymd || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+  return d >= from && d <= to;
+}
+
+function rangesOverlap(aFrom, aTo, bFrom, bTo) {
+  const af = String(aFrom || "").slice(0, 10);
+  const at = String(aTo || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(af) || !/^\d{4}-\d{2}-\d{2}$/.test(at)) return false;
+  return af <= bTo && at >= bFrom;
+}
+
+/** Удалить дневные строки SEO (seo-daily) с датой в [from, to]. */
+export function purgeDailyRowsInRange(from, to) {
+  const before = readDailyRows();
+  const kept = before.filter((r) => !inDateRange(r.date, from, to));
+  writeCsv(SEO_DAILY_CSV, DAILY_HEADER, kept);
+  return before.length - kept.length;
+}
+
+/** Удалить топ-запросы, чей period_from..period_to пересекается с [from, to]. */
+export function purgeQueryRowsInRange(from, to) {
+  const before = readQueryRows();
+  const kept = before.filter((r) => !rangesOverlap(r.period_from, r.period_to, from, to));
+  writeCsv(SEO_QUERIES_CSV, QUERY_HEADER, kept);
+  return before.length - kept.length;
+}
+
+/** Удалить дневные позиции запросов с датой в [from, to]. */
+export function purgeQueryDailyRowsInRange(from, to) {
+  const before = readQueryDailyRows();
+  const kept = before.filter((r) => !inDateRange(r.date, from, to));
+  writeCsv(SEO_QUERY_DAILY_CSV, QUERY_DAILY_HEADER, kept);
+  return before.length - kept.length;
+}
+
+/** Удалить Wordstat, у которых дата fetched_at попадает в [from, to]. */
+export function purgeWordstatRowsInRange(from, to) {
+  const before = readWordstatRows();
+  const kept = before.filter((r) => {
+    const day = String(r.fetched_at || "").slice(0, 10);
+    return !inDateRange(day, from, to);
+  });
+  writeCsv(SEO_WORDSTAT_CSV, WORDSTAT_HEADER, kept);
+  return before.length - kept.length;
+}

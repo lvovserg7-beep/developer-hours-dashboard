@@ -39,6 +39,13 @@ import {
   registerLoginFailure,
   clearLoginFailures,
 } from "./lib/auth.mjs";
+import {
+  listBoardCaches,
+  clearBoardCache,
+  registerHoursCacheHooks,
+  resolveCachePeriod,
+  defaultCacheClearPeriod,
+} from "./lib/board-cache.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
@@ -52,6 +59,7 @@ const RETRY_MS = 30 * 1000;
 const SNAPSHOT_PATH = join(root, "data", "snapshot.json");
 
 let cache = { at: 0, data: null, html: "", error: null, inflight: null, stale: false };
+let hoursEpoch = 0;
 
 const EMPTY_DATA = {
   generatedAt: "",
@@ -120,8 +128,10 @@ async function refresh(force = false) {
   if (!force && cache.data && now - cache.at < ttl) return cache;
   if (cache.inflight) return cache.inflight;
 
+  const epoch = hoursEpoch;
   cache.inflight = (async () => {
     const data = await loadActiveEmployees();
+    if (epoch !== hoursEpoch) return cache;
     if (!hasHoursPayload(data)) {
       throw new Error("1С вернула пустой снимок часов");
     }
@@ -137,6 +147,7 @@ async function refresh(force = false) {
     publishToIis();
     return cache;
   })().catch((err) => {
+    if (epoch !== hoursEpoch) return cache;
     cache.inflight = null;
     cache.error = String(err.message || err);
     if (hasHoursPayload(cache.data)) {
@@ -162,6 +173,20 @@ async function refresh(force = false) {
 
   return cache.inflight;
 }
+
+registerHoursCacheHooks({
+  inspect() {
+    return {
+      memory: !!(cache.data && hasHoursPayload(cache.data)),
+      stale: !!cache.stale,
+      updatedAt: cache.at ? new Date(cache.at).toISOString() : null,
+    };
+  },
+  clear() {
+    hoursEpoch += 1;
+    cache = { at: 0, data: null, html: "", error: null, inflight: null, stale: false };
+  },
+});
 
 function startHoursRefreshLoop() {
   setInterval(() => {
@@ -411,6 +436,42 @@ const server = createServer(async (req, res) => {
         if (!body.tabOrder) return json(res, 400, { error: "Не указан порядок вкладок" });
         try {
           return json(res, 200, updateOwnTabOrder(user.id, body.tabOrder));
+        } catch (err) {
+          return json(res, 400, { error: String(err.message || err) });
+        }
+      }
+      return json(res, 405, { error: "Метод не поддерживается" });
+    }
+
+    if (path === "/api/admin/cache") {
+      if (!user.admin) return json(res, 403, { error: "Нужны права администратора" });
+      if (req.method === "GET") {
+        let period = null;
+        try {
+          period = resolveCachePeriod(url.searchParams.get("from"), url.searchParams.get("to"));
+        } catch (err) {
+          return json(res, 400, { error: String(err.message || err) });
+        }
+        const defaults = defaultCacheClearPeriod();
+        return json(res, 200, {
+          boards: listBoardCaches(period),
+          period: period || defaults,
+          defaults,
+        });
+      }
+      if (req.method === "POST") {
+        const body = await readJson(req);
+        const board = String(body.board || "").trim();
+        if (!board) return json(res, 400, { error: "Не указана доска" });
+        try {
+          const result = clearBoardCache(board, { from: body.from, to: body.to });
+          const listPeriod = result.period || resolveCachePeriod(body.from, body.to);
+          return json(res, 200, {
+            ...result,
+            boards: listBoardCaches(listPeriod),
+            period: listPeriod || defaultCacheClearPeriod(),
+            defaults: defaultCacheClearPeriod(),
+          });
         } catch (err) {
           return json(res, 400, { error: String(err.message || err) });
         }

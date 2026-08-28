@@ -332,10 +332,14 @@
     .pos-table td.pos-cell {
       text-align: center;
       white-space: nowrap;
-      min-width: 3.6rem;
+      min-width: 5.2rem;
       font-variant-numeric: tabular-nums;
     }
     .pos-table td.pos-cell { padding: 6px 4px; }
+    .pos-cell-imp {
+      color: var(--muted);
+      font-weight: 400;
+    }
     .pos-band-1 { background: #d9e4f0; }
     .pos-band-10 { background: #e4eadc; }
     .pos-band-30 { background: #f3ead3; }
@@ -1156,6 +1160,73 @@
       opacity: 0.3;
       cursor: default;
     }
+    .cache-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      align-items: flex-end;
+      margin: 0 0 14px;
+    }
+    .cache-period {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      align-items: flex-end;
+    }
+    .cache-period label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: var(--fs-sm);
+      color: var(--muted);
+    }
+    .cache-period input[type="date"] {
+      font: inherit;
+      padding: 6px 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+    }
+    .cache-period-hint {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: var(--fs-sm);
+    }
+    .cache-toolbar button,
+    .cache-board button {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      font-weight: var(--weight);
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+    .cache-toolbar button:disabled,
+    .cache-board button:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+    .cache-list { display: flex; flex-direction: column; gap: 10px; }
+    .cache-board {
+      border: 1px solid var(--line);
+      padding: 12px 14px;
+      background: #fff;
+    }
+    .cache-board-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .cache-board h3 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .cache-meta { margin: 6px 0 0; color: var(--muted); font-size: var(--fs-sm); }
+    .cache-files { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
     @media (max-width: 1100px) {
       body:not(.is-full) .board,
       body:not(.is-full) .bottom { grid-template-columns: 1fr; }
@@ -1350,6 +1421,7 @@
         <button type="button" class="tab" data-tab="seoproducts" role="tab" aria-selected="false">Все запросы по продуктам</button>
         <button type="button" class="tab" data-tab="seopositions" role="tab" aria-selected="false">Позиции в поисковиках</button>
         <button type="button" class="tab" data-tab="settings" id="tab-btn-settings" role="tab" aria-selected="false">Настройки</button>
+        <button type="button" class="tab" data-tab="cache" id="tab-btn-cache" role="tab" aria-selected="false" hidden>Кэш</button>
         <button type="button" class="tab" data-tab="admin" id="tab-btn-admin" role="tab" aria-selected="false" hidden>Админка</button>
         <span class="tab-spacer"></span>
         <span class="slide-bar" id="slide-bar" hidden aria-label="Перелистывание экранов">
@@ -1400,6 +1472,22 @@
         <div id="settings-err" class="err" hidden></div>
         <p class="admin-user-order-title">Порядок вкладок — перетащите или ↑ ↓</p>
         <ol class="admin-tab-order" id="settings-tab-order"></ol>
+      </section>
+    </div>
+    <div id="tab-cache" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Кэш досок</h2>
+        <p class="lead tab-intro">Только для администраторов. Очистка удаляет кэш только за выбранный период («с» … «по»). Классификацию SEO-запросов не трогаем. Часы/Активность — снимок без дат: кнопка у доски чистит целиком; «Очистить все» их не трогает.</p>
+        <div class="cache-toolbar">
+          <div class="cache-period">
+            <label for="cache-from">Период с<input id="cache-from" type="date"></label>
+            <label for="cache-to">по<input id="cache-to" type="date"></label>
+          </div>
+          <button type="button" id="cache-clear-all">Очистить все за период</button>
+        </div>
+        <p class="cache-period-hint" id="cache-period-hint"></p>
+        <div id="cache-err" class="err" hidden></div>
+        <div id="cache-list" class="cache-list"></div>
       </section>
     </div>
     <div id="tab-admin" class="tab-panel" hidden>
@@ -5310,17 +5398,22 @@
     }
 
     function renderPosCell(cell) {
-      if (!cell || cell.position == null || !(cell.position > 0)) {
+      const impressions = Number(cell?.impressions) || 0;
+      const hasPos = !!(cell && cell.position != null && cell.position > 0);
+      if (!hasPos && impressions <= 0) {
         return `<td class="pos-cell pos-miss">—</td>`;
       }
-      const shown = cell.position < 10 ? formatSeoNum(cell.position, 1) : formatSeoNum(Math.round(cell.position));
+      const shown = hasPos
+        ? (cell.position < 10 ? formatSeoNum(cell.position, 1) : formatSeoNum(Math.round(cell.position)))
+        : "—";
       let deltaHtml = "";
-      if (cell.delta != null && Math.abs(cell.delta) >= 0.5) {
+      if (hasPos && cell.delta != null && Math.abs(cell.delta) >= 0.5) {
         const up = cell.delta > 0;
         const mag = Math.abs(cell.delta) >= 10 ? Math.round(Math.abs(cell.delta)) : formatSeoNum(Math.abs(cell.delta), 0);
         deltaHtml = `<span class="pos-delta ${up ? "is-up" : "is-down"}">${up ? "⁺" : "⁻"}${mag}</span>`;
       }
-      return `<td class="pos-cell ${posBandClass(cell.position)}" title="Показы: ${formatSeoNum(cell.impressions)}, клики: ${formatSeoNum(cell.clicks)}">${shown}${deltaHtml}</td>`;
+      const imp = formatSeoNum(impressions);
+      return `<td class="pos-cell ${hasPos ? posBandClass(cell.position) : "pos-miss"}" title="Позиция: ${hasPos ? shown : "—"}; показы: ${imp}; клики: ${formatSeoNum(cell?.clicks)}">${shown}${deltaHtml}<span class="pos-cell-imp"> / ${imp}</span></td>`;
     }
 
     function renderSeoPositions(report) {
@@ -5475,7 +5568,10 @@
         if (USER.tabs?.[name] === true) tabs.push(name);
       }
       tabs.push("settings");
-      if (USER.admin) tabs.push("admin");
+      if (USER.admin) {
+        tabs.push("cache");
+        tabs.push("admin");
+      }
       return tabs;
     }
 
@@ -5489,13 +5585,15 @@
       }
       const settingsBtn = document.getElementById("tab-btn-settings");
       if (settingsBtn) nav.insertBefore(settingsBtn, spacer);
+      const cacheBtn = document.getElementById("tab-btn-cache");
+      if (cacheBtn) nav.insertBefore(cacheBtn, spacer);
       const adminBtn = document.getElementById("tab-btn-admin");
       if (adminBtn) nav.insertBefore(adminBtn, spacer);
     }
 
     /** Экраны для ТВ-перелистывания (без настроек и админки). */
     function slideTabs() {
-      return visibleTabs().filter((name) => name !== "admin" && name !== "settings");
+      return visibleTabs().filter((name) => name !== "admin" && name !== "settings" && name !== "cache");
     }
 
     /**
@@ -5797,6 +5895,7 @@
       document.getElementById("tab-seoproducts").hidden = name !== "seoproducts";
       document.getElementById("tab-seopositions").hidden = name !== "seopositions";
       document.getElementById("tab-settings").hidden = name !== "settings";
+      document.getElementById("tab-cache").hidden = name !== "cache";
       document.getElementById("tab-admin").hidden = name !== "admin";
       for (const btn of document.querySelectorAll(".tab[data-tab]")) {
         const on = btn.getAttribute("data-tab") === name;
@@ -5813,6 +5912,7 @@
       if (name === "ozonfbs") loadOzonFbsActs();
       if (name === "ozonfbo") loadOzonFboReport();
       if (name === "ozonfbofilters") loadOzonFboFiltersReport();
+      if (name === "cache") loadCacheBoard();
       if (name === "admin") loadAdminUsers();
       if (name === "activity" && data?.activity) fillActivityFilters(data.activity);
       // В обычном режиме отчёты только по «Сформировать»; часы/активность — при открытии вкладки.
@@ -5832,6 +5932,145 @@
       }
       el.hidden = false;
       el.textContent = text;
+    }
+
+    function cacheErr(text) {
+      const el = document.getElementById("cache-err");
+      if (!el) return;
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function getCachePeriod() {
+      const from = String(document.getElementById("cache-from")?.value || "").trim();
+      const to = String(document.getElementById("cache-to")?.value || "").trim();
+      return { from, to };
+    }
+
+    function setCachePeriod(from, to) {
+      const fromEl = document.getElementById("cache-from");
+      const toEl = document.getElementById("cache-to");
+      if (fromEl && from) fromEl.value = from;
+      if (toEl && to) toEl.value = to;
+      const hint = document.getElementById("cache-period-hint");
+      if (hint) {
+        hint.textContent = from && to
+          ? "Удаляется кэш, относящийся к периоду " + from + " … " + to + " (границы включительно)."
+          : "Задайте период очистки.";
+      }
+    }
+
+    function formatCacheBytes(n) {
+      const v = Number(n) || 0;
+      if (v < 1024) return v + " Б";
+      if (v < 1024 * 1024) return (v / 1024).toFixed(1) + " КБ";
+      return (v / (1024 * 1024)).toFixed(1) + " МБ";
+    }
+
+    function formatCacheTime(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "";
+      return d.toLocaleString("ru-RU");
+    }
+
+    function renderCacheBoards(boards) {
+      const box = document.getElementById("cache-list");
+      if (!box) return;
+      const rows = (boards || []).map((b) => {
+        const status = !b.hasCache
+          ? "Кэша нет"
+          : b.canClear
+            ? (b.memory ? "в памяти" : "") + (b.files?.length ? ((b.memory ? " · " : "") + b.files.length + " файл.") : "")
+            : "пусто";
+        const when = formatCacheTime(b.updatedAt);
+        const files = (b.files || []).map((f) => {
+          const range = f.periodFrom && f.periodTo ? " · " + f.periodFrom + "…" + f.periodTo : "";
+          return escapeHtml(f.name) + " (" + formatCacheBytes(f.bytes) + range + ")";
+        }).join(", ");
+        const btnLabel = b.periodAware === false && b.hasCache ? "Очистить целиком" : "Очистить за период";
+        return `<div class="cache-board">
+          <div class="cache-board-head">
+            <h3>${escapeHtml(b.label)}</h3>
+            <button type="button" data-cache-board="${escapeHtml(b.id)}" data-cache-period-aware="${b.periodAware ? "1" : "0"}" ${b.canClear ? "" : "disabled"}>${btnLabel}</button>
+          </div>
+          <p class="cache-meta">${escapeHtml(status)}${when ? " · " + escapeHtml(when) : ""}${b.bytes ? " · " + formatCacheBytes(b.bytes) : ""}</p>
+          ${b.note ? `<p class="cache-meta">${escapeHtml(b.note)}</p>` : ""}
+          ${files ? `<p class="cache-files">${files}</p>` : ""}
+        </div>`;
+      });
+      box.innerHTML = rows.join("") || `<p class="meta">Нет досок.</p>`;
+    }
+
+    function rememberCacheCleared(board) {
+      if (board === "all" || board === "hours" || board === "activity") {
+        /* часы подтянутся при следующем открытии вкладки */
+      }
+      if (board === "all" || board === "ozon") ozonLoaded = false;
+      if (board === "all" || board === "seo") seoLoaded = false;
+      if (board === "all" || board === "seoqueries") seoqueriesLoaded = false;
+      if (board === "all" || board === "seopositions") seopositionsLoaded = false;
+    }
+
+    async function loadCacheBoard() {
+      if (!USER.admin) return;
+      cacheErr("");
+      try {
+        const { from, to } = getCachePeriod();
+        const q = from && to ? ("?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to)) : "";
+        const data = await api("/api/admin/cache" + q);
+        const p = data.period || data.defaults;
+        if (p?.from && p?.to && (!from || !to)) setCachePeriod(p.from, p.to);
+        else setCachePeriod(from || p?.from, to || p?.to);
+        renderCacheBoards(data.boards || []);
+      } catch (e) {
+        cacheErr(e.message || String(e));
+      }
+    }
+
+    async function clearCacheBoard(board, opts = {}) {
+      if (!USER.admin) return;
+      cacheErr("");
+      const { from, to } = getCachePeriod();
+      const periodAware = opts.periodAware !== false;
+      if (periodAware && (!from || !to)) {
+        cacheErr("Укажите период очистки (с и по)");
+        return;
+      }
+      try {
+        const body = { board };
+        if (from && to) {
+          body.from = from;
+          body.to = to;
+        }
+        const data = await api("/api/admin/cache", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        rememberCacheCleared(board);
+        if (data.period?.from && data.period?.to) setCachePeriod(data.period.from, data.period.to);
+        const hint = document.getElementById("cache-period-hint");
+        if (hint) {
+          const bits = [];
+          if (data.period?.from && data.period?.to) {
+            bits.push("Удаляется кэш за " + data.period.from + " … " + data.period.to + ".");
+          }
+          if (data.rows) bits.push("Строк: " + data.rows + ".");
+          else if (data.removed != null) bits.push("Файлов/записей: " + data.removed + ".");
+          if (data.skipped?.length) bits.push("Пропущено: " + data.skipped.join(", ") + ".");
+          if (data.full) bits.push("Снимок часов очищен целиком.");
+          if (bits.length) hint.textContent = bits.join(" ");
+        }
+        renderCacheBoards(data.boards || []);
+      } catch (e) {
+        cacheErr(e.message || String(e));
+      }
     }
 
     async function api(url, opts = {}) {
@@ -5999,7 +6238,7 @@
         if (form) bitrixTab.insertBefore(form, bitrixStage);
         wrapStageHost(bitrixTab, bitrixStage);
       }
-      const skip = new Set(["tab-hours", "tab-bitrix", "tab-admin", "tab-settings"]);
+      const skip = new Set(["tab-hours", "tab-bitrix", "tab-admin", "tab-settings", "tab-cache"]);
       for (const tab of document.querySelectorAll(".tab-panel")) {
         if (skip.has(tab.id)) continue;
         const panel = tab.querySelector(":scope > .panel");
@@ -6186,6 +6425,35 @@
         }
       });
     }
+    document.getElementById("cache-clear-all")?.addEventListener("click", () => {
+      const { from, to } = getCachePeriod();
+      if (!from || !to) {
+        cacheErr("Укажите период очистки (с и по)");
+        return;
+      }
+      if (!confirm("Очистить кэш всех периодных досок за " + from + " … " + to + "?")) return;
+      clearCacheBoard("all", { periodAware: true });
+    });
+    document.getElementById("cache-from")?.addEventListener("change", () => loadCacheBoard());
+    document.getElementById("cache-to")?.addEventListener("change", () => loadCacheBoard());
+    document.getElementById("cache-list")?.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-cache-board]");
+      if (!btn) return;
+      const board = btn.getAttribute("data-cache-board");
+      if (!board) return;
+      const periodAware = btn.getAttribute("data-cache-period-aware") === "1";
+      const { from, to } = getCachePeriod();
+      if (periodAware) {
+        if (!from || !to) {
+          cacheErr("Укажите период очистки (с и по)");
+          return;
+        }
+        if (!confirm("Очистить кэш «" + (btn.closest(".cache-board")?.querySelector("h3")?.textContent || board) + "» за " + from + " … " + to + "?")) return;
+      } else {
+        if (!confirm("Очистить кэш часов целиком (снимок без разреза по датам)?")) return;
+      }
+      clearCacheBoard(board, { periodAware });
+    });
     document.getElementById("btn-logout").addEventListener("click", async () => {
       try {
         await fetch("/api/logout", { method: "POST", credentials: "same-origin" });
