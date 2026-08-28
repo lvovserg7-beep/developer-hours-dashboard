@@ -15,6 +15,7 @@ ping -n 2 127.0.0.1 >nul
 echo Starting dashboard...
 echo Local:  http://localhost:8787/
 echo LAN:    http://192.168.10.240:8787/
+echo On start: refresh board caches for the last 7 days (hours + SEO + Ozon).
 node server.mjs 2>&1
 if errorlevel 1 (
   echo.

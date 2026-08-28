@@ -45,6 +45,7 @@ import {
   registerHoursCacheHooks,
   resolveCachePeriod,
   defaultCacheClearPeriod,
+  trailingCachePeriod,
 } from "./lib/board-cache.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -225,13 +226,128 @@ function logSeoTrailing(result, reason) {
   for (const w of wordstat.warnings || []) console.warn("SEO wordstat:", w);
 }
 
-function runSeoTrailingRefresh(reason) {
-  console.log(`SEO trailing refresh (${reason}, last 7 days overwrite)...`);
+function trailingCacheDays() {
+  const n = Number(process.env.CACHE_TRAILING_DAYS);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 7;
+}
+
+function envFlagOn(name, fallback = true) {
+  const v = process.env[name];
+  if (v == null || v === "") return fallback;
+  return !/^(0|false|no|off)$/i.test(String(v).trim());
+}
+
+function todayYmdLocal() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+const DAY_OPEN_MARK = join(root, "data", "cache-day-open.json");
+
+function readDayOpenMark() {
+  try {
+    if (!existsSync(DAY_OPEN_MARK)) return null;
+    return JSON.parse(readFileSync(DAY_OPEN_MARK, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function writeDayOpenMark(openDay, extra = {}) {
+  try {
+    if (!existsSync(join(root, "data"))) mkdirSync(join(root, "data"), { recursive: true });
+    writeFileSync(
+      DAY_OPEN_MARK,
+      JSON.stringify({ openDay, at: new Date().toISOString(), ...extra }, null, 2),
+      "utf8"
+    );
+  } catch (err) {
+    console.warn("cache-day-open mark:", err.message || err);
+  }
+}
+
+function markCacheDayHandled(reason) {
+  writeDayOpenMark(todayYmdLocal(), { reason });
+}
+
+function runSeoTrailingRefresh(reason, opts = {}) {
+  const days = opts.days != null ? opts.days : trailingCacheDays();
+  console.log(`SEO trailing refresh (${reason}, last ${days} day(s) overwrite)...`);
   return refreshSeoTrailingCache({
-    force: reason === "startup" && process.env.SEO_FORCE_SYNC === "1",
+    days,
+    force: Boolean(opts.force) || (reason === "startup" && process.env.SEO_FORCE_SYNC === "1"),
   })
     .then((result) => logSeoTrailing(result, reason))
     .catch((err) => console.warn(`SEO trailing ${reason} failed:`, err.message || err));
+}
+
+async function refreshOzonTrailingCache(period) {
+  console.log(`Ozon trailing refresh: ${period.from}…${period.to}...`);
+  try {
+    const report = await loadOzonCost(period.from, period.to, {
+      refresh: true,
+      log: true,
+    });
+    const rows = Array.isArray(report?.rows) ? report.rows.length : 0;
+    console.log(`Ozon trailing OK: ${period.from}…${period.to}, rows=${rows}`);
+  } catch (err) {
+    console.warn(`Ozon trailing ${period.from}…${period.to} failed:`, err.message || err);
+  }
+}
+
+/**
+ * Сброс периодного кэша за окно и перечитывание SEO + Озон.
+ * Часы обновляются при открытии главной (`refresh(true)`).
+ * @param {string} reason
+ * @param {{ days?: number }} [opts]
+ */
+async function runAllTrailingCacheRefresh(reason, opts = {}) {
+  if (!envFlagOn("CACHE_TRAILING_STARTUP", true) && reason === "startup") {
+    console.log("Startup trailing cache refresh disabled (CACHE_TRAILING_STARTUP=0)");
+    return;
+  }
+  if (!envFlagOn("CACHE_FIRST_OPEN_DAY", true) && reason === "first-open") {
+    console.log("First-open day cache refresh disabled (CACHE_FIRST_OPEN_DAY=0)");
+    return;
+  }
+  const days = opts.days != null ? Math.max(1, Math.floor(Number(opts.days) || 1)) : trailingCacheDays();
+  const period = trailingCachePeriod(days);
+  console.log(`Cache trailing ${reason}: last ${days} day(s) (${period.from}…${period.to}) — invalidate + re-read...`);
+  try {
+    const cleared = clearBoardCache("all", { from: period.from, to: period.to });
+    console.log(
+      `Cache trailing invalidate: removed=${cleared.removed || 0}, rows=${cleared.rows || 0}` +
+        (cleared.skipped?.length ? `, skipped=${cleared.skipped.join(",")}` : "")
+    );
+  } catch (err) {
+    console.warn(`Cache trailing invalidate failed:`, err.message || err);
+  }
+  await runSeoTrailingRefresh(reason, { days, force: reason === "first-open" });
+  if (envFlagOn("CACHE_TRAILING_OZON", true)) {
+    await refreshOzonTrailingCache(period);
+  } else {
+    console.log("Ozon trailing skipped (CACHE_TRAILING_OZON=0)");
+  }
+  markCacheDayHandled(reason);
+}
+
+let firstOpenRefreshInflight = null;
+
+/** Первый вход в дашборд за календарный день → пересчёт кэша за вчера. */
+function maybeKickFirstOpenDayRefresh() {
+  if (!envFlagOn("CACHE_FIRST_OPEN_DAY", true)) return;
+  const today = todayYmdLocal();
+  const mark = readDayOpenMark();
+  if (mark?.openDay === today) return;
+  if (firstOpenRefreshInflight) return;
+  writeDayOpenMark(today, { reason: "first-open-claimed" });
+  console.log(`First dashboard open today (${today}): refresh cache for yesterday...`);
+  firstOpenRefreshInflight = runAllTrailingCacheRefresh("first-open", { days: 1 })
+    .catch((err) => console.warn("First-open day cache refresh failed:", err.message || err))
+    .finally(() => {
+      firstOpenRefreshInflight = null;
+    });
 }
 
 function startSeoRefreshLoop() {
@@ -239,7 +355,8 @@ function startSeoRefreshLoop() {
     runSeoTrailingRefresh("daily");
   }, SEO_REFRESH_MS);
   const hours = Math.round(SEO_REFRESH_MS / 3600000);
-  console.log(`SEO trailing refresh every ${hours}h (last 7 days overwrite)`);
+  const days = trailingCacheDays();
+  console.log(`SEO trailing refresh every ${hours}h (last ${days} days overwrite)`);
 }
 
 function publishToIis() {
@@ -914,6 +1031,7 @@ const server = createServer(async (req, res) => {
     }
 
     if (path === "/" || path === "/index.html") {
+      maybeKickFirstOpenDayRefresh();
       const snap = await refresh(true);
       return send(res, 200, renderHtml(snap.data, user), "text/html; charset=utf-8");
     }
@@ -965,6 +1083,8 @@ refresh(true)
       }
       startHoursRefreshLoop();
       startSeoRefreshLoop();
-      runSeoTrailingRefresh("startup");
+      runAllTrailingCacheRefresh("startup").catch((err) =>
+        console.warn("Startup trailing cache refresh failed:", err.message || err)
+      );
     });
   });

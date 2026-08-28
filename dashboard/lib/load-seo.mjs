@@ -145,7 +145,10 @@ function mergeYandexHistory(data) {
 
 async function syncGscSite(site, yesterday, opts = {}) {
   const force = Boolean(opts.force);
-  const { from, to } = computeDailySyncRange("gsc", site, yesterday, force);
+  const { from, to } =
+    opts.rangeFrom && opts.rangeTo
+      ? { from: String(opts.rangeFrom).slice(0, 10), to: String(opts.rangeTo).slice(0, 10) }
+      : computeDailySyncRange("gsc", site, yesterday, force);
   const haveQueries = readQueryRows().some((r) => r.source === "gsc" && r.site === site);
 
   if (from > to) {
@@ -291,7 +294,10 @@ async function refreshYandexQueryCatalog(hostId, yesterday) {
 async function syncYandexHost(hostId, yesterday, opts = {}) {
   const force = Boolean(opts.force);
   const haveQueries = readQueryRows().some((r) => r.source === "yandex" && r.site === hostId);
-  const { from, to } = computeDailySyncRange("yandex", hostId, yesterday, force);
+  const { from, to } =
+    opts.rangeFrom && opts.rangeTo
+      ? { from: String(opts.rangeFrom).slice(0, 10), to: String(opts.rangeTo).slice(0, 10) }
+      : computeDailySyncRange("yandex", hostId, yesterday, force);
 
   if (from > to) {
     if (!haveQueries) {
@@ -336,9 +342,10 @@ async function syncYandexHost(hostId, yesterday, opts = {}) {
 let syncInflight = null;
 let trailingInflight = null;
 
-function trailingWindow(yesterday) {
+function trailingWindow(yesterday, days = DAILY_TRAILING_RESYNC_DAYS) {
   const to = yesterday || seoYesterday();
-  const from = ymd(addDays(parseYmd(to), -(DAILY_TRAILING_RESYNC_DAYS - 1)));
+  const n = Math.max(1, Math.floor(Number(days) || DAILY_TRAILING_RESYNC_DAYS));
+  const from = ymd(addDays(parseYmd(to), -(n - 1)));
   return { from, to };
 }
 
@@ -350,15 +357,21 @@ function applySeoQueryClasses() {
 }
 
 /**
- * Перечитать и перезаписать кэш за последние 7 дней:
+ * Перечитать и перезаписать кэш за скользящее окно (по умолчанию 7 дней):
  * суточные CSV сайта, позиции топ-ключей и частоты Wordstat.
- * Вызывать при старте и раз в сутки — Вебмастер/GSC догоняют лаг 1–3 дня.
+ * @param {{ yesterday?: string, days?: number, force?: boolean, allWordstat?: boolean }} [opts]
  */
 export async function refreshSeoTrailingCache(opts = {}) {
   if (trailingInflight) return trailingInflight;
   trailingInflight = (async () => {
-    const { from, to } = trailingWindow(opts.yesterday);
-    const seo = await syncSeoCsv({ yesterday: to, force: Boolean(opts.force) });
+    const days = Math.max(1, Math.floor(Number(opts.days) || DAILY_TRAILING_RESYNC_DAYS));
+    const { from, to } = trailingWindow(opts.yesterday, days);
+    const seo = await syncSeoCsv({
+      yesterday: to,
+      force: Boolean(opts.force),
+      rangeFrom: from,
+      rangeTo: to,
+    });
     let classes = { cls: { total: 0, added: 0 }, brand: { updated: 0, added: 0, total: 0 }, boxes: { updated: 0, added: 0, total: 0 } };
     try {
       classes = applySeoQueryClasses();
@@ -400,7 +413,13 @@ export async function syncSeoCsv(opts = {}) {
     if (envFlag("SEO_GSC_ENABLED", true) && gscConfigured()) {
       for (const site of gscSiteUrls()) {
         try {
-          result.gsc.push(await syncGscSite(site, yesterday, { force: Boolean(opts.force) }));
+          result.gsc.push(
+            await syncGscSite(site, yesterday, {
+              force: Boolean(opts.force),
+              rangeFrom: opts.rangeFrom,
+              rangeTo: opts.rangeTo,
+            })
+          );
         } catch (err) {
           const msg = `GSC ${site}: ${err.message || err}`;
           result.warnings.push(msg);
@@ -417,7 +436,13 @@ export async function syncSeoCsv(opts = {}) {
         if (!hosts.length) result.warnings.push("Яндекс.Вебмастер: нет host_id");
         for (const hostId of hosts) {
           try {
-            result.yandex.push(await syncYandexHost(hostId, yesterday, { force: Boolean(opts.force) }));
+            result.yandex.push(
+              await syncYandexHost(hostId, yesterday, {
+                force: Boolean(opts.force),
+                rangeFrom: opts.rangeFrom,
+                rangeTo: opts.rangeTo,
+              })
+            );
           } catch (err) {
             const msg = `Яндекс ${hostId}: ${err.message || err}`;
             result.warnings.push(msg);

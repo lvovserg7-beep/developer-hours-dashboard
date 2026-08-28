@@ -104,6 +104,34 @@ export function defaultCacheClearPeriod() {
   return { from: ymd(from), to: ymd(to) };
 }
 
+/**
+ * Скользящее окно кэша (как у SEO): по умолчанию 7 дней до вчера включительно.
+ * @param {number} [days]
+ */
+export function trailingCachePeriod(days = 7) {
+  const n = Math.max(1, Math.floor(Number(days) || 7));
+  const p = (v) => String(v).padStart(2, "0");
+  const ymd = (d) => `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  const today = new Date();
+  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+  const from = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate() - (n - 1));
+  return { from: ymd(from), to: ymd(yesterday), days: n };
+}
+
+/** Файлы ozon-cost-*, чей период пересекается с [from, to]. */
+export function listOzonCachesInPeriod(period) {
+  return globOzonFiles(period).map((f) => {
+    const m = String(f.name || "").match(/_c(\d+)_r(\d+)\.json$/i);
+    return {
+      name: f.name,
+      from: f.periodFrom,
+      to: f.periodTo,
+      skipCost: m ? m[1] === "0" : false,
+      skipRegisters: m ? m[2] === "0" : false,
+    };
+  });
+}
+
 function rangesOverlap(aFrom, aTo, bFrom, bTo) {
   return aFrom <= bTo && aTo >= bFrom;
 }
