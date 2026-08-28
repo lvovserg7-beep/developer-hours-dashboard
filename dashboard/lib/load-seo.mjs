@@ -26,6 +26,7 @@ import {
   yandexQueryHistory,
   yandexQueryHistoryById,
   yandexResolveHostIds,
+  yandexHostSummary,
 } from "./yandex-webmaster.mjs";
 import { fetchWordstatFrequency, wordstatConfigured } from "./wordstat.mjs";
 
@@ -563,8 +564,75 @@ export function loadSeoReport({ from, to, source = "all", site = "", queryLimit 
     note:
       "Данные из CSV (data/seo-daily.csv, data/seo-queries.csv). " +
       "Сервер догружает пропуск при старте, если за вчера ещё нет строк. " +
-      "У поисковиков возможна задержка 1–3 дня.",
+      "У поисковиков возможна задержка 1–3 дня. ИКС — из Яндекс.Вебмастера (не за период).",
   };
+}
+
+/** Короткий кэш ИКС, чтобы «Сформировать» не дёргал API каждый раз. */
+let sqiCache = { at: 0, byHost: new Map() };
+const SQI_CACHE_MS = 60 * 60 * 1000;
+
+function hostMatchesSiteFilter(hostId, siteFilter) {
+  if (!siteFilter) return true;
+  const h = String(hostId || "").toLowerCase();
+  const s = String(siteFilter || "").trim().toLowerCase();
+  if (!s) return true;
+  if (h === s) return true;
+  // site в CSV может быть host_id или URL
+  if (h.includes(s) || s.includes(h.replace(/^https?:/, "").replace(/:\d+$/, ""))) return true;
+  const bare = h.replace(/^https?:/, "").replace(/:\d+$/, "");
+  return bare === s || s.includes(bare) || bare.includes(s.replace(/^https?:\/\//, "").replace(/\/$/, ""));
+}
+
+/**
+ * Добавить ИКС Яндекса в отчёт «Поиск SEO».
+ * @param {object} report
+ * @param {{ site?: string }} [opts]
+ */
+export async function attachYandexSqi(report, opts = {}) {
+  const siteFilter = String(opts.site || "").trim();
+  if (!envFlag("SEO_YANDEX_ENABLED", true) || !yandexConfigured()) {
+    report.yandexSqi = { available: false, hosts: [], warning: "Яндекс.Вебмастер не настроен" };
+    return report;
+  }
+  try {
+    let hostIds = await yandexResolveHostIds();
+    if (siteFilter) {
+      const filtered = hostIds.filter((id) => hostMatchesSiteFilter(id, siteFilter));
+      // Фильтр по GSC-сайту — ИКС по всем яндекс-хостам не подмешиваем.
+      hostIds = filtered.length ? filtered : [];
+    }
+    const now = Date.now();
+    if (now - sqiCache.at > SQI_CACHE_MS) {
+      sqiCache = { at: now, byHost: new Map() };
+    }
+    const hosts = [];
+    const warnings = [];
+    for (const hostId of hostIds) {
+      try {
+        let row = sqiCache.byHost.get(hostId);
+        if (!row) {
+          row = await yandexHostSummary(hostId);
+          sqiCache.byHost.set(hostId, row);
+        }
+        hosts.push(row);
+      } catch (err) {
+        warnings.push(`${hostId}: ${err.message || err}`);
+      }
+    }
+    report.yandexSqi = {
+      available: true,
+      hosts,
+      warning: warnings.length ? warnings.join("; ") : "",
+    };
+  } catch (err) {
+    report.yandexSqi = {
+      available: false,
+      hosts: [],
+      warning: String(err.message || err),
+    };
+  }
+  return report;
 }
 
 /**

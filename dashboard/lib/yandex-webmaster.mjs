@@ -124,6 +124,22 @@ export async function yandexResolveHostIds() {
 }
 
 /**
+ * Сводка хоста (ИКС / sqi, страницы в поиске и т.п.).
+ * GET /user/{userId}/hosts/{hostId}/summary
+ */
+export async function yandexHostSummary(hostId) {
+  const userId = await yandexUserId();
+  const encHost = encodeURIComponent(hostId);
+  const data = await ywFetch(`/user/${userId}/hosts/${encHost}/summary`);
+  return {
+    hostId: String(data.host_id || data.hostId || hostId),
+    sqi: data.sqi != null ? Number(data.sqi) : null,
+    searchablePages: data.searchable_pages_count != null ? Number(data.searchable_pages_count) : null,
+    excludedPages: data.excluded_pages_count != null ? Number(data.excluded_pages_count) : null,
+  };
+}
+
+/**
  * Агрегированный тренд по сайту (показы/клики/позиции по дням).
  * @param {string} hostId
  * @param {string} dateFrom YYYY-MM-DD

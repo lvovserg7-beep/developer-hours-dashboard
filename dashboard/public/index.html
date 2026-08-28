@@ -4951,11 +4951,25 @@
       const period = report.period
         ? `<p class="pnl-note">Период CSV: ${escapeHtml(report.period.from)} — ${escapeHtml(report.period.to)} · целевой день синка: ${escapeHtml(report.yesterday || "")}</p>`
         : "";
+      const sqi = report.yandexSqi || {};
+      const sqiHosts = Array.isArray(sqi.hosts) ? sqi.hosts.filter((h) => h && h.sqi != null && Number.isFinite(Number(h.sqi))) : [];
+      let sqiVal = "—";
+      let sqiTitle = "";
+      if (sqiHosts.length === 1) {
+        sqiVal = formatSeoNum(sqiHosts[0].sqi);
+        sqiTitle = sqiHosts[0].hostId || "";
+      } else if (sqiHosts.length > 1) {
+        sqiVal = sqiHosts.map((h) => formatSeoNum(h.sqi)).join(" · ");
+        sqiTitle = sqiHosts.map((h) => (h.hostId || "") + ": " + formatSeoNum(h.sqi)).join("; ");
+      } else if (sqi.warning) {
+        sqiTitle = sqi.warning;
+      }
       box.innerHTML = note + period + `
         <div class="kpi-strip">
           <div class="bt"><div class="lab">Показы</div><div class="val">${formatSeoNum(t.impressions)}</div></div>
           <div class="bt"><div class="lab">Клики</div><div class="val">${formatSeoNum(t.clicks)}</div></div>
           <div class="bt"><div class="lab">CTR</div><div class="val">${formatSeoPct(t.ctr)}</div></div>
+          <div class="bt" title="${escapeHtml(sqiTitle)}"><div class="lab">ИКС Яндекс</div><div class="val">${escapeHtml(sqiVal)}</div></div>
           <div class="bt"><div class="lab">GSC показы</div><div class="val">${formatSeoNum(g.impressions)}</div></div>
           <div class="bt"><div class="lab">Яндекс показы</div><div class="val">${formatSeoNum(y.impressions)}</div></div>
         </div>

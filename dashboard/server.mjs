@@ -19,7 +19,7 @@ import { loadWbProfit, defaultWbRange } from "./lib/load-wb.mjs";
 import { loadDebtors } from "./lib/load-debtors.mjs";
 import { loadMBalance } from "./lib/load-mbalance.mjs";
 import { loadClientPayments } from "./lib/load-client-payments.mjs";
-import { loadSeoReport, loadSeoProductsReport, loadSeoPositionsReport, refreshSeoTrailingCache } from "./lib/load-seo.mjs";
+import { loadSeoReport, loadSeoProductsReport, loadSeoPositionsReport, refreshSeoTrailingCache, attachYandexSqi } from "./lib/load-seo.mjs";
 import {
   cookieName,
   ensureAuthReady,
@@ -297,7 +297,8 @@ async function refreshOzonTrailingCache(period) {
 }
 
 /**
- * Сброс периодного кэша за окно и перечитывание SEO + Озон.
+ * Сброс SEO-кэша за окно (без Озона) и перечитывание.
+ * Озон при автозапуске по умолчанию выключен — полный пересчёт валит Node на слабых машинах.
  * Часы обновляются при открытии главной (`refresh(true)`).
  * @param {string} reason
  * @param {{ days?: number }} [opts]
@@ -313,21 +314,36 @@ async function runAllTrailingCacheRefresh(reason, opts = {}) {
   }
   const days = opts.days != null ? Math.max(1, Math.floor(Number(opts.days) || 1)) : trailingCacheDays();
   const period = trailingCachePeriod(days);
-  console.log(`Cache trailing ${reason}: last ${days} day(s) (${period.from}…${period.to}) — invalidate + re-read...`);
-  try {
-    const cleared = clearBoardCache("all", { from: period.from, to: period.to });
-    console.log(
-      `Cache trailing invalidate: removed=${cleared.removed || 0}, rows=${cleared.rows || 0}` +
-        (cleared.skipped?.length ? `, skipped=${cleared.skipped.join(",")}` : "")
-    );
-  } catch (err) {
-    console.warn(`Cache trailing invalidate failed:`, err.message || err);
+  console.log(`Cache trailing ${reason}: last ${days} day(s) (${period.from}…${period.to})...`);
+
+  // По умолчанию не сносим кэш перед перечитыванием: SEO сам перезаписывает дни.
+  // Полный invalidate (в т.ч. файлы Озона) — только явно CACHE_TRAILING_INVALIDATE=1.
+  if (envFlagOn("CACHE_TRAILING_INVALIDATE", false)) {
+    try {
+      for (const board of ["seo", "seoqueries", "seopositions"]) {
+        const cleared = clearBoardCache(board, { from: period.from, to: period.to });
+        console.log(`Cache trailing invalidate ${board}: removed=${cleared.removed || 0}, rows=${cleared.rows || 0}`);
+      }
+    } catch (err) {
+      console.warn(`Cache trailing invalidate failed:`, err.message || err);
+    }
   }
-  await runSeoTrailingRefresh(reason, { days, force: reason === "first-open" });
-  if (envFlagOn("CACHE_TRAILING_OZON", true)) {
-    await refreshOzonTrailingCache(period);
+
+  try {
+    await runSeoTrailingRefresh(reason, { days, force: reason === "first-open" });
+  } catch (err) {
+    console.warn(`Cache trailing SEO ${reason} failed:`, err.message || err);
+  }
+
+  // Озон: тяжёлый OData-пересчёт. По умолчанию выкл. — иначе Node часто падает (OOM / kill).
+  if (envFlagOn("CACHE_TRAILING_OZON", false)) {
+    try {
+      await refreshOzonTrailingCache(period);
+    } catch (err) {
+      console.warn(`Cache trailing Ozon ${reason} failed:`, err.message || err);
+    }
   } else {
-    console.log("Ozon trailing skipped (CACHE_TRAILING_OZON=0)");
+    console.log("Ozon trailing skipped (default off; set CACHE_TRAILING_OZON=1 to enable)");
   }
   markCacheDayHandled(reason);
 }
@@ -952,6 +968,9 @@ const server = createServer(async (req, res) => {
           site: site || undefined,
           queryLimit,
         });
+        if (tabKey === "seo") {
+          await attachYandexSqi(data, { site: site || undefined });
+        }
         return json(res, 200, data);
       } catch (err) {
         const msg = String(err.message || err);
@@ -1083,8 +1102,18 @@ refresh(true)
       }
       startHoursRefreshLoop();
       startSeoRefreshLoop();
-      runAllTrailingCacheRefresh("startup").catch((err) =>
-        console.warn("Startup trailing cache refresh failed:", err.message || err)
-      );
+      // Откладываем trailing, чтобы порт уже отвечал, даже если SEO ещё идёт.
+      setTimeout(() => {
+        runAllTrailingCacheRefresh("startup").catch((err) =>
+          console.warn("Startup trailing cache refresh failed:", err.message || err)
+        );
+      }, 3000);
     });
   });
+
+process.on("uncaughtException", (err) => {
+  console.error("uncaughtException (дашборд продолжает работу):", err?.stack || err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("unhandledRejection (дашборд продолжает работу):", reason);
+});
