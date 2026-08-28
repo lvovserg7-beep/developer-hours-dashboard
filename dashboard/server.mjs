@@ -575,10 +575,11 @@ const server = createServer(async (req, res) => {
       const from = String(url.searchParams.get("from") || range.from);
       const to = String(url.searchParams.get("to") || range.to);
       try {
-        // По умолчанию без тяжёлых регистров себестоимости/рекламы (?cost=1&registers=1 — полный режим)
-        const skipCost = url.searchParams.get("cost") !== "1";
-        const skipRegisters = url.searchParams.get("registers") !== "1";
-        const data = await loadOzonCost(from, to, { skipCost, skipRegisters });
+        // Полный отчёт как в 1С. Ускорение: ?cost=0 и/или ?registers=0. Сброс кэша: ?refresh=1
+        const skipCost = url.searchParams.get("cost") === "0";
+        const skipRegisters = url.searchParams.get("registers") === "0";
+        const refresh = url.searchParams.get("refresh") === "1";
+        const data = await loadOzonCost(from, to, { skipCost, skipRegisters, refresh });
         return json(res, 200, data);
       } catch (err) {
         const msg = String(err.message || err);

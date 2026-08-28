@@ -1,18 +1,21 @@
 import { odataGet } from "./odata.mjs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const DB = "ecotidy";
 const PAGE = 400;
 const EMPTY = "00000000-0000-0000-0000-000000000000";
+const CACHE_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "data");
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
+/** Документные операции → поля отчёта (без рекламы/premium — они из регистров). */
 const DOC_OP_MAP = {
   "Оплата эквайринга": "acquiring",
-  "Трафареты": "adStencil",
-  "Продвижение в поиске": "adSearch",
   "Доставка и обработка возврата, отмены, невыкупа": "deliveryReturn",
   "Кросс-докинг": "crossDock",
-  "Premium-подписка": "premium",
   "Услуга размещения товаров на складе": "storageServices",
-  "Доставка покупателю — отмена начисления": "deliveryStages",
+  "Доставка покупателю — отмена начисления": "deliveryCancel",
   "Утилизация": "otherFulfillment",
   "Перечисление за доставку от покупателя": "deliveryBias",
   "Возврат перечисления за доставку": "deliveryBias",
@@ -22,7 +25,11 @@ const DOC_OP_MAP = {
   "Начисления по операциям на складе": "storageOps",
 };
 
-/** Поля отчёта, совпадающие с колонками 1С. */
+/**
+ * Поля отчёта в порядке колонок 1С «Расчёт себестоимости».
+ * adOrder = Реклама заказ; deliveryCancel = Доставка покупателю отмена начисления;
+ * decompensation = Декомпенсация за возвращение на сток.
+ */
 const MONEY_FIELDS = [
   "sale",
   "returns",
@@ -31,18 +38,20 @@ const MONEY_FIELDS = [
   "acquiring",
   "deliveryOzon",
   "deliveryReturn",
-  "deliveryRfbs",
   "crossDock",
+  "deliveryCancel",
+  "deliveryRfbs",
   "deliveryBias",
-  "deliveryStages",
+  "deliveryKgt",
   "storageOps",
   "storageServices",
   "otherFulfillment",
   "adStencil",
   "adSearch",
-  "adMedia",
+  "adOrder",
   "premium",
   "tax",
+  "decompensation",
   "compShortage",
   "compLoss",
 ];
@@ -56,32 +65,39 @@ const SERVICE_MAP = {
   ПеречислениеЗаДоставкуОтПокупателя: "deliveryBias",
   ВозвратПеречисленияЗаДоставкуПокупателю: "deliveryBias",
   КомпенсацияПеречисленияЗаДоставку: "deliveryBias",
-  ДоставкаПокупателюОтменаНачисления: "deliveryStages",
-  ДоставкаКГТ: "deliveryStages",
+  ДоставкаПокупателюОтменаНачисления: "deliveryCancel",
+  ДоставкаКГТ: "deliveryKgt",
   НачисленияПоОперациямНаСкладеОзон: "storageOps",
   УслугаРазмещенияТоваровНаСкладе: "storageServices",
   КраткосрочноеРазмещениеВозвратаFBS: "storageServices",
   ДолгосрочноеРазмещениеВозвратаFBS: "storageServices",
+  УдержаниеЗаНедовложениеТовара: "storageOps",
   ПодпискаPremium: "premium",
+  ДекомпенсацияЗаВозвращениеНаСток: "decompensation",
   КомпенсацияЗаУтерюТовара: "compLoss",
   КомпенсацияЗаУтерянныйНаСкладеТовар: "compLoss",
   КомпенсацияЗаПовреждённыйНаСкладеТовар: "compShortage",
-  УдержаниеЗаНедовложениеТовара: "compShortage",
   НачислениеПоПретензии: "compShortage",
   Прочее: "otherFulfillment",
   Неопределено: "otherFulfillment",
   УтилизацияТовара: "otherFulfillment",
   БаллыЗаОтзывы: "otherFulfillment",
   ПриобретениеОтзывовНаПлатформе: "otherFulfillment",
-  УслугаБрендоваяПолка: "adMedia",
-  УслугаПродвиженияБонусыПродавца: "adMedia",
-  ЗвездныеТовары: "adMedia",
+  УслугаБрендоваяПолка: "otherFulfillment",
+  УслугаПродвиженияБонусыПродавца: "otherFulfillment",
+  ЗвездныеТовары: "otherFulfillment",
+  ЛогистикаВРЦ: "otherFulfillment",
+  УслугаDropOffВПунктеПриёмаЗаказов: "otherFulfillment",
+  ПеревыставлениеВозвратовНаПунктеВыдачи: "otherFulfillment",
+  ВзаимозачётСДругимиДоговорамиКонтрагента: "otherFulfillment",
+  ИнвентаризацияВзаиморасчетов: "otherFulfillment",
+  ПрочиеКомпенсации: "otherFulfillment",
 };
 
 const AD_MAP = {
   Трафареты: "adStencil",
   ПродвижениеВПоиске: "adSearch",
-  НачисленияПоЗаказуВсеТовары: "adMedia",
+  НачисленияПоЗаказуВсеТовары: "adOrder",
 };
 
 /** Операции продаж/возвратов в Alsn_Начисления (как в отчёте 1С). */
@@ -148,8 +164,20 @@ async function fetchAll(path) {
   const rows = [];
   for (let page = 0; page < 600; page++) {
     const sep = path.includes("?") ? "&" : "?";
-    const data = await odataGet(`${path}${sep}$top=${PAGE}&$skip=${page * PAGE}`, DB);
-    const chunk = data.value || [];
+    let chunk = [];
+    let lastErr = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const data = await odataGet(`${path}${sep}$top=${PAGE}&$skip=${page * PAGE}`, DB);
+        chunk = data.value || [];
+        lastErr = null;
+        break;
+      } catch (err) {
+        lastErr = err;
+        await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+      }
+    }
+    if (lastErr) throw lastErr;
     rows.push(...chunk);
     if (chunk.length < PAGE) break;
   }
@@ -187,6 +215,10 @@ function enumTail(value) {
   return parts[parts.length - 1] || text;
 }
 
+function textIncludes(hay, needle) {
+  return String(hay || "").toLowerCase().includes(String(needle || "").toLowerCase());
+}
+
 function mapServiceField(vid) {
   const key = enumTail(vid);
   if (SERVICE_MAP[key]) return SERVICE_MAP[key];
@@ -196,48 +228,42 @@ function mapServiceField(vid) {
   return "otherFulfillment";
 }
 
-function textIncludes(hay, needle) {
-  return String(hay || "").toLowerCase().includes(String(needle || "").toLowerCase());
-}
-
 function mapAdField(vid) {
   const key = enumTail(vid);
   if (AD_MAP[key]) return AD_MAP[key];
   if (/трафарет/i.test(key)) return "adStencil";
   if (/поиск/i.test(key)) return "adSearch";
-  return "adMedia";
+  if (/заказ/i.test(key)) return "adOrder";
+  return "otherFulfillment";
 }
 
 function finishMetrics(m, taxRate) {
   const sale = m.sale;
   const returns = m.returns + m.returnsReg;
   const cost = m.cost;
-  const marketing = m.adStencil + m.adSearch + m.adMedia + m.premium;
+  const marketing = m.adStencil + m.adSearch + m.adOrder + m.premium;
   const delivery =
     m.deliveryOzon +
     m.deliveryReturn +
     m.deliveryRfbs +
     m.crossDock +
     m.deliveryBias +
-    m.deliveryStages;
+    m.deliveryCancel +
+    m.deliveryKgt;
   const storage = m.storageOps + m.storageServices;
-  const other = m.otherFulfillment + m.compShortage + m.compLoss;
+  const other = m.otherFulfillment + m.compShortage + m.compLoss + m.decompensation;
   const expenses =
-    cost +
-    m.commission +
-    m.acquiring +
-    delivery +
-    storage +
-    other +
-    marketing +
-    m.tax;
-  // Как в СКД: выручка − расходы − (−возвраты + прочие начисления…)
-  const margin = sale - expenses - (-returns);
-  const gross = margin - m.undistributed;
+    cost + m.commission + m.acquiring + delivery + storage + other + marketing + m.tax;
+  // Как в СКД: выручка − расходы − (−возвраты). Для «Не распределено» добавляем
+  // ПрибыльНераспределенныеРасходы (add-back), валовая = прибыль − эти расходы.
+  const u = num(m.undistributed);
+  let margin = sale - expenses - -returns;
+  if (u) margin += u;
+  const gross = margin - u;
   const marginPct = sale ? (margin / sale) * 100 : 0;
   const grossPct = sale ? (gross / sale) * 100 : 0;
   const roi = cost ? (gross / cost) * 100 : 0;
-  const costPerUnit = m.qty ? cost / Math.abs(m.qty) : 0;
+  const costPerUnit = m.qty ? cost / m.qty : 0;
   return {
     qty: round2(m.qty),
     sale: round2(sale),
@@ -251,19 +277,21 @@ function finishMetrics(m, taxRate) {
     deliveryRfbs: round2(m.deliveryRfbs),
     crossDock: round2(m.crossDock),
     deliveryBias: round2(m.deliveryBias),
-    deliveryStages: round2(m.deliveryStages),
+    deliveryCancel: round2(m.deliveryCancel),
+    deliveryKgt: round2(m.deliveryKgt),
     storageOps: round2(m.storageOps),
     storageServices: round2(m.storageServices),
     otherFulfillment: round2(m.otherFulfillment),
     adStencil: round2(m.adStencil),
     adSearch: round2(m.adSearch),
-    adMedia: round2(m.adMedia),
+    adOrder: round2(m.adOrder),
     premium: round2(m.premium),
     tax: round2(m.tax || sale * (taxRate / 100)),
     taxRate,
+    decompensation: round2(m.decompensation),
     compShortage: round2(m.compShortage),
     compLoss: round2(m.compLoss),
-    undistributed: round2(m.undistributed),
+    undistributed: round2(u),
     margin: round2(margin),
     marginPct: round2(marginPct),
     gross: round2(gross),
@@ -276,45 +304,116 @@ function finishMetrics(m, taxRate) {
  * Расчёт себестоимости Озон (база ecotidy / Первый интегратор).
  * @param {string} fromRaw
  * @param {string} toRaw
- * @param {{ skipCost?: boolean }} [opts]
+ * @param {{ skipCost?: boolean, skipRegisters?: boolean, log?: boolean, refresh?: boolean }} [opts]
  */
 export async function loadOzonCost(fromRaw, toRaw, opts = {}) {
   const range = resolveRange(fromRaw, toRaw);
-  const warnings = [];
+  const cacheKey = `ozon-cost-${range.from}_${range.to}_c${opts.skipCost ? 0 : 1}_r${opts.skipRegisters ? 0 : 1}.json`;
+  const cachePath = join(CACHE_DIR, cacheKey);
+  if (!opts.refresh && existsSync(cachePath)) {
+    try {
+      const cached = JSON.parse(readFileSync(cachePath, "utf8"));
+      const age = Date.now() - Date.parse(cached.generatedAt || 0);
+      if (Number.isFinite(age) && age >= 0 && age < CACHE_TTL_MS) {
+        return { ...cached, cached: true, cacheAgeSec: Math.round(age / 1000) };
+      }
+    } catch {
+      /* пересчитаем */
+    }
+  }
 
-  const [taxData, docs] = await Promise.all([
+  const report = await loadOzonCostFresh(fromRaw, toRaw, opts);
+  try {
+    if (!existsSync(CACHE_DIR)) mkdirSync(CACHE_DIR, { recursive: true });
+    writeFileSync(cachePath, JSON.stringify(report), "utf8");
+  } catch {
+    /* кэш не обязателен */
+  }
+  return report;
+}
+
+async function loadOzonCostFresh(fromRaw, toRaw, opts = {}) {
+  const range = resolveRange(fromRaw, toRaw);
+  const warnings = [];
+  const t0 = Date.now();
+  const tick = (label) => {
+    if (opts.log) console.error(`[ozon +${((Date.now() - t0) / 1000).toFixed(1)}s] ${label}`);
+  };
+
+  const saleFilter =
+    `(НазваниеТипаОперации eq 'Доставка покупателю' or НазваниеТипаОперации eq 'Получение возврата, отмены, невыкупа от покупателя')` +
+    ` and СтоимостьТоваровСУчётомСкидокПродавца ne 0`;
+
+  tick("sale+registers");
+  let services = [];
+  let servicesNoNom = [];
+  let ads = [];
+  const boot = [
     odataGet("Constant_НалогНаПрибыль?$format=json", DB),
     fetchAll(
-      `Document_Alsn_Начисления?$format=json&$filter=Date ge datetime'${range.fromIso}' and Date le datetime'${range.toIso}' and Posted eq true&$select=Ref_Key,НазваниеТипаОперации,СтоимостьТоваровСУчётомСкидокПродавца,СуммаОперации,КомиссияЗаПродажуИлиВозвратКомиссии&$orderby=Date`
+      `Document_Alsn_Начисления?$format=json&$filter=Date ge datetime'${range.fromIso}' and Date le datetime'${range.toIso}' and Posted eq true and ${saleFilter}&$select=Ref_Key,НазваниеТипаОперации,СтоимостьТоваровСУчётомСкидокПродавца,СуммаОперации,КомиссияЗаПродажуИлиВозвратКомиссии`
     ),
-  ]);
+  ];
+  if (!opts.skipRegisters) {
+    boot.push(
+      fetchAll(
+        `AccumulationRegister_AlsnДополнительныеУслуги_RecordType?$format=json&$filter=Period ge datetime'${range.fromIso}' and Period le datetime'${range.toIso}' and Active eq true&$select=Номенклатура,ВидНачисления,Сумма`
+      ).catch((err) => {
+        warnings.push(`Услуги: ${String(err.message || err).slice(0, 120)}`);
+        return [];
+      }),
+      fetchAll(
+        `AccumulationRegister_AlsnДополнительныеУслугиБезНоменклатуры_RecordType?$format=json&$filter=Period ge datetime'${range.fromIso}' and Period le datetime'${range.toIso}' and Active eq true&$select=ВидНачисления,Сумма`
+      ).catch((err) => {
+        warnings.push(`Услуги без ном.: ${String(err.message || err).slice(0, 120)}`);
+        return [];
+      }),
+      fetchAll(
+        `AccumulationRegister_Alsn_РасходыНаРекламу_RecordType?$format=json&$filter=Period ge datetime'${range.fromIso}' and Period le datetime'${range.toIso}' and Active eq true&$select=Номенклатура,ВидРекламнойКомпании,Сумма`
+      ).catch((err) => {
+        warnings.push(`Реклама: ${String(err.message || err).slice(0, 120)}`);
+        return [];
+      })
+    );
+  }
+  const bootRows = await Promise.all(boot);
+  const taxData = bootRows[0];
+  const saleDocs = bootRows[1];
+  if (!opts.skipRegisters) {
+    services = bootRows[2] || [];
+    servicesNoNom = bootRows[3] || [];
+    ads = bootRows[4] || [];
+    tick(`regs services=${services.length} noNom=${servicesNoNom.length} ads=${ads.length}`);
+  } else {
+    warnings.push("Регистры доп. услуг и рекламы пропущены (ускоренный режим).");
+  }
   const taxRate = num(taxData.value?.[0]?.Value) || 0;
+  tick(`sale docs done ${saleDocs.length}`);
 
-  const saleDocs = docs.filter((d) => {
-    const name = d.НазваниеТипаОперации || "";
-    return SALE_OPS.has(name) && num(d.СтоимостьТоваровСУчётомСкидокПродавца) !== 0;
-  });
-
-  // строки товаров для долей
   const goodsByRef = new Map();
   const saleKeys = saleDocs.map((d) => d.Ref_Key);
   const keyBatches = [];
   for (let i = 0; i < saleKeys.length; i += 8) keyBatches.push(saleKeys.slice(i, i + 8));
-  await mapPool(keyBatches, 8, async (part) => {
+  let goodsErrors = 0;
+  tick(`goods batches ${keyBatches.length}`);
+  await mapPool(keyBatches, 4, async (part) => {
     try {
       const filter = encodeURIComponent(part.map((id) => `Ref_Key eq guid'${id}'`).join(" or "));
-      const rows = await fetchAll(
-        `Document_Alsn_Начисления_Товары?$format=json&$filter=${filter}&$select=Ref_Key,Номенклатура`
+      const data = await odataGet(
+        `Document_Alsn_Начисления_Товары?$format=json&$filter=${filter}&$select=Ref_Key,Номенклатура&$top=200`,
+        DB
       );
-      for (const row of rows) {
+      for (const row of data.value || []) {
         const list = goodsByRef.get(row.Ref_Key) || [];
         list.push(String(row.Номенклатура || ""));
         goodsByRef.set(row.Ref_Key, list);
       }
-    } catch (err) {
-      warnings.push(`Товары: ${String(err.message || err).slice(0, 120)}`);
+    } catch {
+      goodsErrors += 1;
     }
   });
+  if (goodsErrors) warnings.push(`Товары: ошибки загрузки в ${goodsErrors} пакетах`);
+  tick(`goods done map=${goodsByRef.size} err=${goodsErrors}`);
 
   const byNom = new Map();
   const ensureNom = (id) => {
@@ -325,9 +424,7 @@ export async function loadOzonCost(fromRaw, toRaw, opts = {}) {
 
   for (const doc of saleDocs) {
     let goods = goodsByRef.get(doc.Ref_Key) || [];
-    if (!goods.length) {
-      goods = [EMPTY];
-    }
+    if (!goods.length) goods = [EMPTY];
     const countByNom = new Map();
     for (const nom of goods) countByNom.set(nom, (countByNom.get(nom) || 0) + 1);
     const totalLines = goods.length;
@@ -345,65 +442,53 @@ export async function loadOzonCost(fromRaw, toRaw, opts = {}) {
       if (salePart < 0) {
         patch.returns = salePart;
         patch.sale = 0;
+        patch.tax = 0;
       } else {
         patch.sale = salePart;
         patch.returns = 0;
+        patch.tax = salePart * (taxRate / 100);
       }
       patch.deliveryOzon = salePart - opPart + comPart;
       patch.commission = -comPart;
-      patch.tax = salePart * (taxRate / 100);
       addMetrics(ensureNom(nom), patch);
     }
   }
 
-  // Прочие типы операций документа → колонки расходов (дополняет регистры)
-  for (const doc of docs) {
-    const name = doc.НазваниеТипаОперации || "";
-    if (SALE_OPS.has(name)) continue;
-    let field = DOC_OP_MAP[name];
-    if (!field) {
-      for (const [opName, f] of Object.entries(DOC_OP_MAP)) {
-        if (name.startsWith(opName) || name.includes(opName)) {
-          field = f;
-          break;
+  // Запасной путь: прочие операции из документов (полный режим — только регистры, как в 1С).
+  if (opts.skipRegisters) {
+    try {
+      const otherDocs = await fetchAll(
+        `Document_Alsn_Начисления?$format=json&$filter=Date ge datetime'${range.fromIso}' and Date le datetime'${range.toIso}' and Posted eq true&$select=Ref_Key,НазваниеТипаОперации,СуммаОперации`
+      );
+      for (const doc of otherDocs) {
+        const name = doc.НазваниеТипаОперации || "";
+        if (SALE_OPS.has(name)) continue;
+        let field = DOC_OP_MAP[name];
+        if (!field) {
+          for (const [opName, f] of Object.entries(DOC_OP_MAP)) {
+            if (name.startsWith(opName) || name.includes(opName)) {
+              field = f;
+              break;
+            }
+          }
         }
+        if (!field) continue;
+        const amount = -num(doc.СуммаОперации);
+        if (!amount) continue;
+        const patch = emptyMetrics();
+        patch[field] = amount;
+        addMetrics(ensureNom("__doc__"), patch);
       }
+    } catch (err) {
+      warnings.push(`Прочие операции: ${String(err.message || err).slice(0, 120)}`);
     }
-    if (!field) continue;
-    const amount = -num(doc.СуммаОперации);
-    if (!amount) continue;
-    const patch = emptyMetrics();
-    patch[field] = amount;
-    addMetrics(ensureNom("__doc__"), patch);
   }
 
-  // регистры доп. услуг и рекламы
-  let services = [];
-  let servicesNoNom = [];
-  let ads = [];
-  if (!opts.skipRegisters) {
-  try {
-    [services, servicesNoNom, ads] = await Promise.all([
-      fetchAll(
-        `AccumulationRegister_AlsnДополнительныеУслуги_RecordType?$format=json&$filter=Period ge datetime'${range.fromIso}' and Period le datetime'${range.toIso}' and Active eq true&$select=Номенклатура,ВидНачисления,Сумма`
-      ),
-      fetchAll(
-        `AccumulationRegister_AlsnДополнительныеУслугиБезНоменклатуры_RecordType?$format=json&$filter=Period ge datetime'${range.fromIso}' and Period le datetime'${range.toIso}' and Active eq true&$select=ВидНачисления,Сумма`
-      ),
-      fetchAll(
-        `AccumulationRegister_Alsn_РасходыНаРекламу_RecordType?$format=json&$filter=Period ge datetime'${range.fromIso}' and Period le datetime'${range.toIso}' and Active eq true&$select=Номенклатура,ВидРекламнойКомпании,Сумма`
-      ),
-    ]);
-  } catch (err) {
-    warnings.push(`Регистры ALSN: ${String(err.message || err).slice(0, 180)}`);
-  }
-  } else {
-    warnings.push("Регистры доп. услуг и рекламы пропущены (ускоренный режим).");
-  }
+  tick(`apply regs services=${services.length}`);
 
   for (const row of services) {
     const field = mapServiceField(row.ВидНачисления);
-    const amount = -num(row.Сумма); // в отчёте расходы со знаком «−оборот»
+    const amount = -num(row.Сумма);
     const patch = emptyMetrics();
     if (field === "returnsReg") patch.returnsReg = amount;
     else patch[field] = amount;
@@ -426,45 +511,54 @@ export async function loadOzonCost(fromRaw, toRaw, opts = {}) {
     addMetrics(ensureNom(row.Номенклатура), patch);
   }
 
-  // себестоимость: средняя цена по расходу, только по номенклатуре отчёта
   const nomIds = [...byNom.keys()].filter((k) => k && k !== EMPTY && k !== "__doc__");
   const unitCost = new Map();
   if (!opts.skipCost) {
-  try {
-    const keyByNom = new Map();
-    for (let i = 0; i < nomIds.length; i += 8) {
-      const part = nomIds.slice(i, i + 8);
-      const filter = encodeURIComponent(part.map((id) => `Номенклатура_Key eq guid'${id}'`).join(" or "));
-      const keys = await fetchAll(
-        `Catalog_КлючиАналитикиУчетаНоменклатуры?$format=json&$filter=${filter}&$select=Ref_Key,Номенклатура_Key`
-      );
-      for (const k of keys) {
-        if (k.Номенклатура_Key) keyByNom.set(k.Ref_Key, k.Номенклатура_Key);
+    tick("cost");
+    try {
+      const keyByNom = new Map();
+      const keyBatches = [];
+      for (let i = 0; i < nomIds.length; i += 8) keyBatches.push(nomIds.slice(i, i + 8));
+      await mapPool(keyBatches, 4, async (part) => {
+        const filter = encodeURIComponent(part.map((id) => `Номенклатура_Key eq guid'${id}'`).join(" or "));
+        const data = await odataGet(
+          `Catalog_КлючиАналитикиУчетаНоменклатуры?$format=json&$filter=${filter}&$select=Ref_Key,Номенклатура_Key&$top=200`,
+          DB
+        );
+        for (const k of data.value || []) {
+          if (k.Номенклатура_Key) keyByNom.set(k.Ref_Key, k.Номенклатура_Key);
+        }
+      });
+
+      const analyticsIds = [...keyByNom.keys()];
+      const agg = new Map();
+      const analBatches = [];
+      // Короткие пакеты — иначе OData 404 из‑за длины URL.
+      for (let i = 0; i < analyticsIds.length; i += 3) analBatches.push(analyticsIds.slice(i, i + 3));
+      await mapPool(analBatches, 4, async (part) => {
+        const keyFilter = part.map((id) => `АналитикаУчетаНоменклатуры_Key eq guid'${id}'`).join(" or ");
+        const data = await odataGet(
+          `AccumulationRegister_СебестоимостьТоваров_RecordType?$format=json&$filter=Period ge datetime'${range.fromIso}' and Period le datetime'${range.toIso}' and Active eq true and RecordType eq 'Expense' and (${keyFilter})&$select=АналитикаУчетаНоменклатуры_Key,Количество,Стоимость,ДопРасходы,СтоимостьУпр,ДопРасходыУпр&$top=1000`,
+          DB
+        );
+        for (const row of data.value || []) {
+          const nom = keyByNom.get(row.АналитикаУчетаНоменклатуры_Key);
+          if (!nom) continue;
+          const cur = agg.get(nom) || { qty: 0, sum: 0 };
+          cur.qty += num(row.Количество);
+          const cost = num(row.Стоимость) + num(row.ДопРасходы);
+          const costUpr = num(row.СтоимостьУпр) + num(row.ДопРасходыУпр);
+          cur.sum += cost || costUpr;
+          agg.set(nom, cur);
+        }
+      });
+      for (const [nom, v] of agg.entries()) {
+        unitCost.set(nom, v.qty ? v.sum / v.qty : 0);
       }
+      tick(`cost units ${unitCost.size}`);
+    } catch (err) {
+      warnings.push(`Себестоимость: ${String(err.message || err).slice(0, 180)}`);
     }
-    const analyticsIds = [...keyByNom.keys()];
-    const agg = new Map();
-    for (let i = 0; i < analyticsIds.length; i += 6) {
-      const part = analyticsIds.slice(i, i + 6);
-      const keyFilter = part.map((id) => `АналитикаУчетаНоменклатуры_Key eq guid'${id}'`).join(" or ");
-      const costRows = await fetchAll(
-        `AccumulationRegister_СебестоимостьТоваров_RecordType?$format=json&$filter=Period ge datetime'${range.fromIso}' and Period le datetime'${range.toIso}' and Active eq true and RecordType eq 'Expense' and (${keyFilter})&$select=АналитикаУчетаНоменклатуры_Key,Количество,Стоимость,ДопРасходы`
-      );
-      for (const row of costRows) {
-        const nom = keyByNom.get(row.АналитикаУчетаНоменклатуры_Key);
-        if (!nom) continue;
-        const cur = agg.get(nom) || { qty: 0, sum: 0 };
-        cur.qty += num(row.Количество);
-        cur.sum += num(row.Стоимость) + num(row.ДопРасходы);
-        agg.set(nom, cur);
-      }
-    }
-    for (const [nom, v] of agg.entries()) {
-      unitCost.set(nom, v.qty ? v.sum / v.qty : 0);
-    }
-  } catch (err) {
-    warnings.push(`Себестоимость: ${String(err.message || err).slice(0, 180)}`);
-  }
   } else {
     warnings.push("Себестоимость по номенклатуре пропущена (ускоренный режим).");
   }
@@ -474,13 +568,16 @@ export async function loadOzonCost(fromRaw, toRaw, opts = {}) {
     if (unit && metrics.qty) metrics.cost += unit * metrics.qty;
   }
 
+  tick(`noms ${nomIds.length}`);
   const nomMap = await fetchByKeys(
     "Catalog_Номенклатура",
     nomIds,
     "Ref_Key,Description,ТоварнаяКатегория_Key"
   );
+  tick(`nomMap ${nomMap.size}`);
   const catIds = [...nomMap.values()].map((r) => r.ТоварнаяКатегория_Key).filter(Boolean);
   const catMap = await fetchByKeys("Catalog_ТоварныеКатегории", catIds, "Ref_Key,Description");
+  tick(`catMap ${catMap.size}`);
 
   const groups = new Map();
   const mergeUndistributed = (metrics) => {
@@ -506,7 +603,6 @@ export async function loadOzonCost(fromRaw, toRaw, opts = {}) {
     });
   }
 
-  // нераспределённые из регистра без номенклатуры
   if (Object.values(undistributed).some((v) => num(v))) {
     mergeUndistributed(undistributed);
   }
@@ -536,6 +632,7 @@ export async function loadOzonCost(fromRaw, toRaw, opts = {}) {
     warnings: [...new Set(warnings)].slice(0, 12),
     note:
       "Как отчёт 1С «Расчёт себестоимости» Озон: продажи и комиссия из Alsn_Начисления, " +
-      "доп. услуги и реклама из регистров ALSN, себестоимость — средняя по расходу регистра «Себестоимость товаров».",
+      "доп. услуги и реклама из регистров ALSN, себестоимость — средняя по расходу регистра «Себестоимость товаров». " +
+      "Пустые колонки скрываются, как в 1С.",
   };
 }

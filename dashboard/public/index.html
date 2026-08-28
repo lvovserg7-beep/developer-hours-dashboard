@@ -3563,35 +3563,112 @@
       return n.toLocaleString("ru-RU", { minimumFractionDigits: digits, maximumFractionDigits: digits });
     }
 
-    function ozonMetricCells(m) {
-      return `<td class="num">${formatOzonNum(m.qty, 0)}</td>`
-        + `<td class="num">${formatOzonNum(m.sale)}</td>`
-        + `<td class="num">${formatOzonNum(m.returns)}</td>`
-        + `<td class="num">${formatOzonNum(m.cost)}</td>`
-        + `<td class="num">${formatOzonNum(m.costPerUnit)}</td>`
-        + `<td class="num">${formatOzonNum(m.commission)}</td>`
-        + `<td class="num">${formatOzonNum(m.acquiring)}</td>`
-        + `<td class="num">${formatOzonNum(m.deliveryOzon)}</td>`
-        + `<td class="num">${formatOzonNum(m.deliveryReturn)}</td>`
-        + `<td class="num">${formatOzonNum(m.deliveryRfbs)}</td>`
-        + `<td class="num">${formatOzonNum(m.crossDock)}</td>`
-        + `<td class="num">${formatOzonNum(m.deliveryBias)}</td>`
-        + `<td class="num">${formatOzonNum(m.deliveryStages)}</td>`
-        + `<td class="num">${formatOzonNum(m.storageOps)}</td>`
-        + `<td class="num">${formatOzonNum(m.storageServices)}</td>`
-        + `<td class="num">${formatOzonNum(m.otherFulfillment)}</td>`
-        + `<td class="num">${formatOzonNum(m.adStencil)}</td>`
-        + `<td class="num">${formatOzonNum(m.adSearch)}</td>`
-        + `<td class="num">${formatOzonNum(m.adMedia)}</td>`
-        + `<td class="num">${formatOzonNum(m.premium)}</td>`
-        + `<td class="num">${formatOzonNum(m.tax)}</td>`
-        + `<td class="num">${formatOzonNum(m.compShortage)}</td>`
-        + `<td class="num">${formatOzonNum(m.compLoss)}</td>`
-        + `<td class="num">${formatOzonNum(m.margin)}</td>`
-        + `<td class="num">${formatOzonNum(m.marginPct)}</td>`
-        + `<td class="num">${formatOzonNum(m.gross)}</td>`
-        + `<td class="num">${formatOzonNum(m.grossPct)}</td>`
-        + `<td class="num">${formatOzonNum(m.roi)}</td>`;
+    /** Колонки как в 1С «Расчёт себестоимости»; нулевые по итогу скрываются. */
+    const OZON_COL_GROUPS = [
+      {
+        title: null,
+        cols: [
+          { key: "qty", label: "Количество", digits: 0, always: true },
+        ],
+      },
+      {
+        title: "Выручка",
+        cols: [
+          { key: "sale", label: "продажа", always: true },
+          { key: "returns", label: "возвраты" },
+        ],
+      },
+      {
+        title: "Себестоимость",
+        cols: [
+          { key: "cost", label: "себестоимость", always: true },
+          { key: "costPerUnit", label: "за ед.", always: true },
+        ],
+      },
+      {
+        title: "Комиссии",
+        cols: [
+          { key: "commission", label: "комиссия", always: true },
+          { key: "acquiring", label: "эквайринг" },
+        ],
+      },
+      {
+        title: "Доставка",
+        cols: [
+          { key: "deliveryOzon", label: "Ozon" },
+          { key: "deliveryReturn", label: "возврат/отмена/невыкуп" },
+          { key: "crossDock", label: "кросс-докинг" },
+          { key: "deliveryCancel", label: "отмена начисления" },
+          { key: "deliveryRfbs", label: "rFBS" },
+          { key: "deliveryBias", label: "перекос" },
+          { key: "deliveryKgt", label: "КГТ" },
+        ],
+      },
+      {
+        title: "Хранение",
+        cols: [
+          { key: "storageOps", label: "операции склада" },
+          { key: "storageServices", label: "размещение" },
+        ],
+      },
+      {
+        title: null,
+        cols: [{ key: "otherFulfillment", label: "Прочее" }],
+      },
+      {
+        title: "Реклама",
+        cols: [
+          { key: "adStencil", label: "трафареты" },
+          { key: "adSearch", label: "поиск" },
+          { key: "adOrder", label: "заказ" },
+          { key: "premium", label: "Premium" },
+        ],
+      },
+      {
+        title: null,
+        cols: [{ key: "tax", label: "Налог", always: true }],
+      },
+      {
+        title: "Компенсация",
+        cols: [
+          { key: "decompensation", label: "декомпенсация на сток" },
+          { key: "compShortage", label: "недостача" },
+          { key: "compLoss", label: "утеря" },
+        ],
+      },
+      {
+        title: "Маржинальная прибыль",
+        cols: [
+          { key: "margin", label: "руб.", always: true },
+          { key: "marginPct", label: "%", always: true },
+        ],
+      },
+      {
+        title: "Валовая прибыль",
+        cols: [
+          { key: "gross", label: "руб.", always: true },
+          { key: "grossPct", label: "%", always: true },
+        ],
+      },
+      {
+        title: null,
+        cols: [{ key: "roi", label: "ROI %", always: true }],
+      },
+    ];
+
+    function ozonVisibleGroups(total) {
+      const t = total || {};
+      return OZON_COL_GROUPS.map((g) => ({
+        ...g,
+        cols: g.cols.filter((c) => c.always || Math.abs(Number(t[c.key]) || 0) > 0.005),
+      })).filter((g) => g.cols.length);
+    }
+
+    function ozonMetricCells(m, visibleGroups) {
+      return visibleGroups
+        .flatMap((g) => g.cols)
+        .map((c) => `<td class="num">${formatOzonNum(m[c.key], c.digits ?? 2)}</td>`)
+        .join("");
     }
 
     function renderOzon(report) {
@@ -3600,56 +3677,43 @@
         box.innerHTML = "";
         return;
       }
-      const head = `
-        <tr>
-          <th rowspan="2">Номенклатура / категория</th>
-          <th rowspan="2">Количество</th>
-          <th colspan="2">Выручка</th>
-          <th colspan="2">Вложения</th>
-          <th colspan="2">Комиссия</th>
-          <th colspan="6">Доставка</th>
-          <th colspan="2">Хранение</th>
-          <th rowspan="2">Прочие</th>
-          <th colspan="4">Реклама</th>
-          <th rowspan="2">Налог</th>
-          <th colspan="2">Компенсация</th>
-          <th colspan="2">Маржа</th>
-          <th colspan="2">Валовая прибыль</th>
-          <th rowspan="2">ROI %</th>
-        </tr>
-        <tr>
-          <th>продажа</th><th>возвраты</th>
-          <th>себестоимость</th><th>за ед.</th>
-          <th>комиссия</th><th>эквайринг</th>
-          <th>озон</th><th>возврат/невыкуп</th><th>rFBS</th><th>кросс-докинг</th><th>перекос</th><th>этапы</th>
-          <th>операции склада</th><th>услуги склада</th>
-          <th>трафарет</th><th>поиск</th><th>медиа</th><th>premium</th>
-          <th>недостача</th><th>утеря</th>
-          <th>руб.</th><th>%</th>
-          <th>руб.</th><th>%</th>
-        </tr>`;
+      const visible = ozonVisibleGroups(report.total);
+      const colCount = 1 + visible.reduce((n, g) => n + g.cols.length, 0);
+      const headTop = [`<th rowspan="2">Номенклатура. Товарная категория / Номенклатура</th>`];
+      const headSub = [];
+      for (const g of visible) {
+        if (g.title && g.cols.length > 1) {
+          headTop.push(`<th colspan="${g.cols.length}">${escapeHtml(g.title)}</th>`);
+          for (const c of g.cols) headSub.push(`<th>${escapeHtml(c.label)}</th>`);
+        } else if (g.title && g.cols.length === 1) {
+          headTop.push(`<th rowspan="2">${escapeHtml(g.title)}<br><span class="ozon-sub">${escapeHtml(g.cols[0].label)}</span></th>`);
+        } else {
+          for (const c of g.cols) headTop.push(`<th rowspan="2">${escapeHtml(c.label)}</th>`);
+        }
+      }
+      const head = `<tr>${headTop.join("")}</tr>` + (headSub.length ? `<tr>${headSub.join("")}</tr>` : "");
       const body = [];
       for (const group of report.groups || []) {
-        body.push(`<tr class="group"><td class="name">${escapeHtml(group.name)}</td>${ozonMetricCells(group.metrics)}</tr>`);
+        body.push(`<tr class="group"><td class="name">${escapeHtml(group.name)}</td>${ozonMetricCells(group.metrics, visible)}</tr>`);
         for (const child of group.children || []) {
-          body.push(`<tr><td class="name ozon-child">${escapeHtml(child.name)}</td>${ozonMetricCells(child.metrics)}</tr>`);
+          body.push(`<tr><td class="name ozon-child">${escapeHtml(child.name)}</td>${ozonMetricCells(child.metrics, visible)}</tr>`);
         }
       }
       if (report.total) {
-        body.push(`<tr class="total"><td class="name">Итого</td>${ozonMetricCells(report.total)}</tr>`);
+        body.push(`<tr class="total"><td class="name">Итого</td>${ozonMetricCells(report.total, visible)}</tr>`);
       }
       const warn = (report.warnings || []).length
         ? `<p class="pnl-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
         : "";
       const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
       const period = report.period
-        ? `<p class="pnl-note">Период ${escapeHtml(report.period.from)} – ${escapeHtml(report.period.to)} · налог ${escapeHtml(String(report.taxRate || 0))}%</p>`
+        ? `<p class="pnl-note">Период ${escapeHtml(report.period.from)} – ${escapeHtml(report.period.to)} · налог ${escapeHtml(String(report.taxRate || 0))}%${report.cached ? ` · кэш ${escapeHtml(String(report.cacheAgeSec || 0))} с` : ""}</p>`
         : "";
       box.innerHTML = warn + note + period + `
         <div class="pnl-section">
           <div class="pnl-scroll"><table class="ozon">
             <thead>${head}</thead>
-            <tbody>${body.join("") || `<tr><td colspan="28">Нет данных за период</td></tr>`}</tbody>
+            <tbody>${body.join("") || `<tr><td colspan="${colCount}">Нет данных за период</td></tr>`}</tbody>
           </table></div>
         </div>`;
     }
@@ -3666,7 +3730,7 @@
       const btn = document.getElementById("ozon-run");
       if (btn) btn.disabled = true;
       ozonErr("");
-      document.getElementById("ozon-report").innerHTML = `<p class="pnl-note">Считаем отчёт из 1С (ecotidy). Это может занять несколько минут…</p>`;
+      document.getElementById("ozon-report").innerHTML = `<p class="pnl-note">Считаем отчёт из 1С (ecotidy), как «Расчёт себестоимости». Первый расчёт за месяц может занять несколько минут; повторные берутся из кэша.</p>`;
       try {
         const report = await api(
           "/api/ozon?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to),
