@@ -332,7 +332,7 @@
     .pos-table td.pos-cell {
       text-align: center;
       white-space: nowrap;
-      min-width: 5.2rem;
+      min-width: 6.8rem;
       font-variant-numeric: tabular-nums;
     }
     .pos-table td.pos-cell { padding: 6px 4px; }
@@ -2146,7 +2146,7 @@
     <div id="tab-seopositions" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Позиции в поисковиках</h2>
-        <p class="lead tab-intro">Топ-5 ключей по каждому продукту и позиции по дням. Колонка «Частота» — Wordstat. Цвет ячейки — зона выдачи; индекс — изменение к предыдущему дню.</p>
+        <p class="lead tab-intro">Топ-5 ключей по каждому продукту и позиции по дням. В ячейке: позиция / показы / клики. Колонка «Частота» — Wordstat. Цвет ячейки — зона выдачи; индекс — изменение к предыдущему дню.</p>
         <form class="pnl-toolbar" id="seopositions-form">
           <div class="filter-dates">
             <label>Период</label>
@@ -5413,8 +5413,9 @@
 
     function renderPosCell(cell) {
       const impressions = Number(cell?.impressions) || 0;
+      const clicks = Number(cell?.clicks) || 0;
       const hasPos = !!(cell && cell.position != null && cell.position > 0);
-      if (!hasPos && impressions <= 0) {
+      if (!hasPos && impressions <= 0 && clicks <= 0) {
         return `<td class="pos-cell pos-miss">—</td>`;
       }
       const shown = hasPos
@@ -5427,7 +5428,8 @@
         deltaHtml = `<span class="pos-delta ${up ? "is-up" : "is-down"}">${up ? "⁺" : "⁻"}${mag}</span>`;
       }
       const imp = formatSeoNum(impressions);
-      return `<td class="pos-cell ${hasPos ? posBandClass(cell.position) : "pos-miss"}" title="Позиция: ${hasPos ? shown : "—"}; показы: ${imp}; клики: ${formatSeoNum(cell?.clicks)}">${shown}${deltaHtml}<span class="pos-cell-imp"> / ${imp}</span></td>`;
+      const clk = formatSeoNum(clicks);
+      return `<td class="pos-cell ${hasPos ? posBandClass(cell.position) : "pos-miss"}" title="Позиция: ${hasPos ? shown : "—"}; показы: ${imp}; клики: ${clk}">${shown}${deltaHtml}<span class="pos-cell-imp"> / ${imp} / ${clk}</span></td>`;
     }
 
     function renderSeoPositions(report) {

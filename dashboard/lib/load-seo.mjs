@@ -1472,7 +1472,7 @@ export async function loadSeoPositionsReport({
     sites: [...new Set(readDailyRows().map((r) => r.site))].sort(),
     wordstatConfigured: wordstat.configured,
     note:
-      "Топ-5 запросов по кликам в каждом продукте. Ячейки — позиция / показы по дням " +
+      "Топ-5 запросов по кликам в каждом продукте. Ячейки — позиция / показы / клики по дням " +
       "(GSC / Яндекс.Вебмастер). Колонка «Частота» — Wordstat (точная фраза в кавычках, ~30 дней), кэш data/seo-wordstat.csv. " +
       (wordstat.configured
         ? ""
