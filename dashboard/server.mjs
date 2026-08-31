@@ -16,6 +16,7 @@ import { loadOzonDrr, defaultOzonDrrRange } from "./lib/load-ozon-drr.mjs";
 import { loadOzonFbsDashboard } from "./lib/load-ozon-fbs-acts.mjs";
 import { loadOzonFboSupplies, defaultOzonFboRange, defaultOzonFboFilterRange } from "./lib/load-ozon-fbo.mjs";
 import { loadWbProfit, defaultWbRange } from "./lib/load-wb.mjs";
+import { loadWbFbsSuppliesReport, getWbFbsSupplyQr, deliverWbFbsSupplyAndQr } from "./lib/load-wb-fbs-supplies.mjs";
 import { loadDebtors } from "./lib/load-debtors.mjs";
 import { loadMBalance } from "./lib/load-mbalance.mjs";
 import { loadClientPayments } from "./lib/load-client-payments.mjs";
@@ -870,6 +871,46 @@ const server = createServer(async (req, res) => {
         const msg = String(err.message || err);
         console.error(err);
         return json(res, /период/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/wbfbs") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "wbfbs")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Поставки ФБС WB»." });
+      }
+      try {
+        const data = await loadWbFbsSuppliesReport();
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/wbfbs/qr") {
+      if (!userHasTab(user, "wbfbs")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Поставки ФБС WB»." });
+      }
+      const supplyId = String(url.searchParams.get("id") || "").trim();
+      if (!supplyId) return json(res, 400, { error: "Укажите id поставки" });
+      try {
+        if (req.method === "GET") {
+          const data = await getWbFbsSupplyQr(supplyId, "png");
+          return json(res, 200, data);
+        }
+        if (req.method === "POST") {
+          // Передача в доставку + QR — явное действие со склада для сдачи ФБС.
+          const data = await deliverWbFbsSupplyAndQr(supplyId);
+          return json(res, 200, data);
+        }
+        return json(res, 405, { error: "Метод не поддерживается" });
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        const notDelivered = /не передана в доставку|not.*deliver/i.test(msg);
+        return json(res, notDelivered ? 409 : 502, { error: msg, needDeliver: notDelivered });
       }
     }
 

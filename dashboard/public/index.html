@@ -67,6 +67,7 @@
     body.wide-report:not(.is-full) #tab-ozonfbofilters .panel,
     body.wide-report:not(.is-full) #tab-units .panel,
     body.wide-report:not(.is-full) #tab-wb .panel,
+    body.wide-report:not(.is-full) #tab-wbfbs .panel,
     body.wide-report:not(.is-full) #tab-debtors .panel,
     body.wide-report:not(.is-full) #tab-mbalance .panel,
     body.wide-report:not(.is-full) #tab-clientpay .panel {
@@ -88,6 +89,8 @@
     body.wide-report:not(.is-full) #tab-units .report-stage-inner,
     body.wide-report:not(.is-full) #tab-wb .report-stage,
     body.wide-report:not(.is-full) #tab-wb .report-stage-inner,
+    body.wide-report:not(.is-full) #tab-wbfbs .report-stage,
+    body.wide-report:not(.is-full) #tab-wbfbs .report-stage-inner,
     body.wide-report:not(.is-full) #tab-debtors .report-stage,
     body.wide-report:not(.is-full) #tab-debtors .report-stage-inner,
     body.wide-report:not(.is-full) #tab-mbalance .report-stage,
@@ -105,6 +108,7 @@
     body.wide-report:not(.is-full) #tab-ozonfbofilters .pnl-scroll,
     body.wide-report:not(.is-full) #tab-units .pnl-scroll,
     body.wide-report:not(.is-full) #tab-wb .pnl-scroll,
+    body.wide-report:not(.is-full) #tab-wbfbs .pnl-scroll,
     body.wide-report:not(.is-full) #tab-debtors .pnl-scroll,
     body.wide-report:not(.is-full) #tab-mbalance .pnl-scroll,
     body.wide-report:not(.is-full) #tab-clientpay .pnl-scroll {
@@ -120,6 +124,7 @@
     body.wide-report:not(.is-full) #tab-ozonfbofilters table.ozon,
     body.wide-report:not(.is-full) #tab-units table.pnl,
     body.wide-report:not(.is-full) #tab-wb table.ozon,
+    body.wide-report:not(.is-full) #tab-wbfbs table.ozon,
     body.wide-report:not(.is-full) #tab-debtors table.pnl,
     body.wide-report:not(.is-full) #tab-mbalance table.pnl,
     body.wide-report:not(.is-full) #tab-clientpay table.pnl {
@@ -135,6 +140,7 @@
     body.wide-report:not(.is-full) #tab-ozonfbofilters table.ozon td.name,
     body.wide-report:not(.is-full) #tab-units table.pnl td.name,
     body.wide-report:not(.is-full) #tab-wb table.ozon td.name,
+    body.wide-report:not(.is-full) #tab-wbfbs table.ozon td.name,
     body.wide-report:not(.is-full) #tab-debtors table.pnl td.name,
     body.wide-report:not(.is-full) #tab-mbalance table.pnl td.name,
     body.wide-report:not(.is-full) #tab-clientpay table.pnl td.name {
@@ -157,6 +163,8 @@
     body.wide-report:not(.is-full) #tab-units table.pnl td.num,
     body.wide-report:not(.is-full) #tab-wb table.ozon th.num,
     body.wide-report:not(.is-full) #tab-wb table.ozon td.num,
+    body.wide-report:not(.is-full) #tab-wbfbs table.ozon th.num,
+    body.wide-report:not(.is-full) #tab-wbfbs table.ozon td.num,
     body.wide-report:not(.is-full) #tab-debtors table.pnl th.num,
     body.wide-report:not(.is-full) #tab-debtors table.pnl td.num,
     body.wide-report:not(.is-full) #tab-mbalance table.pnl th.num,
@@ -836,7 +844,8 @@
     .activity-filters button:hover,
     .btn-secondary:hover { background: var(--accent-soft); }
     .pnl-toolbar button,
-    .btn-primary {
+    .btn-primary,
+    .wbfbs-qr-btn {
       appearance: none;
       padding: 7px 14px;
       font: inherit;
@@ -850,7 +859,8 @@
       border-radius: var(--radius);
     }
     .pnl-toolbar button:hover,
-    .btn-primary:hover { filter: brightness(0.96); }
+    .btn-primary:hover,
+    .wbfbs-qr-btn:hover { filter: brightness(0.96); }
     .comment-body { white-space: pre-wrap; word-break: break-word; max-height: 9em; overflow: auto; }
     table.activity th.when, table.activity td.when {
       width: 140px;
@@ -1413,6 +1423,7 @@
         <button type="button" class="tab" data-tab="ozonfbo" role="tab" aria-selected="false">Отгрузки ФБО Озон</button>
         <button type="button" class="tab" data-tab="ozonfbofilters" role="tab" aria-selected="false">Поставки ФБО с фильтрами</button>
         <button type="button" class="tab" data-tab="wb" role="tab" aria-selected="false">WB рентабельность</button>
+        <button type="button" class="tab" data-tab="wbfbs" role="tab" aria-selected="false">Поставки ФБС WB</button>
         <button type="button" class="tab" data-tab="debtors" role="tab" aria-selected="false">Задолженность клиентов</button>
         <button type="button" class="tab" data-tab="mbalance" role="tab" aria-selected="false">Управленческий баланс</button>
         <button type="button" class="tab" data-tab="clientpay" role="tab" aria-selected="false">Реестр оплат клиентов</button>
@@ -1519,6 +1530,7 @@
             <label><input type="checkbox" id="new-ozonfbo"> Отгрузки ФБО Озон</label>
             <label><input type="checkbox" id="new-ozonfbofilters"> Поставки ФБО с фильтрами</label>
             <label><input type="checkbox" id="new-wb"> WB рентабельность</label>
+            <label><input type="checkbox" id="new-wbfbs"> Поставки ФБС WB</label>
             <label><input type="checkbox" id="new-debtors"> Задолженность клиентов</label>
             <label><input type="checkbox" id="new-mbalance"> Управленческий баланс</label>
             <label><input type="checkbox" id="new-clientpay"> Реестр оплат клиентов</label>
@@ -1952,6 +1964,29 @@
         </form>
         <div id="wb-err" class="err" hidden></div>
         <div id="wb-report"></div>
+      </section>
+    </div>
+    <div id="tab-wbfbs" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Поставки ФБС WB</h2>
+        <p class="lead tab-intro">Открытые поставки, готовые к отгрузке, и недавно сданные в статусе «сортируются». Статусы после сортировки (продано, готов к выдаче и т.п.) не показываем. У каждой поставки — QR для сдачи на ФБС.</p>
+        <form class="pnl-toolbar" id="wbfbs-form">
+          <button type="submit" id="wbfbs-run">Обновить</button>
+        </form>
+        <div id="wbfbs-err" class="err" hidden></div>
+        <div id="wbfbs-report"></div>
+        <div id="wbfbs-qr-modal" hidden style="position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px">
+          <div style="background:#fff;border-radius:10px;max-width:min(640px,96vw);width:100%;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.35)">
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px">
+              <div>
+                <div id="wbfbs-qr-title" style="font-weight:600">QR поставки</div>
+                <div id="wbfbs-qr-id" class="meta"></div>
+              </div>
+              <button type="button" id="wbfbs-qr-close">Закрыть</button>
+            </div>
+            <div id="wbfbs-qr-body" style="text-align:center;min-height:120px"></div>
+          </div>
+        </div>
       </section>
     </div>
     <div id="tab-debtors" class="tab-panel" hidden>
@@ -4113,6 +4148,183 @@
       }
     }
 
+    let wbfbsLoaded = false;
+    let wbfbsInflight = false;
+
+    function wbfbsErr(text) {
+      const el = document.getElementById("wbfbs-err");
+      if (!el) return;
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function wbFbsOrdersHtml(orders) {
+      if (!Array.isArray(orders) || !orders.length) {
+        return `<p class="pnl-note">В поставке нет заданий</p>`;
+      }
+      const rows = orders
+        .map((o) => {
+          const skus = Array.isArray(o.skus) && o.skus.length ? escapeHtml(o.skus.join(", ")) : "—";
+          return `<tr>
+            <td class="num">${escapeHtml(String(o.id || "—"))}</td>
+            <td class="name">${escapeHtml(o.article || "—")}</td>
+            <td>${skus}</td>
+            <td class="num">${o.nmId != null ? formatSeoNum(o.nmId) : "—"}</td>
+            <td>${escapeHtml(o.supplierStatusLabel || o.supplierStatus || "—")}</td>
+            <td>${escapeHtml(o.wbStatusLabel || o.wbStatus || "—")}</td>
+            <td class="num">${formatRub(o.price)}</td>
+            <td>${escapeHtml(o.createdAtLabel || "—")}</td>
+          </tr>`;
+        })
+        .join("");
+      return `<div class="pnl-scroll"><table class="ozon">
+        <thead><tr>
+          <th class="num">ID задания</th>
+          <th>Артикул</th>
+          <th>Баркод</th>
+          <th class="num">nmId</th>
+          <th>Статус продавца</th>
+          <th>Статус WB</th>
+          <th class="num">Цена</th>
+          <th>Создано</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
+    }
+
+    function wbFbsSupplyBlock(s) {
+      const meta = [
+        s.createdAtLabel ? `создана ${escapeHtml(s.createdAtLabel)}` : "",
+        s.scanDtLabel ? `скан ${escapeHtml(s.scanDtLabel)}` : "",
+        s.closedAtLabel ? `закрыта ${escapeHtml(s.closedAtLabel)}` : "",
+        s.destinationOfficeId != null ? `офис ${escapeHtml(String(s.destinationOfficeId))}` : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      const id = escapeHtml(String(s.id || ""));
+      return `<div class="pnl-section" style="margin-top:12px" data-supply-id="${id}">
+        <h3 style="margin:0 0 6px;font-size:1rem;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <span>${escapeHtml(s.name || s.id)}
+            <span class="meta"> · ${formatSeoNum(s.orderCount)} шт · id ${id}</span>
+          </span>
+          <button type="button" class="wbfbs-qr-btn" data-supply-id="${id}" data-supply-name="${escapeHtml(s.name || s.id)}" data-done="${s.done ? "1" : "0"}">QR-код</button>
+        </h3>
+        ${meta ? `<p class="pnl-note" style="margin-top:0">${meta}</p>` : ""}
+        ${wbFbsOrdersHtml(s.orders)}
+      </div>`;
+    }
+
+    function closeWbFbsQrModal() {
+      const modal = document.getElementById("wbfbs-qr-modal");
+      if (!modal) return;
+      modal.hidden = true;
+      modal.style.display = "none";
+      const body = document.getElementById("wbfbs-qr-body");
+      if (body) body.innerHTML = "";
+    }
+
+    function showWbFbsQrModal(title, supplyId, file, mime, barcode) {
+      const modal = document.getElementById("wbfbs-qr-modal");
+      const titleEl = document.getElementById("wbfbs-qr-title");
+      const idEl = document.getElementById("wbfbs-qr-id");
+      const body = document.getElementById("wbfbs-qr-body");
+      if (!modal || !body) return;
+      if (titleEl) titleEl.textContent = title || "QR поставки";
+      if (idEl) idEl.textContent = barcode || supplyId || "";
+      const src = `data:${mime || "image/png"};base64,${file}`;
+      body.innerHTML = `<img alt="QR поставки" src="${src}" style="max-width:100%;height:auto;image-rendering:pixelated">`;
+      modal.hidden = false;
+      modal.style.display = "flex";
+    }
+
+    async function openWbFbsQr(supplyId, supplyName) {
+      const id = String(supplyId || "").trim();
+      if (!id) return;
+      const body = document.getElementById("wbfbs-qr-body");
+      const modal = document.getElementById("wbfbs-qr-modal");
+      const titleEl = document.getElementById("wbfbs-qr-title");
+      const idEl = document.getElementById("wbfbs-qr-id");
+      if (modal) {
+        modal.hidden = false;
+        modal.style.display = "flex";
+      }
+      if (titleEl) titleEl.textContent = supplyName || "QR поставки";
+      if (idEl) idEl.textContent = id;
+      if (body) body.innerHTML = `<p class="pnl-note">Загружаем QR…</p>`;
+      try {
+        const res = await fetch("/api/wbfbs/qr?id=" + encodeURIComponent(id), {
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        const text = await res.text();
+        let parsed = {};
+        try { parsed = text ? JSON.parse(text) : {}; } catch { parsed = {}; }
+        if (!res.ok) {
+          throw new Error(parsed.error || ("Ошибка QR (" + res.status + ")"));
+        }
+        if (!parsed?.file) throw new Error("WB не вернул файл QR");
+        showWbFbsQrModal(supplyName || "QR поставки", id, parsed.file, parsed.mime, parsed.barcode || id);
+      } catch (e) {
+        if (body) body.innerHTML = `<p class="err">${escapeHtml(e.message || String(e))}</p>`;
+      }
+    }
+
+    function renderWbFbsSupplies(report) {
+      const box = document.getElementById("wbfbs-report");
+      if (!box) return;
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      const ready = report.ready || [];
+      const sorting = report.sorting || [];
+      const t = report.totals || {};
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      box.innerHTML = `
+        <div class="kpi-strip">
+          <div class="bt"><div class="lab">Готово к отгрузке</div><div class="val">${formatSeoNum(t.ready)}</div></div>
+          <div class="bt"><div class="lab">Заданий в готовых</div><div class="val">${formatSeoNum(t.readyOrders)}</div></div>
+          <div class="bt"><div class="lab">Сортируются</div><div class="val">${formatSeoNum(t.sorting)}</div></div>
+          <div class="bt"><div class="lab">Заданий в сортировке</div><div class="val">${formatSeoNum(t.sortingOrders)}</div></div>
+        </div>
+        ${note}
+        <div class="pnl-section">
+          <h2>Готово к отгрузке</h2>
+          ${ready.length ? ready.map(wbFbsSupplyBlock).join("") : `<p class="pnl-note">Сейчас нет открытых поставок с заданиями</p>`}
+        </div>
+        <div class="pnl-section">
+          <h2>Сортируются</h2>
+          ${sorting.length ? sorting.map(wbFbsSupplyBlock).join("") : `<p class="pnl-note">Нет поставок в статусе «сортируются»</p>`}
+        </div>`;
+    }
+
+    async function loadWbFbsSupplies(force = false) {
+      if (USER.tabs?.wbfbs === false || wbfbsInflight) return;
+      if (wbfbsLoaded && !force) return;
+      wbfbsInflight = true;
+      const btn = document.getElementById("wbfbs-run");
+      if (btn) btn.disabled = true;
+      wbfbsErr("");
+      document.getElementById("wbfbs-report").innerHTML = `<p class="pnl-note">Запрашиваем поставки FBS в Wildberries…</p>`;
+      try {
+        const report = await api("/api/wbfbs", { method: "GET" });
+        wbfbsLoaded = true;
+        renderWbFbsSupplies(report);
+      } catch (e) {
+        wbfbsLoaded = false;
+        renderWbFbsSupplies(null);
+        wbfbsErr(e.message || String(e));
+      } finally {
+        wbfbsInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
     let ozonfboLoaded = false;
     let ozonfboInflight = false;
 
@@ -5536,7 +5748,7 @@
       }
     }
 
-    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "debtors", "mbalance", "clientpay", "seo", "seoqueries", "seoproducts", "seopositions"];
+    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "seo", "seoqueries", "seoproducts", "seopositions"];
     const TAB_LABELS = {
       hours: "Часы",
       activity: "Активность",
@@ -5553,6 +5765,7 @@
       ozonfbo: "Отгрузки ФБО Озон",
       ozonfbofilters: "Поставки ФБО с фильтрами",
       wb: "WB",
+      wbfbs: "Поставки ФБС WB",
       debtors: "Задолженность",
       mbalance: "Упр. баланс",
       clientpay: "Оплаты клиентов",
@@ -5799,6 +6012,11 @@
         await loadWbReport();
         return;
       }
+      if (name === "wbfbs") {
+        wbfbsLoaded = false;
+        await loadWbFbsSupplies();
+        return;
+      }
       if (name === "debtors") {
         debtorsLoaded = false;
         await loadDebtorsReport();
@@ -5903,6 +6121,7 @@
       document.getElementById("tab-ozonfbo").hidden = name !== "ozonfbo";
       document.getElementById("tab-ozonfbofilters").hidden = name !== "ozonfbofilters";
       document.getElementById("tab-wb").hidden = name !== "wb";
+      document.getElementById("tab-wbfbs").hidden = name !== "wbfbs";
       document.getElementById("tab-debtors").hidden = name !== "debtors";
       document.getElementById("tab-mbalance").hidden = name !== "mbalance";
       document.getElementById("tab-clientpay").hidden = name !== "clientpay";
@@ -5921,13 +6140,14 @@
       if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
       document.body.classList.toggle(
         "wide-report",
-        name === "plan" || name === "budget" || name === "ozon" || name === "ozondrr" || name === "ozonfbs" || name === "ozonfbo" || name === "ozonfbofilters" || name === "units" || name === "wb" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
+        name === "plan" || name === "budget" || name === "ozon" || name === "ozondrr" || name === "ozonfbs" || name === "ozonfbo" || name === "ozonfbofilters" || name === "units" || name === "wb" || name === "wbfbs" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
       );
       document.body.classList.remove("wide-plan");
       if (name === "settings") loadSettingsTabOrder();
       if (name === "ozonfbs") loadOzonFbsActs();
       if (name === "ozonfbo") loadOzonFboReport();
       if (name === "ozonfbofilters") loadOzonFboFiltersReport();
+      if (name === "wbfbs") loadWbFbsSupplies();
       if (name === "cache") loadCacheBoard();
       if (name === "admin") loadAdminUsers();
       if (name === "activity" && data?.activity) fillActivityFilters(data.activity);
@@ -6122,6 +6342,7 @@
         ["ozonfbo", "Отгрузки ФБО Озон"],
         ["ozonfbofilters", "Поставки ФБО с фильтрами"],
         ["wb", "WB"],
+        ["wbfbs", "Поставки ФБС WB"],
         ["debtors", "Задолженность"],
         ["mbalance", "Упр. баланс"],
         ["clientpay", "Оплаты клиентов"],
@@ -6503,6 +6724,7 @@
               ozonfbo: document.getElementById("new-ozonfbo").checked,
               ozonfbofilters: document.getElementById("new-ozonfbofilters").checked,
               wb: document.getElementById("new-wb").checked,
+              wbfbs: document.getElementById("new-wbfbs").checked,
               debtors: document.getElementById("new-debtors").checked,
               mbalance: document.getElementById("new-mbalance").checked,
               clientpay: document.getElementById("new-clientpay").checked,
@@ -6938,6 +7160,19 @@
     document.getElementById("ozonfbs-form").addEventListener("submit", (e) => {
       e.preventDefault();
       loadOzonFbsActs(true);
+    });
+    document.getElementById("wbfbs-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      loadWbFbsSupplies(true);
+    });
+    document.getElementById("wbfbs-report")?.addEventListener("click", (e) => {
+      const btn = e.target.closest(".wbfbs-qr-btn");
+      if (!btn) return;
+      openWbFbsQr(btn.getAttribute("data-supply-id"), btn.getAttribute("data-supply-name"));
+    });
+    document.getElementById("wbfbs-qr-close")?.addEventListener("click", () => closeWbFbsQrModal());
+    document.getElementById("wbfbs-qr-modal")?.addEventListener("click", (e) => {
+      if (e.target.id === "wbfbs-qr-modal") closeWbFbsQrModal();
     });
     document.getElementById("ozonfbo-form").addEventListener("submit", (e) => {
       e.preventDefault();

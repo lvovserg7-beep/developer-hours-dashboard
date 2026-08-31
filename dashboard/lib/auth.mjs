@@ -7,7 +7,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const USERS_FILE = join(root, "users.json");
 const COOKIE = "dash_session";
 const SESSION_MS = 14 * 24 * 60 * 60 * 1000;
-const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "debtors", "mbalance", "clientpay", "seo", "seoqueries", "seoproducts", "seopositions"];
+const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "seo", "seoqueries", "seoproducts", "seopositions"];
 
 const TAB_LABELS = {
   hours: "Часы",
@@ -25,6 +25,7 @@ const TAB_LABELS = {
   ozonfbo: "Отгрузки ФБО Озон",
   ozonfbofilters: "Поставки ФБО с фильтрами",
   wb: "WB рентабельность",
+  wbfbs: "Поставки ФБС WB",
   debtors: "Задолженность клиентов",
   mbalance: "Управленческий баланс",
   clientpay: "Реестр оплат клиентов",
@@ -147,7 +148,7 @@ export function ensureAuthReady() {
       salt,
       hash,
       admin: true,
-      tabs: { hours: true, activity: true, pnl: true, pnlecotidy: true, units: true, plan: true, budget: true, bitrix: true, bitrixfreq: true, ozon: true, ozondrr: true, ozonfbs: true, ozonfbo: true, ozonfbofilters: true, wb: true, debtors: true, mbalance: true, clientpay: true },
+      tabs: { hours: true, activity: true, pnl: true, pnlecotidy: true, units: true, plan: true, budget: true, bitrix: true, bitrixfreq: true, ozon: true, ozondrr: true, ozonfbs: true, ozonfbo: true, ozonfbofilters: true, wb: true, wbfbs: true, debtors: true, mbalance: true, clientpay: true },
       tabOrder: [...TABS],
     });
     changed = true;
@@ -171,6 +172,10 @@ export function ensureAuthReady() {
     }
     if (user.tabs.ozonfbofilters == null) {
       user.tabs.ozonfbofilters = !!(user.tabs.ozonfbo || user.tabs.ozonfbs || user.tabs.ozon);
+      changed = true;
+    }
+    if (user.tabs.wbfbs == null) {
+      user.tabs.wbfbs = !!user.tabs.wb;
       changed = true;
     }
     // Новые доски (ключ отсутствует) — выключены, включает только администратор.
