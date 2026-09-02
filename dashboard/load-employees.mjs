@@ -370,13 +370,15 @@ export async function loadActiveEmployees() {
   const chats = await loadLatestChats(boardTasks.map((t) => t.Ref_Key));
   const activity = boardTasks.map((task) => {
     const chat = chats.get(task.Ref_Key);
+    const chatDate = chat?.date && !isEmptyDate(chat.date) ? chat.date : null;
+    const taskDate = !isEmptyDate(task.Date) ? task.Date : null;
     return {
       number: documentNumber(task.Number),
       title: task.Задача || "Без названия",
       client: clients.get(task.Контрагент_Key) || "",
       status: taskStatus(task),
       comment: chat?.comment || "",
-      date: chat?.date || null,
+      date: chatDate || taskDate || null,
       navLink: taskNavLink(task.Ref_Key),
     };
   }).sort((a, b) => {
