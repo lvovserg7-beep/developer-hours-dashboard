@@ -322,6 +322,24 @@ export function userHasTab(user, tab) {
   return TABS.includes(tab) && publicUser(user).tabs[tab] === true;
 }
 
+/**
+ * Какие фоновые обновления данных нужны в сеансе пользователя.
+ * Админ — всё. Не-админ — только доски, на которые у него есть вкладки.
+ */
+export function sessionRefreshNeeds(user) {
+  if (!user) return { hours: false, seo: false, ozon: false };
+  if (user.admin) return { hours: true, seo: true, ozon: true };
+  return {
+    hours: userHasTab(user, "hours") || userHasTab(user, "activity"),
+    seo:
+      userHasTab(user, "seo") ||
+      userHasTab(user, "seoqueries") ||
+      userHasTab(user, "seoproducts") ||
+      userHasTab(user, "seopositions"),
+    ozon: userHasTab(user, "ozon") || userHasTab(user, "ozondrr"),
+  };
+}
+
 export function filterDashboardData(data, user) {
   const tabs = publicUser(user).tabs;
   const out = { ...data };

@@ -6152,7 +6152,11 @@
       if (name === "admin") loadAdminUsers();
       if (name === "activity" && data?.activity) fillActivityFilters(data.activity);
       // В обычном режиме отчёты только по «Сформировать»; часы/активность — при открытии вкладки.
-      if (!document.body.classList.contains("is-full") && (name === "hours" || name === "activity")) {
+      if (
+        !document.body.classList.contains("is-full") &&
+        (name === "hours" || name === "activity") &&
+        (USER.tabs?.hours === true || USER.tabs?.activity === true)
+      ) {
         boot(true);
       }
       fitHoursStage();

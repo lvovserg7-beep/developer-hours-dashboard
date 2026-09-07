@@ -35,6 +35,7 @@ import {
   publicUser,
   filterDashboardData,
   userHasTab,
+  sessionRefreshNeeds,
   clientIp,
   checkLoginThrottle,
   registerLoginFailure,
@@ -300,9 +301,9 @@ async function refreshOzonTrailingCache(period) {
 /**
  * Сброс SEO-кэша за окно (без Озона) и перечитывание.
  * Озон при автозапуске по умолчанию выключен — полный пересчёт валит Node на слабых машинах.
- * Часы обновляются при открытии главной (`refresh(true)`).
+ * Часы обновляются при открытии главной (`refresh(true)`), если у пользователя есть доска часов/активности.
  * @param {string} reason
- * @param {{ days?: number }} [opts]
+ * @param {{ days?: number, boards?: { seo?: boolean, ozon?: boolean } }} [opts]
  */
 async function runAllTrailingCacheRefresh(reason, opts = {}) {
   if (!envFlagOn("CACHE_TRAILING_STARTUP", true) && reason === "startup") {
@@ -315,11 +316,14 @@ async function runAllTrailingCacheRefresh(reason, opts = {}) {
   }
   const days = opts.days != null ? Math.max(1, Math.floor(Number(opts.days) || 1)) : trailingCacheDays();
   const period = trailingCachePeriod(days);
-  console.log(`Cache trailing ${reason}: last ${days} day(s) (${period.from}…${period.to})...`);
+  const boards = opts.boards || { seo: true, ozon: true };
+  console.log(
+    `Cache trailing ${reason}: last ${days} day(s) (${period.from}…${period.to}), boards seo=${!!boards.seo} ozon=${!!boards.ozon}...`
+  );
 
   // По умолчанию не сносим кэш перед перечитыванием: SEO сам перезаписывает дни.
   // Полный invalidate (в т.ч. файлы Озона) — только явно CACHE_TRAILING_INVALIDATE=1.
-  if (envFlagOn("CACHE_TRAILING_INVALIDATE", false)) {
+  if (boards.seo && envFlagOn("CACHE_TRAILING_INVALIDATE", false)) {
     try {
       for (const board of ["seo", "seoqueries", "seopositions"]) {
         const cleared = clearBoardCache(board, { from: period.from, to: period.to });
@@ -330,41 +334,105 @@ async function runAllTrailingCacheRefresh(reason, opts = {}) {
     }
   }
 
-  try {
-    await runSeoTrailingRefresh(reason, { days, force: reason === "first-open" });
-  } catch (err) {
-    console.warn(`Cache trailing SEO ${reason} failed:`, err.message || err);
+  if (boards.seo) {
+    try {
+      await runSeoTrailingRefresh(reason, { days, force: reason === "first-open" });
+    } catch (err) {
+      console.warn(`Cache trailing SEO ${reason} failed:`, err.message || err);
+    }
+  } else {
+    console.log(`SEO trailing skipped (${reason}: нет доступа к SEO-доскам в сеансе)`);
   }
 
   // Озон: тяжёлый OData-пересчёт. По умолчанию выкл. — иначе Node часто падает (OOM / kill).
-  if (envFlagOn("CACHE_TRAILING_OZON", false)) {
+  if (boards.ozon && envFlagOn("CACHE_TRAILING_OZON", false)) {
     try {
       await refreshOzonTrailingCache(period);
     } catch (err) {
       console.warn(`Cache trailing Ozon ${reason} failed:`, err.message || err);
     }
-  } else {
+  } else if (boards.ozon) {
     console.log("Ozon trailing skipped (default off; set CACHE_TRAILING_OZON=1 to enable)");
+  } else {
+    console.log(`Ozon trailing skipped (${reason}: нет доступа к Озон-доскам в сеансе)`);
   }
-  markCacheDayHandled(reason);
+
+  if (reason === "startup") {
+    writeDayOpenMark(todayYmdLocal(), {
+      reason: "startup",
+      boards: {
+        seo: Boolean(boards.seo),
+        ozon: Boolean(boards.ozon && envFlagOn("CACHE_TRAILING_OZON", false)),
+      },
+    });
+  }
 }
 
 let firstOpenRefreshInflight = null;
+/** Доски, которые попросили обновить, пока шёл другой first-open. */
+let firstOpenQueued = { seo: false, ozon: false };
 
-/** Первый вход в дашборд за календарный день → пересчёт кэша за вчера. */
-function maybeKickFirstOpenDayRefresh() {
-  if (!envFlagOn("CACHE_FIRST_OPEN_DAY", true)) return;
+function startFirstOpenBoards(todo, login) {
   const today = todayYmdLocal();
   const mark = readDayOpenMark();
-  if (mark?.openDay === today) return;
-  if (firstOpenRefreshInflight) return;
-  writeDayOpenMark(today, { reason: "first-open-claimed" });
-  console.log(`First dashboard open today (${today}): refresh cache for yesterday...`);
-  firstOpenRefreshInflight = runAllTrailingCacheRefresh("first-open", { days: 1 })
+  const done = mark?.openDay === today && mark.boards && typeof mark.boards === "object" ? { ...mark.boards } : {};
+  if (todo.seo) done.seo = true;
+  if (todo.ozon) done.ozon = true;
+  writeDayOpenMark(today, {
+    reason: "first-open-claimed",
+    boards: done,
+    by: login || "",
+  });
+  console.log(
+    `First dashboard open today (${today}) by ${login || "?"}: refresh yesterday cache seo=${!!todo.seo} ozon=${!!todo.ozon}...`
+  );
+  firstOpenRefreshInflight = runAllTrailingCacheRefresh("first-open", { days: 1, boards: todo })
     .catch((err) => console.warn("First-open day cache refresh failed:", err.message || err))
     .finally(() => {
       firstOpenRefreshInflight = null;
+      const queued = {
+        seo: Boolean(firstOpenQueued.seo),
+        ozon: Boolean(firstOpenQueued.ozon),
+      };
+      firstOpenQueued = { seo: false, ozon: false };
+      if (!queued.seo && !queued.ozon) return;
+      // Уже отмеченные сегодня доски повторно не берём.
+      const markNow = readDayOpenMark();
+      const doneNow =
+        markNow?.openDay === today && markNow.boards && typeof markNow.boards === "object" ? markNow.boards : {};
+      const next = {
+        seo: queued.seo && !doneNow.seo,
+        ozon: queued.ozon && !doneNow.ozon,
+      };
+      if (!next.seo && !next.ozon) return;
+      startFirstOpenBoards(next, "queue");
     });
+}
+
+/**
+ * Первый вход за день → дочитать кэш за вчера, но только по доскам текущего пользователя.
+ * Уже обновлённые сегодня доски повторно не трогаем (чтобы не-админ без SEO не «закрыл» день для SEO).
+ */
+function maybeKickFirstOpenDayRefresh(user) {
+  if (!envFlagOn("CACHE_FIRST_OPEN_DAY", true)) return;
+  const needs = sessionRefreshNeeds(user);
+  const today = todayYmdLocal();
+  const mark = readDayOpenMark();
+  const done = mark?.openDay === today && mark.boards && typeof mark.boards === "object" ? mark.boards : {};
+  // Старый формат метки без boards: день уже считался полностью обработанным.
+  if (mark?.openDay === today && !mark.boards) return;
+
+  const todo = {
+    seo: Boolean(needs.seo && !done.seo),
+    ozon: Boolean(needs.ozon && !done.ozon),
+  };
+  if (!todo.seo && !todo.ozon) return;
+  if (firstOpenRefreshInflight) {
+    if (todo.seo) firstOpenQueued.seo = true;
+    if (todo.ozon) firstOpenQueued.ozon = true;
+    return;
+  }
+  startFirstOpenBoards(todo, user?.login || "");
 }
 
 function startSeoRefreshLoop() {
@@ -1075,7 +1143,10 @@ const server = createServer(async (req, res) => {
     }
 
     if (path === "/api/employees" || path === "/api/health") {
-      const force = url.searchParams.get("force") === "1" || url.searchParams.get("refresh") === "1";
+      const forceRequested = url.searchParams.get("force") === "1" || url.searchParams.get("refresh") === "1";
+      const needs = sessionRefreshNeeds(user);
+      // Не-админ без досок часов/активности не дергает 1С за часами в этом сеансе.
+      const force = Boolean(forceRequested && needs.hours);
       const snap = await refresh(force);
       if (path === "/api/health") {
         return json(res, 200, {
@@ -1091,8 +1162,9 @@ const server = createServer(async (req, res) => {
     }
 
     if (path === "/" || path === "/index.html") {
-      maybeKickFirstOpenDayRefresh();
-      const snap = await refresh(true);
+      maybeKickFirstOpenDayRefresh(user);
+      const needs = sessionRefreshNeeds(user);
+      const snap = await refresh(Boolean(needs.hours));
       return send(res, 200, renderHtml(snap.data, user), "text/html; charset=utf-8");
     }
 
