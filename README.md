@@ -2,7 +2,7 @@
 
 Приложение для компании Аллсан Интеграция. Берёт данные из 1С и показывает часы по задачам разработчика и активность в чате.
 
-Стабильная версия: [v1.13.0](https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.13.0)
+Стабильная версия: [v1.13.1](https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.13.1)
 
 Тестовая версия (не для боевого): [v1.7.12-test](https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.7.12-test) — файл `TESTING`. Клон: `git clone --branch v1.7.12-test …`. На боевую ставить только стабильный тег из `STABLE`.
 
@@ -36,13 +36,13 @@ IIS не обязателен. Дашборд сам слушает порт **8
 
 Стабильная версия:
 
-https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.13.0
+https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.13.1
 
 В PowerShell:
 
 ```powershell
 cd C:\Apps
-git clone --branch v1.13.0 https://github.com/lvovserg7-beep/developer-hours-dashboard.git
+git clone --branch v1.13.1 https://github.com/lvovserg7-beep/developer-hours-dashboard.git
 ```
 
 Или скачайте Source code (zip) у релиза и распакуйте, например в `C:\Apps\developer-hours-dashboard`.
@@ -147,7 +147,7 @@ netsh advfirewall firewall add rule name="Developer hours dashboard 8787" dir=in
 
 ### Обновить боевой компьютер (вместо ZIP)
 
-Рабочая папка в Cursor и боевой каталог — разные копии. На боевую **не** копировать архив с рабочего стола. Берут стабильный тег из этого руководства (файл `STABLE`, сейчас **v1.13.0**).
+Рабочая папка в Cursor и боевой каталог — разные копии. На боевую **не** копировать архив с рабочего стола. Берут стабильный тег из этого руководства (файл `STABLE`, сейчас **v1.13.1**).
 
 Репозиторий закрытый: на боевой машине нужен Git и вход в GitHub (окно Git Credential Manager при первом `git clone` / `git fetch`).
 
@@ -160,7 +160,7 @@ netsh advfirewall firewall add rule name="Developer hours dashboard 8787" dir=in
 
 ```powershell
 cd C:\Apps
-git clone --branch v1.13.0 https://github.com/lvovserg7-beep/developer-hours-dashboard.git
+git clone --branch v1.13.1 https://github.com/lvovserg7-beep/developer-hours-dashboard.git
 ```
 
 5. Верните `.env` и `users.json` в `C:\Apps\developer-hours-dashboard\dashboard\`.
@@ -172,6 +172,6 @@ git clone --branch v1.13.0 https://github.com/lvovserg7-beep/developer-hours-das
 C:\Apps\developer-hours-dashboard\dashboard\update-stable.cmd
 ```
 
-Скрипт берёт тег из файла `STABLE`, подтягивает его с GitHub и перезапускает сервер. `.env` и `users.json` git не трогает. Другой тег вручную: `update-stable.cmd v1.13.0`.
+Скрипт берёт тег из файла `STABLE`, подтягивает его с GitHub и перезапускает сервер. `.env` и `users.json` git не трогает. Другой тег вручную: `update-stable.cmd v1.13.1`.
 
 Если Git на боевой недоступен — только ZIP **релиза** (Source code у страницы стабильной версии), распаковать поверх той же папки, не затирая `.env` и `users.json`. Не использовать ZIP рабочей копии Cursor.

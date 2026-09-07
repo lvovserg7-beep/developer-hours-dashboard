@@ -449,9 +449,10 @@ function publishToIis() {
     mkdirSync(IIS_DIR, { recursive: true });
     writeFileSync(
       join(IIS_DIR, "index.html"),
-      `<!DOCTYPE html><meta charset="utf-8"><title>Дашборд</title><p>Откройте дашборд на порту 8787 и войдите под своей учёткой.</p>`,
+      `<!DOCTYPE html><meta charset="utf-8"><meta name="robots" content="noindex, nofollow, noarchive"><title>Дашборд</title><p>Откройте дашборд на порту 8787 и войдите под своей учёткой.</p>`,
       "utf8"
     );
+    writeFileSync(join(IIS_DIR, "robots.txt"), "User-agent: *\nDisallow: /\n", "utf8");
     writeFileSync(join(IIS_DIR, "web.config"), IIS_WEB_CONFIG, "utf8");
     cache.published = IIS_DIR;
   } catch (err) {
@@ -550,6 +551,16 @@ const server = createServer(async (req, res) => {
     if (path === "/login.html" || path === "/login") {
       const html = readFileSync(join(root, "public", "login.html"), "utf8");
       return send(res, 200, html, "text/html; charset=utf-8");
+    }
+
+    if (path === "/robots.txt") {
+      const file = join(root, "public", "robots.txt");
+      const body = existsSync(file)
+        ? readFileSync(file, "utf8")
+        : "User-agent: *\nDisallow: /\n";
+      return send(res, 200, body, "text/plain; charset=utf-8", {
+        "Cache-Control": "public, max-age=3600",
+      });
     }
 
     if (path === "/favicon.ico" || path === "/favicon.png") {
