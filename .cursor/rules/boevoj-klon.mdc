@@ -5,9 +5,9 @@ alwaysApply: true
 
 # Боевой клон
 
-Рабочая копия в Cursor — не боевой сервер. Боевой каталог (обычно `C:\Apps\developer-hours-dashboard`) не заполнять ZIP из этой папки.
+Рабочая копия в Cursor — не боевой сервер. Боевой каталог (обычно `C:\Apps\developer-hours-dashboard` на Windows или `/opt/developer-hours-dashboard` на Linux) не заполнять ZIP из этой папки.
 
 - На боевой ставить **только стабильный тег** из `README.md` и файла `STABLE` (сейчас тот, что в руководстве).
-- Пароли и учётки дашборда — только на боевой машине: `dashboard\.env` и `dashboard\users.json`. Их не копировать в git и не затирать при обновлении.
-- Разработку на боевой не вести. Обновление: `dashboard\update-stable.cmd` (берёт тег из `STABLE` или аргумент).
-- После просьбы «поставить стабильную версию в руководство» релиз на GitHub уже есть; на боевой отдельно запускают `update-stable.cmd`.
+- Пароли и учётки дашборда — только на боевой машине: `dashboard/.env` и `dashboard/users.json`. Их не копировать в git и не затирать при обновлении.
+- Разработку на боевой не вести. Обновление: `dashboard/update-stable.cmd` (Windows) или `dashboard/update-stable.sh` (Linux; при активном systemd перезапускает сервис).
+- После просьбы «поставить стабильную версию в руководство» релиз на GitHub уже есть; на боевой отдельно запускают `update-stable.cmd` / `update-stable.sh`.

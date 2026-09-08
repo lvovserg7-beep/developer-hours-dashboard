@@ -2,13 +2,13 @@
 
 Приложение для компании Аллсан Интеграция. Берёт данные из 1С и показывает часы по задачам разработчика и активность в чате.
 
-Стабильная версия: [v1.13.1](https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.13.1)
+Стабильная версия: [v1.14.0](https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.14.0)
 
 Тестовая версия (не для боевого): [v1.7.12-test](https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.7.12-test) — файл `TESTING`. Клон: `git clone --branch v1.7.12-test …`. На боевую ставить только стабильный тег из `STABLE`.
 
 Репозиторий: [https://github.com/lvovserg7-beep/developer-hours-dashboard](https://github.com/lvovserg7-beep/developer-hours-dashboard)
 
-В обычном режиме данные не обновляются сами: отчёты — по кнопке «Сформировать», часы и активность — при открытии вкладки. Вход по логину и паролю. Вкладки: **Часы**, **Активность**, **Доходы и расходы** (Аллсан и Первый интегратор), **Сводка юнитов**, **Исполнение плана**, **Бюджет**, **Bitrix**, **Чистота ведения Битрикс**, **Озон** / **Озон ДРР**, **Отгрузки ФБС ozon**, **Отгрузки ФБО Озон**, **Поставки ФБО с фильтрами**, **WB**, **Поставки ФБС WB**, **Задолженность клиентов**, **Управленческий баланс**, **Реестр оплат клиентов**, SEO-доски (на «Поиск SEO» — ИКС Яндекса), у администратора — **Админка** и **Кэш**. При старте перечитывается SEO-кэш за последние 7 дней (Озон при старте по умолчанию выкл.); первый вход за день — SEO за вчера. `start.cmd` при выходе процесса перезапускает сервер. Режим «На весь экран» с перелистыванием слайдов (кнопки и ← →); в нём данные слайдов обновляются по таймеру. Клик по номеру задачи копирует навигационную ссылку 1С. На самой странице адрес сервиса 1С не показывается. Перед запуском `start.cmd` сам останавливает старый процесс на порту 8787.
+В обычном режиме данные не обновляются сами: отчёты — по кнопке «Сформировать», часы и активность — при открытии вкладки. Вход по логину и паролю. Вкладки: **Часы**, **Активность**, **Доходы и расходы** (Аллсан и Первый интегратор), **Сводка юнитов**, **Исполнение плана**, **Бюджет**, **Bitrix**, **Чистота ведения Битрикс**, **Озон** / **Озон ДРР**, **Отгрузки ФБС ozon**, **Отгрузки ФБО Озон**, **Поставки ФБО с фильтрами**, **WB**, **Поставки ФБС WB**, **Задолженность клиентов**, **Управленческий баланс**, **Реестр оплат клиентов**, SEO-доски (на «Поиск SEO» — ИКС Яндекса), у администратора — **Админка** и **Кэш**. При старте перечитывается SEO-кэш за последние 7 дней (Озон при старте по умолчанию выкл.); первый вход за день — SEO за вчера. `start.cmd` при выходе процесса перезапускает сервер. Режим «На весь экран» с перелистыванием слайдов (кнопки и ← →); в нём данные слайдов обновляются по таймеру. Клик по номеру задачи копирует навигационную ссылку 1С. На самой странице адрес сервиса 1С не показывается. Перед запуском `start.cmd` / `start.sh` сам останавливает старый процесс на порту 8787. На Linux та же программа: `dashboard/start.sh` или systemd (см. ниже).
 
 ## Правила отбора
 
@@ -36,13 +36,13 @@ IIS не обязателен. Дашборд сам слушает порт **8
 
 Стабильная версия:
 
-https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.13.1
+https://github.com/lvovserg7-beep/developer-hours-dashboard/releases/tag/v1.14.0
 
 В PowerShell:
 
 ```powershell
 cd C:\Apps
-git clone --branch v1.13.1 https://github.com/lvovserg7-beep/developer-hours-dashboard.git
+git clone --branch v1.14.0 https://github.com/lvovserg7-beep/developer-hours-dashboard.git
 ```
 
 Или скачайте Source code (zip) у релиза и распакуйте, например в `C:\Apps\developer-hours-dashboard`.
@@ -147,7 +147,7 @@ netsh advfirewall firewall add rule name="Developer hours dashboard 8787" dir=in
 
 ### Обновить боевой компьютер (вместо ZIP)
 
-Рабочая папка в Cursor и боевой каталог — разные копии. На боевую **не** копировать архив с рабочего стола. Берут стабильный тег из этого руководства (файл `STABLE`, сейчас **v1.13.1**).
+Рабочая папка в Cursor и боевой каталог — разные копии. На боевую **не** копировать архив с рабочего стола. Берут стабильный тег из этого руководства (файл `STABLE`, сейчас **v1.14.0**).
 
 Репозиторий закрытый: на боевой машине нужен Git и вход в GitHub (окно Git Credential Manager при первом `git clone` / `git fetch`).
 
@@ -160,7 +160,7 @@ netsh advfirewall firewall add rule name="Developer hours dashboard 8787" dir=in
 
 ```powershell
 cd C:\Apps
-git clone --branch v1.13.1 https://github.com/lvovserg7-beep/developer-hours-dashboard.git
+git clone --branch v1.14.0 https://github.com/lvovserg7-beep/developer-hours-dashboard.git
 ```
 
 5. Верните `.env` и `users.json` в `C:\Apps\developer-hours-dashboard\dashboard\`.
@@ -172,6 +172,64 @@ git clone --branch v1.13.1 https://github.com/lvovserg7-beep/developer-hours-das
 C:\Apps\developer-hours-dashboard\dashboard\update-stable.cmd
 ```
 
-Скрипт берёт тег из файла `STABLE`, подтягивает его с GitHub и перезапускает сервер. `.env` и `users.json` git не трогает. Другой тег вручную: `update-stable.cmd v1.13.1`.
+Скрипт берёт тег из файла `STABLE`, подтягивает его с GitHub и перезапускает сервер. `.env` и `users.json` git не трогает. Другой тег вручную: `update-stable.cmd v1.14.0`.
 
 Если Git на боевой недоступен — только ZIP **релиза** (Source code у страницы стабильной версии), распаковать поверх той же папки, не затирая `.env` и `users.json`. Не использовать ZIP рабочей копии Cursor.
+
+## Запуск на Linux
+
+То же ядро Node.js, что на Windows. IIS не используется. В репозитории рядом лежат `start.cmd` (Windows) и `start.sh` / systemd (Linux).
+
+### Что нужно
+
+1. **Linux** с доступом к `https://trade.alsn.ru` (DNS, порт 443).
+2. **Node.js LTS** (`node -v`).
+3. **Git**.
+
+### Установка
+
+```bash
+sudo mkdir -p /opt
+cd /opt
+sudo git clone --branch v1.14.0 https://github.com/lvovserg7-beep/developer-hours-dashboard.git
+cd developer-hours-dashboard/dashboard
+sudo cp .env.example .env
+sudo nano .env   # ODATA_DB_TRADE_* / ODATA_DB_ECOTIDY_* и прочие ключи
+chmod +x start.sh update-stable.sh
+```
+
+`.env` и `users.json` в git не попадают — храните только на сервере.
+
+### Запуск вручную
+
+```bash
+cd /opt/developer-hours-dashboard/dashboard
+./start.sh
+```
+
+или: `node server.mjs`. Браузер: `http://localhost:8787/` (или IP сервера и порт `PORT` из окружения).
+
+### systemd (после перезагрузки)
+
+Пример unit: [`dashboard/deploy/developer-hours-dashboard.service`](dashboard/deploy/developer-hours-dashboard.service).
+
+1. Создайте пользователя `dashboard` (или поправьте `User=` / пути в unit).
+2. Выдайте ему права на `/opt/developer-hours-dashboard/dashboard` (в т.ч. `data/`, `users.json`).
+3. Установите unit:
+
+```bash
+sudo cp /opt/developer-hours-dashboard/dashboard/deploy/developer-hours-dashboard.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now developer-hours-dashboard
+sudo systemctl status developer-hours-dashboard
+```
+
+Порт по умолчанию **8787**. При необходимости откройте его в firewall (`ufw allow 8787/tcp`) или поставьте nginx/caddy на 80/443 с прокси на `127.0.0.1:8787`.
+
+### Обновление на Linux
+
+```bash
+/opt/developer-hours-dashboard/dashboard/update-stable.sh
+```
+
+Тег из `STABLE`, либо явно: `./update-stable.sh v1.14.0`. Если сервис systemd активен — скрипт перезапустит его; иначе запустите снова `./start.sh`.

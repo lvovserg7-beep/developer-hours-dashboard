@@ -10,6 +10,6 @@ alwaysApply: true
 После любых доработок кода дашборда (`dashboard/server.mjs`, `dashboard/lib/*`, `dashboard/public/*` и связанное), которые влияют на работу UI или API:
 
 1. **Самостоятельно** перезапустить локальный процесс на порту 8787 — не просить пользователя сделать это вручную.
-2. Способ: освободить порт 8787 и запустить `node server.mjs` из `dashboard/` (или `dashboard\start.cmd`, если он удобнее в среде).
+2. Способ: освободить порт 8787 и запустить `node server.mjs` из `dashboard/` (или `dashboard/start.cmd` / `dashboard/start.sh`, если удобнее).
 3. Кратко сообщить пользователю, что локальный дашборд перезапущен (`http://localhost:8787/`).
-4. Боевой клон (`C:\Apps\developer-hours-dashboard` и т.п.) этим правилом **не** трогать — см. правило про боевой клон.
+4. Боевой клон (`C:\Apps\developer-hours-dashboard`, `/opt/developer-hours-dashboard` и т.п.) этим правилом **не** трогать — см. правило про боевой клон.

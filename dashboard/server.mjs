@@ -52,7 +52,13 @@ import {
 
 const root = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
-const IIS_DIR = process.env.IIS_PUBLISH_DIR || "C:\\inetpub\\wwwroot\\employees";
+/** IIS-снимок: только если задан IIS_PUBLISH_DIR, либо дефолт на Windows. На Linux без env — не публикуем. */
+const IIS_DIR = (() => {
+  const fromEnv = String(process.env.IIS_PUBLISH_DIR || "").trim();
+  if (fromEnv) return fromEnv;
+  if (process.platform === "win32") return "C:\\inetpub\\wwwroot\\employees";
+  return "";
+})();
 const CACHE_MS = 10 * 60 * 1000;
 const SEO_REFRESH_MS = (() => {
   const n = Number(process.env.SEO_REFRESH_MS);
@@ -445,6 +451,7 @@ function startSeoRefreshLoop() {
 }
 
 function publishToIis() {
+  if (!IIS_DIR) return;
   try {
     mkdirSync(IIS_DIR, { recursive: true });
     writeFileSync(
@@ -1221,7 +1228,7 @@ refresh(true)
   .finally(() => {
     server.listen(PORT, "0.0.0.0", () => {
       console.log(`Dashboard http://localhost:${PORT}/`);
-      if (existsSync(join(IIS_DIR, "index.html"))) {
+      if (IIS_DIR && existsSync(join(IIS_DIR, "index.html"))) {
         console.log(`IIS snapshot http://localhost/employees/`);
       }
       startHoursRefreshLoop();

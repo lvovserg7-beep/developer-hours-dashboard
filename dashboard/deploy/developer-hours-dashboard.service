@@ -1,0 +1,19 @@
+[Unit]
+Description=Developer hours dashboard (Node.js)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dashboard
+Group=dashboard
+WorkingDirectory=/opt/developer-hours-dashboard/dashboard
+EnvironmentFile=-/opt/developer-hours-dashboard/dashboard/.env
+ExecStart=/usr/bin/node server.mjs
+Restart=always
+RestartSec=5
+# data/, users.json and board caches must be writable by User=
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
