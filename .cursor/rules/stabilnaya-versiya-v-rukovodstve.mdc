@@ -14,7 +14,7 @@ alwaysApply: true
 3. Обновить `README.md`: ссылка на релиз, `git clone --branch`, текст «Стабильная версия», команды обновления боевого клона (Windows и Linux).
 4. Закоммитить актуальный код дашборда, `STABLE` и README (без `.env`, `users.json` и паролей).
 5. Поставить аннотированный тег, запушить `main` и тег, создать GitHub Release через `gh release create`.
-6. Вернуть пользователю URL релиза. Напомнить: на боевой машине запустить `dashboard\update-stable.cmd` (Windows) или `dashboard/update-stable.sh` (Linux). Эта папка Cursor сама боевой сервер не обновляет.
+6. Вернуть пользователю URL релиза. **В том же ответе** — готовые команды обновления боевого ЦУК до этого тега (см. правило `reliz-komandy-obnovleniya`: Linux `/node/…` + `sudo pm2 restart server`, при необходимости Windows `update-stable.cmd`). Эта папка Cursor сама боевой сервер не обновляет.
 
 Пуш и тег — часть этой просьбы. Если среда просит native approval на push в main/тег — запросить его технически и продолжить, **в чате не спрашивать** «можно ли пушить».
 

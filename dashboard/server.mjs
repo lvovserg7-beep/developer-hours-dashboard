@@ -31,6 +31,7 @@ import {
   createUser,
   updateUser,
   updateOwnTabOrder,
+  updateOwnSettings,
   removeUser,
   publicUser,
   filterDashboardData,
@@ -124,7 +125,9 @@ function saveSnapshotToDisk(data) {
 function renderHtml(data, user) {
   const template = readFileSync(join(root, "public", "index.html"), "utf8");
   const payload = JSON.stringify(filterDashboardData(data, user)).replace(/</g, "\\u003c");
-  const parts = renderChartParts(filterDashboardData(data, user));
+  const parts = renderChartParts(filterDashboardData(data, user), {
+    theme: user?.theme === "dark" ? "dark" : "light",
+  });
   return template
     .replace("__EMBEDDED_DATA__", payload)
     .replace("__USER__", JSON.stringify(publicUser(user)).replace(/</g, "\\u003c"))
@@ -660,11 +663,16 @@ const server = createServer(async (req, res) => {
       if (req.method === "PATCH") {
         const body = await readJson(req);
         if (body.admin != null || body.tabs || body.login != null || body.password) {
-          return json(res, 403, { error: "Через этот запрос можно менять только порядок своих вкладок." });
+          return json(res, 403, { error: "Через этот запрос можно менять только свои настройки (порядок вкладок и тему)." });
         }
-        if (!body.tabOrder) return json(res, 400, { error: "Не указан порядок вкладок" });
+        if (body.tabOrder == null && body.theme == null) {
+          return json(res, 400, { error: "Укажите tabOrder и/или theme" });
+        }
         try {
-          return json(res, 200, updateOwnTabOrder(user.id, body.tabOrder));
+          const patch = {};
+          if (body.tabOrder != null) patch.tabOrder = body.tabOrder;
+          if (body.theme != null) patch.theme = body.theme;
+          return json(res, 200, updateOwnSettings(user.id, patch));
         } catch (err) {
           return json(res, 400, { error: String(err.message || err) });
         }

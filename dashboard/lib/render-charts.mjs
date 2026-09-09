@@ -1,4 +1,6 @@
-const PALETTE = ["#5c6b4a", "#8a5a12", "#3d4a5c", "#9a6b12", "#6b5344", "#7a8a62", "#4a5c6b", "#b08948", "#5a4a3a", "#2f4f4f", "#8a7060"];
+const PALETTE_LIGHT = ["#5c6b4a", "#8a5a12", "#3d4a5c", "#9a6b12", "#6b5344", "#7a8a62", "#4a5c6b", "#b08948", "#5a4a3a", "#2f4f4f", "#8a7060"];
+const PALETTE_DARK = ["#9ab07a", "#d4a04a", "#8aa0b8", "#e0b05a", "#c4a090", "#b0c090", "#90a8b8", "#e0c080", "#c0a890", "#70a0a0", "#d0b8a0"];
+let ACTIVE_PALETTE = PALETTE_LIGHT;
 const fmt = new Intl.DateTimeFormat("ru-RU", { dateStyle: "short", timeStyle: "short" });
 
 function escapeHtml(value) {
@@ -11,7 +13,7 @@ function escapeHtml(value) {
 
 function colorOf(key, keys) {
   const i = keys.indexOf(key);
-  return PALETTE[(i < 0 ? 0 : i) % PALETTE.length];
+  return ACTIVE_PALETTE[(i < 0 ? 0 : i) % ACTIVE_PALETTE.length];
 }
 
 function orderNum(name) {
@@ -100,7 +102,8 @@ function gaugeSvg(value, max) {
       </svg>`;
 }
 
-export function renderChartParts(data) {
+export function renderChartParts(data, opts = {}) {
+  ACTIVE_PALETTE = opts.theme === "dark" ? PALETTE_DARK : PALETTE_LIGHT;
   const c = data.charts || {};
   const k = data.kpis || {};
   return {

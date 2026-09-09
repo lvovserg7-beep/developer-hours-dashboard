@@ -12,6 +12,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    try {
+      if (localStorage.getItem("cuk-theme") === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    } catch (_) {}
+  </script>
   <style>
     :root {
       --bg: #f4f2ed;
@@ -38,6 +45,127 @@
       --radius: 0;
       --weight: 600;
       --weight-strong: 700;
+    }
+    html[data-theme="dark"] {
+      --bg: #121110;
+      --ink: #f0ebe3;
+      --muted: #a39e94;
+      --line: #2f2c28;
+      --card: #1a1916;
+      --accent: #d4a04a;
+      --accent-soft: #2c261c;
+      --th: #22201c;
+      --row-group: #2a2418;
+      --row-total: #322a1c;
+      --ok: #6bcf7e;
+      --bad: #e07070;
+      --low: #e07070;
+      --mid: #9ab07a;
+      --high: #e0b05a;
+      color-scheme: dark;
+    }
+    html[data-theme="dark"] select,
+    html[data-theme="dark"] select.month-pick,
+    html[data-theme="dark"] .month-pick,
+    html[data-theme="dark"] input,
+    html[data-theme="dark"] input[type="date"],
+    html[data-theme="dark"] input[type="text"],
+    html[data-theme="dark"] input[type="password"],
+    html[data-theme="dark"] textarea {
+      color-scheme: dark;
+      background-color: var(--card) !important;
+      color: var(--ink) !important;
+      border-color: var(--line) !important;
+    }
+    html[data-theme="dark"] select option,
+    html[data-theme="dark"] .month-pick option {
+      background-color: var(--card);
+      color: var(--ink);
+    }
+    html[data-theme="dark"] .err {
+      background: #3a2222;
+      border-color: #6b4040;
+      color: #f0d0d0;
+    }
+    html[data-theme="dark"] .track { background: #2a2824; }
+    html[data-theme="dark"] .pos-band-1 { background: #243040; }
+    html[data-theme="dark"] .pos-band-10 { background: #2a3224; }
+    html[data-theme="dark"] .pos-band-30 { background: #3a3220; }
+    html[data-theme="dark"] .pos-band-bad { background: #3a2824; }
+    html[data-theme="dark"] .slide-bar select:hover { background: #3a3220; }
+    html[data-theme="dark"] table.plan th.money,
+    html[data-theme="dark"] table.plan td.money,
+    html[data-theme="dark"] table.plan tr.total td.money { background: #2a3a22; }
+    html[data-theme="dark"] table.plan th.mark,
+    html[data-theme="dark"] table.plan td.mark,
+    html[data-theme="dark"] table.plan tr.total td.mark { background: #3a3420; }
+    html[data-theme="dark"] input,
+    html[data-theme="dark"] select,
+    html[data-theme="dark"] textarea,
+    html[data-theme="dark"] .admin-form input,
+    html[data-theme="dark"] .admin-form select,
+    html[data-theme="dark"] .pnl-toolbar input,
+    html[data-theme="dark"] .pnl-toolbar select,
+    html[data-theme="dark"] .activity-filters input,
+    html[data-theme="dark"] .activity-filters select,
+    html[data-theme="dark"] .cache-toolbar input,
+    html[data-theme="dark"] button.tab-full,
+    html[data-theme="dark"] .btn-secondary,
+    html[data-theme="dark"] .admin-tab-order,
+    html[data-theme="dark"] .admin-tab-order li,
+    html[data-theme="dark"] .cache-list,
+    html[data-theme="dark"] #wbfbs-qr-modal > div {
+      background: var(--card);
+      color: var(--ink);
+      border-color: var(--line);
+    }
+    html[data-theme="dark"] .tab {
+      color: var(--muted);
+    }
+    html[data-theme="dark"] .tab.is-on {
+      color: var(--ink);
+      border-color: var(--accent);
+    }
+    html[data-theme="dark"] .admin-user,
+    html[data-theme="dark"] .cache-board,
+    html[data-theme="dark"] .wbfbs-qr-dialog {
+      background: var(--card);
+      color: var(--ink);
+      border-color: var(--line);
+    }
+    .wbfbs-qr-dialog {
+      background: var(--card);
+      color: var(--ink);
+    }
+    html[data-theme="dark"] .logo-light { display: none !important; }
+    html[data-theme="dark"] .logo-dark { display: block !important; }
+    img.logo-dark { display: none !important; }
+    .brand-logos img.logo-dark,
+    .logos img.logo-dark { display: none !important; }
+    html[data-theme="dark"] .brand-logos img.logo-light,
+    html[data-theme="dark"] .logos img.logo-light { display: none !important; }
+    html[data-theme="dark"] .brand-logos img.logo-dark,
+    html[data-theme="dark"] .logos img.logo-dark { display: block !important; }
+    .logo-dark { display: none; }
+    .theme-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 16px;
+      margin: 0 0 18px;
+    }
+    .theme-row label {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .theme-row select {
+      min-width: 160px;
+      padding: 6px 10px;
+      font: inherit;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
     }
     * { box-sizing: border-box; }
     body {
@@ -197,6 +325,9 @@
       max-width: 240px;
       object-fit: contain;
     }
+    .brand-logos img.logo-dark { display: none !important; }
+    html[data-theme="dark"] .brand-logos img.logo-light { display: none !important; }
+    html[data-theme="dark"] .brand-logos img.logo-dark { display: block !important; }
     .brand-logos img[alt="Аллсан Интеграция"],
     .brand-logos img[alt="Экотайди"] {
       height: 56px;
@@ -333,7 +464,7 @@
     .seo-bar-lab { color: var(--muted); font-variant-numeric: tabular-nums; }
     .seo-bar-track {
       height: 10px;
-      background: #ebe7df;
+      background: var(--accent-soft);
       border-radius: 2px;
       overflow: hidden;
     }
@@ -413,7 +544,7 @@
     .bar-row { display: grid; grid-template-columns: 132px 1fr minmax(42px, max-content); gap: 8px; align-items: center; margin: 5px 0; }
     .bar-row .lab { font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .bar-row .num { font-size: var(--fs-sm); font-variant-numeric: tabular-nums; text-align: right; color: var(--muted); }
-    .track { display: flex; height: 16px; background: #ece8df; min-width: 0; }
+    .track { display: flex; height: 16px; background: var(--accent-soft); min-width: 0; }
     .seg { height: 16px; min-width: 0; }
     .legend { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 10px; font-size: 11px; color: var(--muted); }
     .legend i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; vertical-align: middle; }
@@ -774,7 +905,8 @@
       min-width: 0;
     }
     .activity-filters .filter-dates .month-pick,
-    .pnl-toolbar .filter-dates .month-pick {
+    .pnl-toolbar .filter-dates .month-pick,
+    select.month-pick {
       width: 100%;
       min-width: 0;
       max-width: none;
@@ -783,10 +915,11 @@
       font: inherit;
       font-size: var(--fs-sm);
       border: 1px solid var(--line);
-      background: #fff;
+      background-color: var(--card);
       color: var(--ink);
       border-radius: var(--radius);
       cursor: pointer;
+      color-scheme: inherit;
     }
     .activity-filters .filter-reset {
       flex: 0 0 auto;
@@ -815,7 +948,7 @@
       font: inherit;
       font-size: var(--fs-sm);
       border: 1px solid var(--line);
-      background: #fff;
+      background: var(--card);
       color: var(--ink);
       border-radius: var(--radius);
     }
@@ -846,7 +979,7 @@
       font-size: var(--fs-sm);
       font-weight: var(--weight);
       color: var(--accent);
-      background: #fff;
+      background: var(--card);
       border: 1px solid var(--line);
       cursor: pointer;
       white-space: nowrap;
@@ -1012,7 +1145,7 @@
       font: inherit;
       font-size: var(--fs-sm);
       border: 1px solid var(--line);
-      background: #fff;
+      background: var(--card);
       color: var(--ink);
       cursor: pointer;
       border-radius: var(--radius);
@@ -1061,7 +1194,7 @@
       font: inherit;
       font-size: var(--fs-sm);
       border: 1px solid var(--line);
-      background: #fff;
+      background: var(--card);
     }
     .admin-checks { display: flex; flex-wrap: wrap; gap: 10px 14px; padding-bottom: 6px; }
     .admin-checks label { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; color: var(--ink); }
@@ -1093,7 +1226,7 @@
     .admin-user {
       border: 1px solid var(--line);
       padding: 12px 14px;
-      background: #fff;
+      background: var(--card);
     }
     .admin-user-head {
       display: flex;
@@ -1105,15 +1238,31 @@
     }
     .admin-user-head .login { font-weight: 700; }
     .admin-user-actions { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
-    .admin-user-actions button {
-      appearance: none;
-      background: none;
-      border: 0;
-      color: var(--accent);
+    .admin-user-actions .admin-theme-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      font-size: 13px;
+      color: var(--ink);
+      font-weight: 500;
+    }
+    .admin-user-actions select[data-field="theme"] {
       font: inherit;
-      font-weight: var(--weight);
-      cursor: pointer;
-      padding: 0;
+      font-size: var(--fs-sm);
+      padding: 4px 8px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+    }
+    .admin-form select {
+      width: 100%;
+      padding: 7px 10px;
+      font: inherit;
+      font-size: var(--fs-sm);
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
     }
     .admin-user-tabs {
       display: flex;
@@ -1205,7 +1354,7 @@
       font: inherit;
       padding: 6px 8px;
       border: 1px solid var(--line);
-      background: #fff;
+      background: var(--card);
       color: var(--ink);
     }
     .cache-period-hint {
@@ -1216,7 +1365,7 @@
     .cache-toolbar button,
     .cache-board button {
       border: 1px solid var(--line);
-      background: #fff;
+      background: var(--card);
       color: var(--ink);
       font: inherit;
       font-weight: var(--weight);
@@ -1232,7 +1381,7 @@
     .cache-board {
       border: 1px solid var(--line);
       padding: 12px 14px;
-      background: #fff;
+      background: var(--card);
     }
     .cache-board-head {
       display: flex;
@@ -1410,8 +1559,10 @@
     <div class="wrap">
       <div class="brand-bar">
         <div class="brand-logos">
-          <img src="/assets/logo-allsan.png" alt="Аллсан Интеграция" width="70" height="56">
-          <img src="/assets/logo-ecotidy.jpg" alt="Экотайди" width="66" height="48">
+          <img class="logo-light" src="/assets/logo-allsan.png" alt="Аллсан Интеграция" width="70" height="56">
+          <img class="logo-dark" src="/assets/logo-allsan-dark.png" alt="Аллсан Интеграция" width="70" height="56">
+          <img class="logo-light" src="/assets/logo-ecotidy.jpg" alt="Экотайди" width="66" height="48">
+          <img class="logo-dark" src="/assets/logo-ecotidy-dark.png" alt="Экотайди" width="66" height="48">
         </div>
         <div class="brand-text">
           <h1>Центр управления корпорацией <span class="app-version" id="app-version">__APP_VERSION__</span></h1>
@@ -1490,8 +1641,15 @@
     <div id="tab-settings" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Настройки</h2>
-        <p class="lead tab-intro">Порядок вкладок только для вас. Перетащите пункты или используйте ↑ ↓. Включить или выключить доски и назначить администратора может только администратор.</p>
+        <p class="lead tab-intro">Тема оформления и порядок вкладок — только для вас. Включить или выключить доски и назначить администратора может только администратор.</p>
         <div id="settings-err" class="err" hidden></div>
+        <div class="theme-row">
+          <label for="settings-theme">Оформление</label>
+          <select id="settings-theme" aria-label="Тема оформления">
+            <option value="light">Светлая</option>
+            <option value="dark">Тёмная</option>
+          </select>
+        </div>
         <p class="admin-user-order-title">Порядок вкладок — перетащите или ↑ ↓</p>
         <ol class="admin-tab-order" id="settings-tab-order"></ol>
       </section>
@@ -1515,7 +1673,7 @@
     <div id="tab-admin" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Пользователи и права</h2>
-        <p class="lead tab-intro">Администратор создаёт учётки и сам включает нужные доски — по умолчанию у нового пользователя все вкладки выключены. Также задаёт порядок вкладок и права администратора.</p>
+        <p class="lead tab-intro">Администратор создаёт учётки, включает доски, задаёт порядок вкладок, тему оформления и права администратора.</p>
         <form class="admin-form" id="user-create">
           <div>
             <label for="new-login">Логин</label>
@@ -1524,6 +1682,13 @@
           <div>
             <label for="new-pass">Пароль</label>
             <input id="new-pass" name="password" type="password" required minlength="4" autocomplete="new-password">
+          </div>
+          <div>
+            <label for="new-theme">Оформление</label>
+            <select id="new-theme" name="theme" aria-label="Тема оформления">
+              <option value="light" selected>Светлая</option>
+              <option value="dark">Тёмная</option>
+            </select>
           </div>
           <div class="admin-checks">
             <label><input type="checkbox" id="new-hours"> Часы</label>
@@ -1987,7 +2152,7 @@
         <div id="wbfbs-err" class="err" hidden></div>
         <div id="wbfbs-report"></div>
         <div id="wbfbs-qr-modal" hidden style="position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:16px">
-          <div style="background:#fff;border-radius:10px;max-width:min(640px,96vw);width:100%;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.35)">
+          <div class="wbfbs-qr-dialog" style="border-radius:10px;max-width:min(640px,96vw);width:100%;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.35)">
             <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px">
               <div>
                 <div id="wbfbs-qr-title" style="font-weight:600">QR поставки</div>
@@ -2245,7 +2410,12 @@
   <script>
     const EMBEDDED = __EMBEDDED_DATA__;
     const USER = __USER__;
-    const PALETTE = ["#5c6b4a", "#8a5a12", "#3d4a5c", "#9a6b12", "#6b5344", "#7a8a62", "#4a5c6b", "#b08948", "#5a4a3a", "#2f4f4f", "#8a7060"];
+    const PALETTE_LIGHT = ["#5c6b4a", "#8a5a12", "#3d4a5c", "#9a6b12", "#6b5344", "#7a8a62", "#4a5c6b", "#b08948", "#5a4a3a", "#2f4f4f", "#8a7060"];
+    const PALETTE_DARK = ["#9ab07a", "#d4a04a", "#8aa0b8", "#e0b05a", "#c4a090", "#b0c090", "#90a8b8", "#e0c080", "#c0a890", "#70a0a0", "#d0b8a0"];
+    function chartPalette() {
+      return document.documentElement.getAttribute("data-theme") === "dark" ? PALETTE_DARK : PALETTE_LIGHT;
+    }
+    const PALETTE = PALETTE_LIGHT;
     const fmt = new Intl.DateTimeFormat("ru-RU", { dateStyle: "short", timeStyle: "short" });
     let data = null;
 
@@ -2258,8 +2428,9 @@
     }
 
     function colorOf(key, keys) {
+      const pal = chartPalette();
       const i = keys.indexOf(key);
-      return PALETTE[(i < 0 ? 0 : i) % PALETTE.length];
+      return pal[(i < 0 ? 0 : i) % pal.length];
     }
 
     function orderNum(name) {
@@ -6103,9 +6274,20 @@
       }, SLIDE_DATA_MS);
     }
 
+    function applyTheme(theme) {
+      const next = theme === "dark" ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", next);
+      try {
+        localStorage.setItem("cuk-theme", next);
+      } catch (_) {}
+      const sel = document.getElementById("settings-theme");
+      if (sel && sel.value !== next) sel.value = next;
+    }
+
     function applyUserUi() {
       const who = document.getElementById("who");
       if (who) who.textContent = USER.login || "";
+      applyTheme(USER.theme || "light");
       reorderNavTabs();
       for (const btn of document.querySelectorAll(".tab[data-tab]")) {
         const name = btn.getAttribute("data-tab");
@@ -6382,10 +6564,17 @@
             <button type="button" data-act="tab-down" title="Ниже" ${idx === order.length - 1 ? "disabled" : ""}>↓</button>
           </li>`;
         }).join("");
+        const theme = u.theme === "dark" ? "dark" : "light";
         return `<div class="admin-user" data-id="${escapeHtml(u.id)}" data-tab-order="${escapeHtml(order.join(","))}">
           <div class="admin-user-head">
             <div><span class="login">${escapeHtml(u.login)}</span>${self ? ' <span class="meta">вы</span>' : ""}</div>
             <div class="admin-user-actions">
+              <label class="admin-theme-label">Оформление
+                <select data-field="theme" aria-label="Тема для ${escapeHtml(u.login)}">
+                  <option value="light" ${theme === "light" ? "selected" : ""}>Светлая</option>
+                  <option value="dark" ${theme === "dark" ? "selected" : ""}>Тёмная</option>
+                </select>
+              </label>
               <label><input type="checkbox" data-field="admin" ${u.admin ? "checked" : ""}> Администратор</label>
               <button type="button" data-act="pass">Пароль</button>
               ${self ? "" : `<button type="button" data-act="del">Удалить</button>`}
@@ -6447,6 +6636,19 @@
       const order = normalizeClientTabOrder(USER.tabOrder);
       list.setAttribute("data-tab-order", order.join(","));
       list.innerHTML = settingsOrderItemsHtml(order);
+      const themeSel = document.getElementById("settings-theme");
+      if (themeSel) themeSel.value = USER.theme === "dark" ? "dark" : "light";
+    }
+
+    async function saveOwnTheme(theme) {
+      const next = theme === "dark" ? "dark" : "light";
+      const updated = await api("/api/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme: next }),
+      });
+      USER.theme = updated.theme || next;
+      applyTheme(USER.theme);
     }
 
     async function saveOwnTabOrder(nextOrder) {
@@ -6723,6 +6925,7 @@
             login: document.getElementById("new-login").value,
             password: document.getElementById("new-pass").value,
             admin: document.getElementById("new-admin").checked,
+            theme: document.getElementById("new-theme")?.value === "dark" ? "dark" : "light",
             tabs: {
               hours: document.getElementById("new-hours").checked,
               activity: document.getElementById("new-activity").checked,
@@ -6757,14 +6960,21 @@
       }
     });
     document.getElementById("admin-users").addEventListener("change", async (e) => {
-      const input = e.target.closest("input[data-field]");
+      const input = e.target.closest("input[data-field], select[data-field]");
       const card = e.target.closest(".admin-user[data-id]");
       if (!input || !card) return;
       const id = card.getAttribute("data-id");
       const field = input.getAttribute("data-field");
-      const patch = field === "admin"
-        ? { admin: input.checked }
-        : { tabs: { [field]: input.checked } };
+      let patch;
+      let prevTheme = null;
+      if (field === "admin") {
+        patch = { admin: input.checked };
+      } else if (field === "theme") {
+        prevTheme = USER.theme === "dark" ? "dark" : "light";
+        patch = { theme: input.value === "dark" ? "dark" : "light" };
+      } else {
+        patch = { tabs: { [field]: input.checked } };
+      }
       try {
         adminErr("");
         const updated = await api("/api/admin/users?id=" + encodeURIComponent(id), {
@@ -6776,11 +6986,16 @@
           USER.tabs = updated.tabs;
           USER.admin = updated.admin;
           USER.tabOrder = updated.tabOrder;
+          USER.theme = updated.theme || "light";
           applyUserUi();
         }
         await loadAdminUsers();
       } catch (ex) {
-        input.checked = !input.checked;
+        if (field === "theme") {
+          input.value = id === USER.id ? (prevTheme || "light") : input.value === "dark" ? "light" : "dark";
+        } else if (field === "admin" || input.type === "checkbox") {
+          input.checked = !input.checked;
+        }
         adminErr(ex.message || String(ex));
       }
     });
@@ -7010,6 +7225,18 @@
         }
       });
     })();
+
+    document.getElementById("settings-theme")?.addEventListener("change", async (e) => {
+      const theme = e.target.value === "dark" ? "dark" : "light";
+      try {
+        settingsErr("");
+        await saveOwnTheme(theme);
+      } catch (ex) {
+        settingsErr(ex.message || String(ex));
+        const sel = document.getElementById("settings-theme");
+        if (sel) sel.value = USER.theme === "dark" ? "dark" : "light";
+      }
+    });
 
     document.getElementById("btn-full").addEventListener("click", () => {
       setFull(!document.body.classList.contains("is-full"));

@@ -116,9 +116,14 @@ function publicUser(user) {
     id: user.id,
     login: user.login,
     admin: !!user.admin,
+    theme: normalizeTheme(user.theme),
     tabs: normalizeTabs(user.tabs),
     tabOrder: normalizeTabOrder(user.tabOrder),
   };
+}
+
+function normalizeTheme(theme) {
+  return String(theme || "").trim().toLowerCase() === "dark" ? "dark" : "light";
 }
 
 export function cookieName() {
@@ -148,6 +153,7 @@ export function ensureAuthReady() {
       salt,
       hash,
       admin: true,
+      theme: "light",
       tabs: { hours: true, activity: true, pnl: true, pnlecotidy: true, units: true, plan: true, budget: true, bitrix: true, bitrixfreq: true, ozon: true, ozondrr: true, ozonfbs: true, ozonfbo: true, ozonfbofilters: true, wb: true, wbfbs: true, debtors: true, mbalance: true, clientpay: true },
       tabOrder: [...TABS],
     });
@@ -157,6 +163,10 @@ export function ensureAuthReady() {
     else console.log("First admin password taken from DASHBOARD_ADMIN_PASSWORD");
   }
   for (const user of store.users) {
+    if (user.theme !== "dark" && user.theme !== "light") {
+      user.theme = "light";
+      changed = true;
+    }
     if (!user.tabs || typeof user.tabs !== "object") {
       // Старые учётки без tabs — сохраняем прежний полный доступ один раз.
       user.tabs = Object.fromEntries(TABS.map((key) => [key, true]));
@@ -240,7 +250,7 @@ export function readSession(token) {
   }
 }
 
-export function createUser({ login, password, admin, tabs, tabOrder }) {
+export function createUser({ login, password, admin, tabs, tabOrder, theme }) {
   const store = ensureAuthReady();
   const name = String(login || "").trim();
   if (!name || name.length < 2) throw new Error("Логин слишком короткий");
@@ -256,6 +266,7 @@ export function createUser({ login, password, admin, tabs, tabOrder }) {
     salt,
     hash,
     admin: isAdmin,
+    theme: normalizeTheme(theme),
     tabs: normalizeTabs(tabs),
     tabOrder: normalizeTabOrder(tabOrder),
   };
@@ -292,18 +303,33 @@ export function updateUser(id, patch) {
   }
   if (patch.tabs) user.tabs = normalizeTabs({ ...user.tabs, ...patch.tabs });
   if (patch.tabOrder) user.tabOrder = normalizeTabOrder(patch.tabOrder);
+  if (patch.theme != null) user.theme = normalizeTheme(patch.theme);
   saveStore(store);
   return publicUser(user);
 }
 
-/** Смена только своего порядка вкладок (без прав админа). */
-export function updateOwnTabOrder(userId, tabOrder) {
+/** Смена своих настроек: порядок вкладок и тема оформления. */
+export function updateOwnSettings(userId, patch = {}) {
   const store = ensureAuthReady();
   const user = store.users.find((u) => u.id === userId);
   if (!user) throw new Error("Пользователь не найден");
-  user.tabOrder = normalizeTabOrder(tabOrder);
+  let touched = false;
+  if (patch.tabOrder !== undefined) {
+    user.tabOrder = normalizeTabOrder(patch.tabOrder);
+    touched = true;
+  }
+  if (patch.theme !== undefined) {
+    user.theme = normalizeTheme(patch.theme);
+    touched = true;
+  }
+  if (!touched) throw new Error("Нечего сохранять");
   saveStore(store);
   return publicUser(user);
+}
+
+/** Порядок вкладок (обратная совместимость). */
+export function updateOwnTabOrder(userId, tabOrder) {
+  return updateOwnSettings(userId, { tabOrder });
 }
 
 export function removeUser(id, actorId) {
