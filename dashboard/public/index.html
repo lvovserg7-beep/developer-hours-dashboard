@@ -212,6 +212,16 @@
       letter-spacing: -0.02em;
       line-height: 1.2;
     }
+    .app-version {
+      display: inline-block;
+      margin-left: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0;
+      color: var(--muted);
+      vertical-align: middle;
+    }
+    .app-version:empty { display: none; }
     h2 {
       font-size: 15px;
       font-weight: var(--weight-strong);
@@ -1404,7 +1414,7 @@
           <img src="/assets/logo-ecotidy.jpg" alt="Экотайди" width="66" height="48">
         </div>
         <div class="brand-text">
-          <h1>Центр управления корпорацией</h1>
+          <h1>Центр управления корпорацией <span class="app-version" id="app-version">__APP_VERSION__</span></h1>
           <p class="mission">Собираем достоверные данные в понятный и быстрый формат — чтобы вся компания принимала управленческие решения вовремя, уверенно и по существу.</p>
         </div>
       </div>

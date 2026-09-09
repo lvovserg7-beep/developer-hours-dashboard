@@ -59,6 +59,14 @@ const IIS_DIR = (() => {
   if (process.platform === "win32") return "C:\\inetpub\\wwwroot\\employees";
   return "";
 })();
+const APP_VERSION = (() => {
+  try {
+    const raw = readFileSync(join(root, "..", "STABLE"), "utf8");
+    return raw.replace(/^\uFEFF/, "").trim().split(/\r?\n/)[0].trim() || "";
+  } catch {
+    return "";
+  }
+})();
 const CACHE_MS = 10 * 60 * 1000;
 const SEO_REFRESH_MS = (() => {
   const n = Number(process.env.SEO_REFRESH_MS);
@@ -120,6 +128,7 @@ function renderHtml(data, user) {
   return template
     .replace("__EMBEDDED_DATA__", payload)
     .replace("__USER__", JSON.stringify(publicUser(user)).replace(/</g, "\\u003c"))
+    .replace("__APP_VERSION__", APP_VERSION || "")
     .replace("__CHART_STATUS__", parts.status)
     .replace("__CHART_KPIS__", parts.kpis)
     .replace("__CHART_DEV_WORK__", parts.devWork)
@@ -1228,6 +1237,7 @@ refresh(true)
   .finally(() => {
     server.listen(PORT, "0.0.0.0", () => {
       console.log(`Dashboard http://localhost:${PORT}/`);
+      if (APP_VERSION) console.log(`Version ${APP_VERSION}`);
       if (IIS_DIR && existsSync(join(IIS_DIR, "index.html"))) {
         console.log(`IIS snapshot http://localhost/employees/`);
       }
