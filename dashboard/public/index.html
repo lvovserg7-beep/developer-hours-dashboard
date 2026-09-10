@@ -93,12 +93,6 @@
     html[data-theme="dark"] .pos-band-30 { background: #3a3220; }
     html[data-theme="dark"] .pos-band-bad { background: #3a2824; }
     html[data-theme="dark"] .slide-bar select:hover { background: #3a3220; }
-    html[data-theme="dark"] table.plan th.money,
-    html[data-theme="dark"] table.plan td.money,
-    html[data-theme="dark"] table.plan tr.total td.money { background: #2a3a22; }
-    html[data-theme="dark"] table.plan th.mark,
-    html[data-theme="dark"] table.plan td.mark,
-    html[data-theme="dark"] table.plan tr.total td.mark { background: #3a3420; }
     html[data-theme="dark"] input,
     html[data-theme="dark"] select,
     html[data-theme="dark"] textarea,
@@ -577,6 +571,31 @@
       opacity: 1;
       transition: transform 0.22s ease, opacity 0.22s ease;
       pointer-events: auto;
+    }
+    html[data-theme="dark"] body.is-full header {
+      background: rgba(26, 25, 22, 0.96);
+      border-bottom-color: var(--line);
+      color: var(--ink);
+    }
+    html[data-theme="dark"] body.is-full .tab {
+      color: var(--muted);
+    }
+    html[data-theme="dark"] body.is-full .tab.is-on {
+      color: var(--ink);
+    }
+    html[data-theme="dark"] body.is-full .slide-bar button,
+    html[data-theme="dark"] body.is-full .slide-bar select,
+    html[data-theme="dark"] body.is-full .tab-full {
+      background: var(--card);
+      color: var(--ink);
+      border-color: var(--line);
+    }
+    html[data-theme="dark"] body.is-full .slide-bar button:hover,
+    html[data-theme="dark"] body.is-full .slide-bar select:hover {
+      background: var(--accent-soft);
+    }
+    html[data-theme="dark"] body.is-full .who {
+      color: var(--muted);
     }
     body.is-full:not(.chrome-open) header {
       transform: translateY(-110%);
@@ -1131,6 +1150,21 @@
     table.plan tr.total td.money { background: #cfe8a8; }
     table.plan tr.group td.mark,
     table.plan tr.total td.mark { background: #f5e6a3; }
+    /* Тёмная тема: цветные ячейки плана остаются светлыми — цифры тёмные */
+    html[data-theme="dark"] table.plan th.money,
+    html[data-theme="dark"] table.plan td.money,
+    html[data-theme="dark"] table.plan tr.group td.money,
+    html[data-theme="dark"] table.plan tr.total td.money {
+      background: #cfe8a8 !important;
+      color: #1a1916 !important;
+    }
+    html[data-theme="dark"] table.plan th.mark,
+    html[data-theme="dark"] table.plan td.mark,
+    html[data-theme="dark"] table.plan tr.group td.mark,
+    html[data-theme="dark"] table.plan tr.total td.mark {
+      background: #f5e6a3 !important;
+      color: #1a1916 !important;
+    }
 
     .plan-variant,
     .bitrix-preset {
