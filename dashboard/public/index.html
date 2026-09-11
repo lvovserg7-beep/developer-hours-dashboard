@@ -1628,6 +1628,7 @@
         <button type="button" class="tab" data-tab="mbalance" role="tab" aria-selected="false">Управленческий баланс</button>
         <button type="button" class="tab" data-tab="clientpay" role="tab" aria-selected="false">Реестр оплат клиентов</button>
         <button type="button" class="tab" data-tab="clientquality" role="tab" aria-selected="false">Качество работы с клиентами</button>
+        <button type="button" class="tab" data-tab="clientqualitytv" role="tab" aria-selected="false">Качество работы с клиентами TV</button>
         <button type="button" class="tab" data-tab="seo" role="tab" aria-selected="false">Поиск SEO</button>
         <button type="button" class="tab" data-tab="seoqueries" role="tab" aria-selected="false">SEO запросы</button>
         <button type="button" class="tab" data-tab="seoproducts" role="tab" aria-selected="false">Все запросы по продуктам</button>
@@ -1750,6 +1751,7 @@
             <label><input type="checkbox" id="new-mbalance"> Управленческий баланс</label>
             <label><input type="checkbox" id="new-clientpay"> Реестр оплат клиентов</label>
             <label><input type="checkbox" id="new-clientquality"> Качество работы с клиентами</label>
+            <label><input type="checkbox" id="new-clientqualitytv"> Качество работы с клиентами TV</label>
             <label><input type="checkbox" id="new-seo"> Поиск SEO</label>
             <label><input type="checkbox" id="new-seoqueries"> SEO запросы</label>
             <label><input type="checkbox" id="new-seoproducts"> Все запросы по продуктам</label>
@@ -2275,6 +2277,17 @@
         </form>
         <div id="clientquality-err" class="err" hidden></div>
         <div id="clientquality-report"></div>
+      </section>
+    </div>
+    <div id="tab-clientqualitytv" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Качество работы с клиентами TV</h2>
+        <p class="lead tab-intro">Только вопросы, отмеченные в локальной панели сборщика галочкой «Выводить на ТВ».</p>
+        <form class="pnl-toolbar" id="clientqualitytv-form">
+          <button type="submit" id="clientqualitytv-run">Обновить</button>
+        </form>
+        <div id="clientqualitytv-err" class="err" hidden></div>
+        <div id="clientqualitytv-report"></div>
       </section>
     </div>
     <div id="tab-seo" class="tab-panel" hidden>
@@ -5339,10 +5352,21 @@
       return min ? `${h} ч ${min} мин` : `${h} ч`;
     }
 
-    function renderClientQuality(report) {
-      const box = document.getElementById("clientquality-report");
+    function renderClientQuality(report, opts = {}) {
+      const box = document.getElementById(opts.boxId || "clientquality-report");
+      if (!box) return;
+      const tv = Boolean(opts.tv);
       if (!report) {
         box.innerHTML = "";
+        return;
+      }
+      const allow = tv
+        ? new Set((Array.isArray(report.tvSections) ? report.tvSections : []).map(String))
+        : null;
+      const show = (key) => !allow || allow.has(key);
+      if (tv && (!allow || !allow.size)) {
+        box.innerHTML = `<p class="pnl-note">Нет вопросов с галочкой «Выводить на ТВ». Отметьте их в локальной панели сборщика чатов.</p>`;
+        afterReportPaint();
         return;
       }
       const meta = [];
@@ -5359,6 +5383,7 @@
       const dueThisWeek = Array.isArray(report.dueThisWeek) ? report.dueThisWeek : [];
       const ping = Array.isArray(report.ping) ? report.ping : [];
       const faq = Array.isArray(report.faqCandidates) ? report.faqCandidates : [];
+      const customAnswers = Array.isArray(report.customAnswers) ? report.customAnswers : [];
 
       const mgrBody = managers
         .map(
@@ -5428,44 +5453,73 @@
         )
         .join("");
 
-      box.innerHTML = `
-        <p class="pnl-note meta">${meta.join(" · ") || "Нет метаданных снимка"}</p>
-        <div class="report-stage"><div class="report-stage-inner">
-          <h3>1. Среднее время реакции по менеджерам</h3>
+      const customBody = customAnswers
+        .map(
+          (r) => `<tr>
+          <td class="name">${escapeHtml(r.question || r.title || "—")}</td>
+          <td>${escapeHtml(r.answer || r.excerpt || "")}</td>
+          <td>${escapeHtml((r.clients || []).join(", "))}</td>
+        </tr>`
+        )
+        .join("");
+
+      let n = 0;
+      const heading = (title) => `<h3>${++n}. ${title}</h3>`;
+      const parts = [];
+      if (show("managers")) {
+        parts.push(`${heading("Среднее время реакции по менеджерам")}
           <div class="pnl-scroll"><table class="pnl">
             <thead><tr><th>Менеджер</th><th class="num">Ответов</th><th class="num">Среднее</th><th class="num">Медиана</th></tr></thead>
             <tbody>${mgrBody || `<tr><td colspan="4">Пока нет данных</td></tr>`}</tbody>
-          </table></div>
-
-          <h3>2. Что пообещали и не закрыли в чате</h3>
+          </table></div>`);
+      }
+      if (show("openPromises")) {
+        parts.push(`${heading("Что пообещали и не закрыли в чате")}
           <div class="pnl-scroll"><table class="pnl">
             <thead><tr><th>Клиент</th><th>Менеджер</th><th>Когда</th><th>Обещание</th></tr></thead>
             <tbody>${promBody || `<tr><td colspan="4">Пока нет данных</td></tr>`}</tbody>
-          </table></div>
-
-          <h3>3. Клиенты, где в чате есть негатив</h3>
+          </table></div>`);
+      }
+      if (show("negativity")) {
+        parts.push(`${heading("Клиенты, где в чате есть негатив")}
           <div class="pnl-scroll"><table class="pnl">
             <thead><tr><th>Клиент</th><th>Менеджер</th><th>Когда</th><th>Фрагмент</th></tr></thead>
             <tbody>${negBody || `<tr><td colspan="4">Пока нет данных</td></tr>`}</tbody>
-          </table></div>
-
-          <h3>4. Кому должны ответ или обещанный срок на этой неделе</h3>
+          </table></div>`);
+      }
+      if (show("dueThisWeek")) {
+        parts.push(`${heading("Кому должны ответ или обещанный срок на этой неделе")}
           <div class="pnl-scroll"><table class="pnl">
             <thead><tr><th>Клиент</th><th>Менеджер</th><th>Тип</th><th>Срок</th><th>Суть</th></tr></thead>
             <tbody>${dueBody || `<tr><td colspan="5">Пока нет данных</td></tr>`}</tbody>
-          </table></div>
-
-          <h3>5. Кого из клиентов стоит пропинговать</h3>
+          </table></div>`);
+      }
+      if (show("ping")) {
+        parts.push(`${heading("Кого из клиентов стоит пропинговать")}
           <div class="pnl-scroll"><table class="pnl">
             <thead><tr><th>Клиент</th><th>Менеджер</th><th class="num">Ждём</th><th>Последнее от клиента</th><th>Фрагмент</th></tr></thead>
             <tbody>${pingBody || `<tr><td colspan="5">Пока нет данных</td></tr>`}</tbody>
-          </table></div>
-
-          <h3>6. Новые повторяющиеся вопросы → в инструкцию</h3>
+          </table></div>`);
+      }
+      if (show("faqCandidates")) {
+        parts.push(`${heading("Новые повторяющиеся вопросы → в инструкцию")}
           <div class="pnl-scroll"><table class="pnl">
             <thead><tr><th>Вопрос</th><th class="num">Раз</th><th>Клиенты</th><th>Рекомендация</th></tr></thead>
             <tbody>${faqBody || `<tr><td colspan="4">Пока нет данных</td></tr>`}</tbody>
-          </table></div>
+          </table></div>`);
+      }
+      if (show("customAnswers") && (tv || customAnswers.length)) {
+        parts.push(`${heading("Прочие выводы")}
+          <div class="pnl-scroll"><table class="pnl">
+            <thead><tr><th>Вопрос</th><th>Ответ</th><th>Клиенты</th></tr></thead>
+            <tbody>${customBody || `<tr><td colspan="3">Пока нет данных</td></tr>`}</tbody>
+          </table></div>`);
+      }
+
+      box.innerHTML = `
+        <p class="pnl-note meta">${meta.join(" · ") || "Нет метаданных снимка"}</p>
+        <div class="report-stage"><div class="report-stage-inner">
+          ${parts.join("\n")}
         </div></div>`;
       afterReportPaint();
     }
@@ -5487,6 +5541,43 @@
         clientqualityErr(e.message || String(e));
       } finally {
         clientqualityInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    let clientqualitytvLoaded = false;
+    let clientqualitytvInflight = false;
+
+    function clientqualitytvErr(text) {
+      const el = document.getElementById("clientqualitytv-err");
+      if (!el) return;
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    async function loadClientQualityTvReport() {
+      if (USER.tabs?.clientqualitytv === false || clientqualitytvInflight) return;
+      clientqualitytvInflight = true;
+      const btn = document.getElementById("clientqualitytv-run");
+      if (btn) btn.disabled = true;
+      clientqualitytvErr("");
+      const box = document.getElementById("clientqualitytv-report");
+      if (box) box.innerHTML = `<p class="pnl-note">Читаем снимок доски…</p>`;
+      try {
+        const report = await api("/api/clientqualitytv", { method: "GET" });
+        clientqualitytvLoaded = true;
+        renderClientQuality(report, { boxId: "clientqualitytv-report", tv: true });
+      } catch (e) {
+        clientqualitytvLoaded = false;
+        renderClientQuality(null, { boxId: "clientqualitytv-report", tv: true });
+        clientqualitytvErr(e.message || String(e));
+      } finally {
+        clientqualitytvInflight = false;
         if (btn) btn.disabled = false;
       }
     }
@@ -6163,7 +6254,7 @@
       }
     }
 
-    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "clientquality", "seo", "seoqueries", "seoproducts", "seopositions"];
+    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
     const TAB_LABELS = {
       hours: "Часы",
       activity: "Активность",
@@ -6185,6 +6276,7 @@
       mbalance: "Упр. баланс",
       clientpay: "Оплаты клиентов",
       clientquality: "Качество работы с клиентами",
+      clientqualitytv: "Качество работы с клиентами TV",
       seo: "Поиск SEO",
       seoqueries: "SEO запросы",
       seoproducts: "Все запросы по продуктам",
@@ -6464,6 +6556,11 @@
         await loadClientQualityReport();
         return;
       }
+      if (name === "clientqualitytv") {
+        clientqualitytvLoaded = false;
+        await loadClientQualityTvReport();
+        return;
+      }
       if (name === "seo") {
         seoLoaded = false;
         await loadSeoReport();
@@ -6573,6 +6670,7 @@
       document.getElementById("tab-mbalance").hidden = name !== "mbalance";
       document.getElementById("tab-clientpay").hidden = name !== "clientpay";
       document.getElementById("tab-clientquality").hidden = name !== "clientquality";
+      document.getElementById("tab-clientqualitytv").hidden = name !== "clientqualitytv";
       document.getElementById("tab-seo").hidden = name !== "seo";
       document.getElementById("tab-seoqueries").hidden = name !== "seoqueries";
       document.getElementById("tab-seoproducts").hidden = name !== "seoproducts";
@@ -6588,7 +6686,7 @@
       if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
       document.body.classList.toggle(
         "wide-report",
-        name === "plan" || name === "budget" || name === "ozon" || name === "ozondrr" || name === "ozonfbs" || name === "ozonfbo" || name === "ozonfbofilters" || name === "units" || name === "wb" || name === "wbfbs" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "clientquality" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
+        name === "plan" || name === "budget" || name === "ozon" || name === "ozondrr" || name === "ozonfbs" || name === "ozonfbo" || name === "ozonfbofilters" || name === "units" || name === "wb" || name === "wbfbs" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "clientquality" || name === "clientqualitytv" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
       );
       document.body.classList.remove("wide-plan");
       if (name === "settings") loadSettingsTabOrder();
@@ -6597,6 +6695,7 @@
       if (name === "ozonfbofilters") loadOzonFboFiltersReport();
       if (name === "wbfbs") loadWbFbsSupplies();
       if (name === "clientquality") loadClientQualityReport();
+      if (name === "clientqualitytv") loadClientQualityTvReport();
       if (name === "cache") loadCacheBoard();
       if (name === "admin") loadAdminUsers();
       if (name === "activity" && data?.activity) fillActivityFilters(data.activity);
@@ -6815,6 +6914,7 @@
         ["mbalance", "Упр. баланс"],
         ["clientpay", "Оплаты клиентов"],
         ["clientquality", "Качество работы с клиентами"],
+        ["clientqualitytv", "Качество работы с клиентами TV"],
         ["seo", "Поиск SEO"],
         ["seoqueries", "SEO запросы"],
         ["seoproducts", "Все запросы по продуктам"],
@@ -7237,6 +7337,7 @@
               mbalance: document.getElementById("new-mbalance").checked,
               clientpay: document.getElementById("new-clientpay").checked,
               clientquality: document.getElementById("new-clientquality").checked,
+              clientqualitytv: document.getElementById("new-clientqualitytv").checked,
               seo: document.getElementById("new-seo").checked,
               seoqueries: document.getElementById("new-seoqueries").checked,
               seoproducts: document.getElementById("new-seoproducts").checked,
@@ -7753,6 +7854,11 @@
       e.preventDefault();
       clientqualityLoaded = false;
       loadClientQualityReport();
+    });
+    document.getElementById("clientqualitytv-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      clientqualitytvLoaded = false;
+      loadClientQualityTvReport();
     });
     document.getElementById("seo-form").addEventListener("submit", (e) => {
       e.preventDefault();

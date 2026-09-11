@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Закрытые пункты — сбор чатов</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f4f2ed;
+      --ink: #1c1b18;
+      --muted: #5c5a54;
+      --line: #ddd9d0;
+      --card: #fff;
+      --accent: #8a5a12;
+      --font: "Manrope", "Segoe UI", system-ui, sans-serif;
+      --danger: #9b2c2c;
+      --ok: #2f6b3a;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 14px/1.45 var(--font); color: var(--ink); background: var(--bg); }
+    main { width: min(920px, calc(100% - 32px)); margin: 24px auto 48px; }
+    h1 { font-size: 22px; font-weight: 700; margin: 0 0 6px; }
+    .lead { color: var(--muted); margin: 0 0 20px; }
+    section { background: var(--card); border: 1px solid var(--line); padding: 18px 20px; margin-bottom: 14px; }
+    h2 { font-size: 15px; margin: 0 0 12px; }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    button {
+      font: inherit; font-weight: 600; border: 1px solid var(--accent);
+      background: var(--accent); color: #fff; padding: 6px 12px; cursor: pointer;
+    }
+    button.ghost { background: #fff; color: var(--ink); border-color: var(--line); }
+    button:disabled { opacity: 0.55; cursor: default; }
+    nav.tabs { display: flex; gap: 8px; margin: 0 0 18px; }
+    nav.tabs a {
+      color: var(--ink); text-decoration: none; border: 1px solid var(--line);
+      padding: 6px 12px; font-weight: 600; background: #fff;
+    }
+    nav.tabs a[aria-current="page"] { border-color: var(--accent); background: #f7efe3; }
+    .flash { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--line); background: var(--card); }
+    .flash.err { border-color: #e2b6b6; color: var(--danger); }
+    .flash.ok { border-color: #bddbc3; color: var(--ok); }
+    .item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: start;
+      border-top: 1px solid var(--line);
+      padding: 10px 0;
+    }
+    .item:first-of-type { border-top: none; padding-top: 0; }
+    .meta { font-size: 12px; color: var(--muted); }
+    .empty { color: var(--muted); margin: 0; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Сбор клиентских чатов</h1>
+    <p class="lead">Пункты, отмеченные решёнными, не уходят на доску ЦУК и не поднимаются агентом снова.</p>
+    <nav class="tabs">
+      <a href="/">Настройки</a>
+      <a href="/resolved" aria-current="page">Закрытые пункты</a>
+    </nav>
+    <div id="flash" hidden></div>
+
+    <section>
+      <h2>Открытые на доске</h2>
+      <p class="hint">Список из последнего снимка. «Решено» сразу снимает пункт с доски ЦУК, если заданы адрес и токен.</p>
+      <div id="open"></div>
+    </section>
+
+    <section>
+      <h2>Решённые</h2>
+      <p class="hint">«Вернуть» снова покажет пункт на доске. Агент к закрытым темам больше не возвращается, пока их не вернуть.</p>
+      <div id="resolved"></div>
+    </section>
+  </main>
+  <script>
+    function flash(text, ok) {
+      const el = document.getElementById("flash");
+      el.hidden = !text;
+      el.textContent = text || "";
+      el.className = "flash " + (ok ? "ok" : "err");
+    }
+
+    async function api(path, opts) {
+      const res = await fetch(path, opts);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return data;
+    }
+
+    function rowHtml(it, actionLabel) {
+      const wrap = document.createElement("div");
+      wrap.className = "item";
+      wrap.innerHTML = `
+        <div>
+          <div><strong>${escapeHtml(it.sectionLabel || it.section || "")}</strong> · ${escapeHtml(it.client || "без клиента")}</div>
+          <div>${escapeHtml(it.title || "—")}</div>
+          <div class="meta">${it.resolvedAt ? "закрыто " + escapeHtml(it.resolvedAt) : (it.id ? "id " + escapeHtml(it.id) : "")}</div>
+        </div>
+        <button type="button" class="ghost act">${actionLabel}</button>
+      `;
+      return wrap;
+    }
+
+    function escapeHtml(s) {
+      return String(s || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function render(data) {
+      const openBox = document.getElementById("open");
+      const resBox = document.getElementById("resolved");
+      openBox.innerHTML = "";
+      resBox.innerHTML = "";
+      const open = data.open || [];
+      const resolved = data.resolved || [];
+      if (!open.length) {
+        const p = document.createElement("p");
+        p.className = "empty";
+        p.textContent = "Нет открытых пунктов. Они появятся после успешного тика.";
+        openBox.appendChild(p);
+      }
+      open.forEach((it) => {
+        const row = rowHtml(it, "Решено");
+        row.querySelector(".act").addEventListener("click", () => resolveOne(it));
+        openBox.appendChild(row);
+      });
+      if (!resolved.length) {
+        const p = document.createElement("p");
+        p.className = "empty";
+        p.textContent = "Пока ничего не закрыто.";
+        resBox.appendChild(p);
+      }
+      resolved.forEach((it) => {
+        const row = rowHtml({ ...it, sectionLabel: it.section }, "Вернуть");
+        row.querySelector(".act").addEventListener("click", () => reopenOne(it));
+        resBox.appendChild(row);
+      });
+    }
+
+    async function resolveOne(it) {
+      flash("");
+      try {
+        const data = await api("/api/resolved", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "resolve",
+            items: [{
+              id: it.id,
+              section: it.section,
+              client: it.client,
+              title: it.title,
+              fingerprint: it.fingerprint,
+              item: it.item || it,
+            }],
+          }),
+        });
+        render(await api("/api/board"));
+        flash(data.posted ? "Снято с доски ЦУК." : "Закрыто локально. На ЦУК уйдёт при следующем тике или когда зададите адрес и токен.", true);
+      } catch (e) {
+        flash(e.message || String(e), false);
+      }
+    }
+
+    async function reopenOne(it) {
+      flash("");
+      try {
+        const data = await api("/api/resolved", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "reopen",
+            fingerprints: [it.fingerprint, it.id].filter(Boolean),
+          }),
+        });
+        render(await api("/api/board"));
+        flash(data.posted ? "Вернули на доску ЦУК." : "Снова открыт. На ЦУК уйдёт при следующем тике или когда зададите адрес и токен.", true);
+      } catch (e) {
+        flash(e.message || String(e), false);
+      }
+    }
+
+    api("/api/board").then(render).catch((e) => flash(e.message || String(e), false));
+  </script>
+</body>
+</html>

@@ -20,7 +20,7 @@ import { loadWbFbsSuppliesReport, getWbFbsSupplyQr, deliverWbFbsSupplyAndQr } fr
 import { loadDebtors } from "./lib/load-debtors.mjs";
 import { loadMBalance } from "./lib/load-mbalance.mjs";
 import { loadClientPayments } from "./lib/load-client-payments.mjs";
-import { loadClientQuality, ingestClientQualityEvents } from "./lib/load-client-quality.mjs";
+import { loadClientQuality, loadClientQualityTv, ingestClientQualityEvents } from "./lib/load-client-quality.mjs";
 import { loadSeoReport, loadSeoProductsReport, loadSeoPositionsReport, refreshSeoTrailingCache, attachYandexSqi } from "./lib/load-seo.mjs";
 import {
   cookieName,
@@ -1119,6 +1119,20 @@ const server = createServer(async (req, res) => {
       }
       try {
         return json(res, 200, loadClientQuality());
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/clientqualitytv") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "clientqualitytv")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Качество работы с клиентами TV»." });
+      }
+      try {
+        return json(res, 200, loadClientQualityTv());
       } catch (err) {
         const msg = String(err.message || err);
         console.error(err);

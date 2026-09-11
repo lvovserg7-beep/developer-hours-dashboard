@@ -8,7 +8,7 @@ const USERS_FILE = join(root, "users.json");
 const USERS_TMP = join(root, "users.json.tmp");
 const COOKIE = "dash_session";
 const SESSION_MS = 14 * 24 * 60 * 60 * 1000;
-const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "clientquality", "seo", "seoqueries", "seoproducts", "seopositions"];
+const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
 
 const TAB_LABELS = {
   hours: "Часы",
@@ -31,6 +31,7 @@ const TAB_LABELS = {
   mbalance: "Управленческий баланс",
   clientpay: "Реестр оплат клиентов",
   clientquality: "Качество работы с клиентами",
+  clientqualitytv: "Качество работы с клиентами TV",
   seo: "Поиск SEO",
   seoqueries: "SEO запросы",
   seoproducts: "Все запросы по продуктам",
@@ -204,6 +205,7 @@ export function ensureAuthReady() {
           mbalance: true,
           clientpay: true,
           clientquality: true,
+          clientqualitytv: true,
         },
         tabOrder: [...TABS],
       });
@@ -242,6 +244,10 @@ export function ensureAuthReady() {
     if (user.tabs.clientquality == null) {
       // Новая доска: админам сразу, остальным — вручную.
       user.tabs.clientquality = !!user.admin;
+      changed = true;
+    }
+    if (user.tabs.clientqualitytv == null) {
+      user.tabs.clientqualitytv = !!user.tabs.clientquality;
       changed = true;
     }
     // Новые доски (ключ отсутствует) — выключены, включает только администратор.
@@ -447,6 +453,7 @@ export function filterDashboardData(data, user) {
   if (!tabs.mbalance) out.mbalance = null;
   if (!tabs.clientpay) out.clientpay = null;
   if (!tabs.clientquality) out.clientquality = null;
+  if (!tabs.clientqualitytv) out.clientqualitytv = null;
   return out;
 }
 

@@ -1,0 +1,9 @@
+{
+  "name": "cq-agent",
+  "private": true,
+  "type": "module",
+  "description": "Локальный сбор клиентских чатов Trade → доска ЦУК",
+  "dependencies": {
+    "@cursor/sdk": "^1.0.31"
+  }
+}

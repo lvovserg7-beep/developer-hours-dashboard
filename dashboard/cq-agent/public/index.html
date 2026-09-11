@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Сбор клиентских чатов</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f4f2ed;
+      --ink: #1c1b18;
+      --muted: #5c5a54;
+      --line: #ddd9d0;
+      --card: #fff;
+      --accent: #8a5a12;
+      --font: "Manrope", "Segoe UI", system-ui, sans-serif;
+      --danger: #9b2c2c;
+      --ok: #2f6b3a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 14px/1.45 var(--font);
+      color: var(--ink);
+      background: var(--bg);
+    }
+    main { width: min(920px, calc(100% - 32px)); margin: 24px auto 48px; }
+    h1 { font-size: 22px; font-weight: 700; margin: 0 0 6px; }
+    .lead { color: var(--muted); margin: 0 0 20px; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 18px 20px;
+      margin-bottom: 14px;
+    }
+    h2 { font-size: 15px; margin: 0 0 12px; }
+    label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+    input[type="text"], input[type="password"], input[type="number"], input[type="time"], select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 8px 10px;
+      font: inherit;
+      color: inherit;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .days { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 6px; }
+    .days label { margin: 0; color: var(--ink); display: flex; align-items: center; gap: 6px; font-size: 13px; }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    button {
+      font: inherit;
+      font-weight: 600;
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: #fff;
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+    button.ghost { background: #fff; color: var(--ink); border-color: var(--line); }
+    button:disabled { opacity: 0.55; cursor: default; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .q-block {
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+    .q-tv {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--ink);
+      margin: 0 0 6px;
+    }
+    .q-row {
+      display: grid;
+      grid-template-columns: 28px 1fr 180px 72px;
+      gap: 8px;
+      align-items: center;
+    }
+    .status { font-size: 13px; color: var(--muted); }
+    .status.ok { color: var(--ok); }
+    .status.err { color: var(--danger); }
+    .flash { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--line); background: var(--card); }
+    .flash.err { border-color: #e2b6b6; color: var(--danger); }
+    .flash.ok { border-color: #bddbc3; color: var(--ok); }
+    nav.tabs { display: flex; gap: 8px; margin: 0 0 18px; }
+    nav.tabs a {
+      color: var(--ink);
+      text-decoration: none;
+      border: 1px solid var(--line);
+      padding: 6px 12px;
+      font-weight: 600;
+      background: #fff;
+    }
+    nav.tabs a[aria-current="page"] { border-color: var(--accent); background: #f7efe3; }
+    @media (max-width: 700px) {
+      .row, .q-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Сбор клиентских чатов</h1>
+    <p class="lead">Локальная панель. По расписанию догружает чаты Trade, анализирует их в Cursor и отправляет снимок на боевой ЦУК.</p>
+    <nav class="tabs">
+      <a href="/" aria-current="page">Настройки</a>
+      <a href="/resolved">Закрытые пункты</a>
+    </nav>
+    <div id="flash" hidden></div>
+
+    <section>
+      <h2>Подключения</h2>
+      <label for="cukUrl">Адрес боевого ЦУК</label>
+      <input id="cukUrl" type="text" placeholder="http://192.168.10.240:8787" autocomplete="off">
+      <p class="hint">Без хвоста /api. Токен ingest — тот же, что CLIENT_QUALITY_INGEST_TOKEN на боевом сервере.</p>
+      <div class="row">
+        <div>
+          <label for="ingestToken">Токен выгрузки на ЦУК</label>
+          <input id="ingestToken" type="password" placeholder="не менять, если уже задан" autocomplete="off">
+        </div>
+        <div>
+          <label for="cursorApiKey">Ключ Cursor API</label>
+          <input id="cursorApiKey" type="password" placeholder="не менять, если уже задан" autocomplete="off">
+        </div>
+      </div>
+      <label for="odataUrl">Портал 1С OData (Trade)</label>
+      <input id="odataUrl" type="text" placeholder="пусто = из dashboard/.env" autocomplete="off">
+      <div class="row">
+        <div>
+          <label for="odataUser">Пользователь OData</label>
+          <input id="odataUser" type="text" autocomplete="off">
+        </div>
+        <div>
+          <label for="odataPassword">Пароль OData</label>
+          <input id="odataPassword" type="password" placeholder="не менять, если уже задан" autocomplete="off">
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Расписание</h2>
+      <div class="row">
+        <div>
+          <label for="intervalHours">Интервал, часы</label>
+          <input id="intervalHours" type="number" min="1" max="12" value="2">
+        </div>
+        <div>
+          <label>Рабочее окно (Europe/Moscow)</label>
+          <div class="row">
+            <input id="timeFrom" type="time" value="09:00">
+            <input id="timeTo" type="time" value="18:00">
+          </div>
+        </div>
+      </div>
+      <label>Дни</label>
+      <div class="days" id="days"></div>
+    </section>
+
+    <section>
+      <h2>Вопросы анализа</h2>
+      <p class="hint">Включённые вопросы уходят в промпт агента. Секция — куда положить ответ на доске ЦУК. Галочка «Выводить на ТВ» — секция попадёт на вкладку «Качество работы с клиентами TV». Пустой список при сохранении снова заполняется стартовым набором. Если все выключить — тик не запускает анализ.</p>
+      <div id="questions"></div>
+      <div class="actions">
+        <button type="button" class="ghost" id="add-q">Добавить вопрос</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Статус</h2>
+      <p class="status" id="live">Панель: http://127.0.0.1:8791/</p>
+      <p class="status" id="status">Загрузка…</p>
+      <div class="actions">
+        <button type="button" id="save">Сохранить</button>
+        <button type="button" class="ghost" id="run">Запустить сейчас</button>
+      </div>
+      <p class="hint">Автозапуск при входе в Windows: dashboard/cq-agent/install-autostart.cmd. Расписание тиков — только здесь.</p>
+    </section>
+  </main>
+  <script>
+    const DAYS = [
+      [1, "пн"], [2, "вт"], [3, "ср"], [4, "чт"], [5, "пт"], [6, "сб"], [7, "вс"],
+    ];
+    const SECTIONS = [
+      ["", "прочие выводы"],
+      ["managers", "менеджеры"],
+      ["openPromises", "обещания"],
+      ["negativity", "негатив"],
+      ["dueThisWeek", "срок на неделе"],
+      ["ping", "пинг"],
+      ["faqCandidates", "FAQ"],
+    ];
+    const daysBox = document.getElementById("days");
+    DAYS.forEach(([v, label]) => {
+      const el = document.createElement("label");
+      el.innerHTML = `<input type="checkbox" value="${v}"> ${label}`;
+      daysBox.appendChild(el);
+    });
+
+    function flash(text, ok) {
+      const el = document.getElementById("flash");
+      el.hidden = !text;
+      el.textContent = text || "";
+      el.className = "flash " + (ok ? "ok" : "err");
+    }
+
+    function selectedDays() {
+      return [...daysBox.querySelectorAll("input:checked")].map((i) => Number(i.value));
+    }
+
+    function setDays(arr) {
+      daysBox.querySelectorAll("input").forEach((i) => {
+        i.checked = (arr || []).includes(Number(i.value));
+      });
+    }
+
+    function qRow(q) {
+      const wrap = document.createElement("div");
+      wrap.className = "q-block";
+      wrap.innerHTML = `
+        <label class="q-tv"><input type="checkbox" class="q-tv-on" ${q.tv === true ? "checked" : ""}> Выводить на ТВ</label>
+        <div class="q-row">
+          <input type="checkbox" class="q-on" title="Включён" ${q.enabled !== false ? "checked" : ""}>
+          <input type="text" class="q-text" value="${String(q.text || "").replace(/"/g, "&quot;")}">
+          <select class="q-sec">${SECTIONS.map(([v, l]) => `<option value="${v}" ${q.section === v ? "selected" : ""}>${l}</option>`).join("")}</select>
+          <button type="button" class="ghost q-del">Удалить</button>
+        </div>
+      `;
+      wrap.dataset.id = q.id || "";
+      wrap.querySelector(".q-del").addEventListener("click", () => wrap.remove());
+      return wrap;
+    }
+
+    function readQuestions() {
+      return [...document.querySelectorAll("#questions .q-block")].map((row, i) => ({
+        id: row.dataset.id || `q-${i + 1}`,
+        enabled: row.querySelector(".q-on").checked,
+        tv: row.querySelector(".q-tv-on").checked,
+        text: row.querySelector(".q-text").value.trim(),
+        section: row.querySelector(".q-sec").value,
+      })).filter((q) => q.text);
+    }
+
+    function renderQuestions(list) {
+      const box = document.getElementById("questions");
+      box.innerHTML = "";
+      (list || []).forEach((q) => box.appendChild(qRow(q)));
+    }
+
+    function fill(s) {
+      document.getElementById("cukUrl").value = s.cukUrl || "";
+      document.getElementById("ingestToken").placeholder = s.ingestTokenSet ? "задан, введите чтобы заменить" : "вставьте токен";
+      document.getElementById("cursorApiKey").placeholder = s.cursorApiKeySet ? "задан, введите чтобы заменить" : "ключ Cursor API";
+      document.getElementById("odataUrl").value = s.odataUrl || "";
+      document.getElementById("odataUser").value = s.odataUser || "";
+      document.getElementById("odataPassword").placeholder = s.odataPasswordSet ? "задан, введите чтобы заменить" : "из .env, если пусто";
+      document.getElementById("intervalHours").value = s.intervalHours || 2;
+      document.getElementById("timeFrom").value = s.timeFrom || "09:00";
+      document.getElementById("timeTo").value = s.timeTo || "18:00";
+      setDays(s.days || [1, 2, 3, 4, 5]);
+      renderQuestions(s.questions || []);
+      const enabled = (s.questions || []).filter((q) => q.enabled !== false).length;
+      const st = document.getElementById("status");
+      const t = s.lastTick;
+      let text;
+      if (!t) text = "Ещё не запускался.";
+      else {
+        text = (t.ok ? "Последний тик ок" : "Последний тик с ошибкой")
+          + `: ${t.at || "—"} · чатов ${t.chats ?? "—"} · новых сообщений ${t.newMessages ?? "—"}`
+          + (t.error ? ` · ${t.error}` : "");
+      }
+      if (!enabled) text += " Нет включённых вопросов — анализ не пойдёт.";
+      st.className = "status " + ((t && !t.ok) || !enabled ? "err" : t?.ok ? "ok" : "");
+      st.textContent = text;
+    }
+
+    async function refreshLive() {
+      try {
+        const s = await api("/api/status");
+        const live = document.getElementById("live");
+        live.className = "status";
+        live.textContent = (s.listening || "http://127.0.0.1:8791/")
+          + (s.configured === false
+            ? ` · нет ${((s.missing && s.missing.length) ? s.missing : ["ЦУК", "токена", "ключа Cursor"]).join(" / ")} — расписание ждёт настройки`
+            : "")
+          + (s.ticking ? " · сейчас идёт тик" : "")
+          + (s.slot ? ` · слот ${s.slot}` : " · вне рабочего окна")
+          + (s.lastSlot ? ` · прошлый слот ${s.lastSlot}` : "");
+        document.getElementById("run").disabled = Boolean(s.ticking);
+      } catch {
+        /* панель ещё грузится */
+      }
+    }
+
+    async function api(path, opts) {
+      const res = await fetch(path, opts);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return data;
+    }
+
+    async function reload() {
+      fill(await api("/api/settings"));
+    }
+
+    document.getElementById("add-q").addEventListener("click", () => {
+      document.getElementById("questions").appendChild(qRow({
+        id: "q-" + Date.now().toString(36),
+        text: "",
+        enabled: true,
+        tv: false,
+        section: "",
+      }));
+    });
+
+    document.getElementById("save").addEventListener("click", async () => {
+      flash("");
+      try {
+        const body = {
+          cukUrl: document.getElementById("cukUrl").value,
+          ingestToken: document.getElementById("ingestToken").value,
+          cursorApiKey: document.getElementById("cursorApiKey").value,
+          odataUrl: document.getElementById("odataUrl").value,
+          odataUser: document.getElementById("odataUser").value,
+          odataPassword: document.getElementById("odataPassword").value,
+          intervalHours: Number(document.getElementById("intervalHours").value),
+          timeFrom: document.getElementById("timeFrom").value,
+          timeTo: document.getElementById("timeTo").value,
+          days: selectedDays(),
+          questions: readQuestions(),
+        };
+        fill(await api("/api/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }));
+        document.getElementById("ingestToken").value = "";
+        document.getElementById("cursorApiKey").value = "";
+        document.getElementById("odataPassword").value = "";
+        flash("Сохранено. Расписание берётся из этих полей.", true);
+      } catch (e) {
+        flash(e.message || String(e), false);
+      }
+    });
+
+    document.getElementById("run").addEventListener("click", async () => {
+      flash("");
+      const btn = document.getElementById("run");
+      btn.disabled = true;
+      try {
+        await api("/api/tick", { method: "POST" });
+        await reload();
+        flash("Тик выполнен, снимок отправлен на ЦУК.", true);
+      } catch (e) {
+        await reload();
+        flash(e.message || String(e), false);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    reload().catch((e) => flash(e.message || String(e), false));
+    refreshLive();
+    setInterval(refreshLive, 15000);
+  </script>
+</body>
+</html>

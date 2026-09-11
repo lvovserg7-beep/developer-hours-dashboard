@@ -1,7 +1,7 @@
 /**
  * Доска «Качество работы с клиентами».
  * События приходят через POST /api/clientquality/events (сессия или CLIENT_QUALITY_INGEST_TOKEN),
- * хранятся в data/client-quality.json, отдаются GET /api/clientquality.
+ * хранятся в data/client-quality.json, отдаются GET /api/clientquality и GET /api/clientqualitytv.
  */
 import { existsSync, readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -20,6 +20,7 @@ const SECTION_KEYS = [
   "dueThisWeek",
   "ping",
   "faqCandidates",
+  "customAnswers",
 ];
 
 function emptyBoard() {
@@ -35,8 +36,25 @@ function emptyBoard() {
     dueThisWeek: [],
     ping: [],
     faqCandidates: [],
+    customAnswers: [],
+    tvSections: [],
     events: [],
   };
+}
+
+function normalizeTvSections(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const raw of list) {
+    let key = String(raw || "").trim();
+    if (!key) key = "customAnswers";
+    if (!SECTION_KEYS.includes(key)) key = "customAnswers";
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(key);
+  }
+  return out;
 }
 
 function normalizeBoard(raw) {
@@ -51,6 +69,8 @@ function normalizeBoard(raw) {
     dueThisWeek: Array.isArray(raw.dueThisWeek) ? raw.dueThisWeek : [],
     ping: Array.isArray(raw.ping) ? raw.ping : [],
     faqCandidates: Array.isArray(raw.faqCandidates) ? raw.faqCandidates : [],
+    customAnswers: Array.isArray(raw.customAnswers) ? raw.customAnswers : [],
+    tvSections: normalizeTvSections(raw.tvSections),
     events: Array.isArray(raw.events) ? raw.events : [],
   };
 }
@@ -83,8 +103,20 @@ export function loadClientQuality() {
   const { events, ...rest } = store;
   return {
     ...rest,
+    tvSections: normalizeTvSections(store.tvSections),
     eventsCount: Array.isArray(events) ? events.length : 0,
   };
+}
+
+/** Тот же снимок, но только секции из tvSections (доска для ТВ). */
+export function loadClientQualityTv() {
+  const full = loadClientQuality();
+  const allow = new Set(full.tvSections || []);
+  const next = { ...full, tv: true };
+  for (const key of SECTION_KEYS) {
+    next[key] = allow.has(key) ? full[key] : [];
+  }
+  return next;
 }
 
 function newId(prefix) {
@@ -118,7 +150,10 @@ export function ingestClientQualityEvents(body, opts = {}) {
   if (body?.period) store.period = body.period;
   if (body?.week) store.week = body.week;
   if (body?.stats && typeof body.stats === "object") store.stats = { ...store.stats, ...body.stats };
-  if (Array.isArray(body?.managers)) store.managers = body.managers;
+  for (const key of SECTION_KEYS) {
+    if (Array.isArray(body?.[key])) store[key] = body[key];
+  }
+  if (Array.isArray(body?.tvSections)) store.tvSections = normalizeTvSections(body.tvSections);
 
   for (const raw of events) {
     if (!raw || typeof raw !== "object") continue;
@@ -147,6 +182,9 @@ export function ingestClientQualityEvents(body, opts = {}) {
       upsertById(store.ping, item);
     } else if (type === "faq" || type === "faqCandidate" || type === "faqCandidates") {
       upsertById(store.faqCandidates, item);
+    } else if (type === "custom" || type === "customAnswer" || type === "customAnswers") {
+      if (Array.isArray(payload.customAnswers)) store.customAnswers = payload.customAnswers;
+      else upsertById(store.customAnswers, item);
     } else if (type === "board" && payload && typeof payload === "object") {
       for (const key of SECTION_KEYS) {
         if (Array.isArray(payload[key])) store[key] = payload[key];
