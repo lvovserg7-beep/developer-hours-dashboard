@@ -625,6 +625,10 @@
       height: 100%;
       width: 100%;
     }
+    /* Когда шапка с вкладками видна — не наезжает на контент (настройки темы и т.п.) */
+    body.is-full.chrome-open main {
+      padding-top: var(--full-chrome-h, 56px);
+    }
     body.is-full .tab-panel:not([hidden]) {
       flex: 1 1 0;
       min-height: 0;
@@ -1623,6 +1627,7 @@
         <button type="button" class="tab" data-tab="debtors" role="tab" aria-selected="false">Задолженность клиентов</button>
         <button type="button" class="tab" data-tab="mbalance" role="tab" aria-selected="false">Управленческий баланс</button>
         <button type="button" class="tab" data-tab="clientpay" role="tab" aria-selected="false">Реестр оплат клиентов</button>
+        <button type="button" class="tab" data-tab="clientquality" role="tab" aria-selected="false">Качество работы с клиентами</button>
         <button type="button" class="tab" data-tab="seo" role="tab" aria-selected="false">Поиск SEO</button>
         <button type="button" class="tab" data-tab="seoqueries" role="tab" aria-selected="false">SEO запросы</button>
         <button type="button" class="tab" data-tab="seoproducts" role="tab" aria-selected="false">Все запросы по продуктам</button>
@@ -1744,6 +1749,7 @@
             <label><input type="checkbox" id="new-debtors"> Задолженность клиентов</label>
             <label><input type="checkbox" id="new-mbalance"> Управленческий баланс</label>
             <label><input type="checkbox" id="new-clientpay"> Реестр оплат клиентов</label>
+            <label><input type="checkbox" id="new-clientquality"> Качество работы с клиентами</label>
             <label><input type="checkbox" id="new-seo"> Поиск SEO</label>
             <label><input type="checkbox" id="new-seoqueries"> SEO запросы</label>
             <label><input type="checkbox" id="new-seoproducts"> Все запросы по продуктам</label>
@@ -2258,6 +2264,17 @@
         </form>
         <div id="clientpay-err" class="err" hidden></div>
         <div id="clientpay-report"></div>
+      </section>
+    </div>
+    <div id="tab-clientquality" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Качество работы с клиентами</h2>
+        <p class="lead tab-intro">События из клиентских чатов (обработка в Cursor → API). Снимок на диске сервера; обновление — по кнопке или входящим событиям.</p>
+        <form class="pnl-toolbar" id="clientquality-form">
+          <button type="submit" id="clientquality-run">Обновить</button>
+        </form>
+        <div id="clientquality-err" class="err" hidden></div>
+        <div id="clientquality-report"></div>
       </section>
     </div>
     <div id="tab-seo" class="tab-panel" hidden>
@@ -5292,6 +5309,188 @@
       }
     }
 
+    let clientqualityLoaded = false;
+    let clientqualityInflight = false;
+
+    function clientqualityErr(text) {
+      const el = document.getElementById("clientquality-err");
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function fmtCqWhen(iso) {
+      if (!iso) return "—";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return escapeHtml(String(iso));
+      return escapeHtml(d.toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" }));
+    }
+
+    function fmtMinutes(m) {
+      const n = Number(m);
+      if (!Number.isFinite(n)) return "—";
+      if (n < 60) return `${Math.round(n)} мин`;
+      const h = Math.floor(n / 60);
+      const min = Math.round(n % 60);
+      return min ? `${h} ч ${min} мин` : `${h} ч`;
+    }
+
+    function renderClientQuality(report) {
+      const box = document.getElementById("clientquality-report");
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      const meta = [];
+      if (report.generatedAt) meta.push("снимок: " + fmtCqWhen(report.generatedAt));
+      if (report.source) meta.push("источник: " + escapeHtml(report.source));
+      if (report.period?.from && report.period?.to) {
+        meta.push(`период анализа: ${escapeHtml(report.period.from)} … ${escapeHtml(report.period.to)}`);
+      }
+      if (report.eventsCount != null) meta.push("событий в логе: " + report.eventsCount);
+
+      const managers = Array.isArray(report.managers) ? report.managers : [];
+      const openPromises = Array.isArray(report.openPromises) ? report.openPromises : [];
+      const negativity = Array.isArray(report.negativity) ? report.negativity : [];
+      const dueThisWeek = Array.isArray(report.dueThisWeek) ? report.dueThisWeek : [];
+      const ping = Array.isArray(report.ping) ? report.ping : [];
+      const faq = Array.isArray(report.faqCandidates) ? report.faqCandidates : [];
+
+      const mgrBody = managers
+        .map(
+          (r) => `<tr>
+          <td class="name">${escapeHtml(r.manager || "—")}</td>
+          <td class="num">${escapeHtml(String(r.replies ?? "—"))}</td>
+          <td class="num">${escapeHtml(fmtMinutes(r.avgMinutes))}</td>
+          <td class="num">${escapeHtml(fmtMinutes(r.medianMinutes))}</td>
+        </tr>`
+        )
+        .join("");
+
+      const promBody = openPromises
+        .map(
+          (r) => `<tr>
+          <td class="name">${escapeHtml(r.client || "—")}</td>
+          <td>${escapeHtml(r.manager || "—")}</td>
+          <td>${fmtCqWhen(r.promisedAt)}</td>
+          <td>${escapeHtml(r.excerpt || "")}</td>
+        </tr>`
+        )
+        .join("");
+
+      const negBody = negativity
+        .map(
+          (r) => `<tr>
+          <td class="name">${escapeHtml(r.client || "—")}</td>
+          <td>${escapeHtml(r.manager || "—")}</td>
+          <td>${fmtCqWhen(r.at)}</td>
+          <td>${escapeHtml(r.excerpt || "")}</td>
+        </tr>`
+        )
+        .join("");
+
+      const dueBody = dueThisWeek
+        .map(
+          (r) => `<tr>
+          <td class="name">${escapeHtml(r.client || "—")}</td>
+          <td>${escapeHtml(r.manager || "—")}</td>
+          <td>${escapeHtml(r.kind === "promise" ? "обещание" : "ответ")}</td>
+          <td>${fmtCqWhen(r.dueAt)}</td>
+          <td>${escapeHtml(r.excerpt || "")}</td>
+        </tr>`
+        )
+        .join("");
+
+      const pingBody = ping
+        .map(
+          (r) => `<tr>
+          <td class="name">${escapeHtml(r.client || "—")}</td>
+          <td>${escapeHtml(r.manager || "—")}</td>
+          <td class="num">${escapeHtml(String(r.waitingHours ?? "—"))} ч</td>
+          <td>${fmtCqWhen(r.lastClientAt)}</td>
+          <td>${escapeHtml(r.excerpt || "")}</td>
+        </tr>`
+        )
+        .join("");
+
+      const faqBody = faq
+        .map(
+          (r) => `<tr>
+          <td class="name">${escapeHtml(r.query || "—")}</td>
+          <td class="num">${escapeHtml(String(r.count ?? "—"))}</td>
+          <td>${escapeHtml((r.clients || []).join(", "))}</td>
+          <td>${escapeHtml(r.suggestion || "")}</td>
+        </tr>`
+        )
+        .join("");
+
+      box.innerHTML = `
+        <p class="pnl-note meta">${meta.join(" · ") || "Нет метаданных снимка"}</p>
+        <div class="report-stage"><div class="report-stage-inner">
+          <h3>1. Среднее время реакции по менеджерам</h3>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead><tr><th>Менеджер</th><th class="num">Ответов</th><th class="num">Среднее</th><th class="num">Медиана</th></tr></thead>
+            <tbody>${mgrBody || `<tr><td colspan="4">Пока нет данных</td></tr>`}</tbody>
+          </table></div>
+
+          <h3>2. Что пообещали и не закрыли в чате</h3>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead><tr><th>Клиент</th><th>Менеджер</th><th>Когда</th><th>Обещание</th></tr></thead>
+            <tbody>${promBody || `<tr><td colspan="4">Пока нет данных</td></tr>`}</tbody>
+          </table></div>
+
+          <h3>3. Клиенты, где в чате есть негатив</h3>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead><tr><th>Клиент</th><th>Менеджер</th><th>Когда</th><th>Фрагмент</th></tr></thead>
+            <tbody>${negBody || `<tr><td colspan="4">Пока нет данных</td></tr>`}</tbody>
+          </table></div>
+
+          <h3>4. Кому должны ответ или обещанный срок на этой неделе</h3>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead><tr><th>Клиент</th><th>Менеджер</th><th>Тип</th><th>Срок</th><th>Суть</th></tr></thead>
+            <tbody>${dueBody || `<tr><td colspan="5">Пока нет данных</td></tr>`}</tbody>
+          </table></div>
+
+          <h3>5. Кого из клиентов стоит пропинговать</h3>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead><tr><th>Клиент</th><th>Менеджер</th><th class="num">Ждём</th><th>Последнее от клиента</th><th>Фрагмент</th></tr></thead>
+            <tbody>${pingBody || `<tr><td colspan="5">Пока нет данных</td></tr>`}</tbody>
+          </table></div>
+
+          <h3>6. Новые повторяющиеся вопросы → в инструкцию</h3>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead><tr><th>Вопрос</th><th class="num">Раз</th><th>Клиенты</th><th>Рекомендация</th></tr></thead>
+            <tbody>${faqBody || `<tr><td colspan="4">Пока нет данных</td></tr>`}</tbody>
+          </table></div>
+        </div></div>`;
+      afterReportPaint();
+    }
+
+    async function loadClientQualityReport() {
+      if (USER.tabs?.clientquality === false || clientqualityInflight) return;
+      clientqualityInflight = true;
+      const btn = document.getElementById("clientquality-run");
+      if (btn) btn.disabled = true;
+      clientqualityErr("");
+      document.getElementById("clientquality-report").innerHTML = `<p class="pnl-note">Читаем снимок доски…</p>`;
+      try {
+        const report = await api("/api/clientquality", { method: "GET" });
+        clientqualityLoaded = true;
+        renderClientQuality(report);
+      } catch (e) {
+        clientqualityLoaded = false;
+        renderClientQuality(null);
+        clientqualityErr(e.message || String(e));
+      } finally {
+        clientqualityInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
     let seoLoaded = false;
     let seoInflight = false;
 
@@ -5964,7 +6163,7 @@
       }
     }
 
-    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "seo", "seoqueries", "seoproducts", "seopositions"];
+    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "clientquality", "seo", "seoqueries", "seoproducts", "seopositions"];
     const TAB_LABELS = {
       hours: "Часы",
       activity: "Активность",
@@ -5985,6 +6184,7 @@
       debtors: "Задолженность",
       mbalance: "Упр. баланс",
       clientpay: "Оплаты клиентов",
+      clientquality: "Качество работы с клиентами",
       seo: "Поиск SEO",
       seoqueries: "SEO запросы",
       seoproducts: "Все запросы по продуктам",
@@ -6150,6 +6350,17 @@
     const SLIDE_DATA_MS = 10 * 60 * 1000;
     let slideDataTimer = null;
     let slideDataInflight = false;
+    let slideRefreshEpoch = 0;
+    let ignoreAuthRedirectUntil = 0;
+    let justExitedFullUntil = 0;
+
+    function suppressAuthRedirect(ms = 5000) {
+      ignoreAuthRedirectUntil = Date.now() + ms;
+    }
+
+    function allowAuthRedirect() {
+      return Date.now() >= ignoreAuthRedirectUntil;
+    }
 
     function clearSlideDataRefresh() {
       if (slideDataTimer) {
@@ -6160,7 +6371,7 @@
 
     async function refreshOneSlideTab(name) {
       if (name === "hours" || name === "activity") {
-        await boot(true);
+        await boot(true, { redirectOn401: false });
         return;
       }
       if (name === "pnl") {
@@ -6248,6 +6459,11 @@
         await loadClientPayReport();
         return;
       }
+      if (name === "clientquality") {
+        clientqualityLoaded = false;
+        await loadClientQualityReport();
+        return;
+      }
       if (name === "seo") {
         seoLoaded = false;
         await loadSeoReport();
@@ -6274,6 +6490,7 @@
       if (!document.body.classList.contains("is-full") || slideDataInflight) return;
       const tabs = slideTabs();
       if (!tabs.length) return;
+      const epoch = slideRefreshEpoch;
       slideDataInflight = true;
       try {
         // Часы и активность — один запрос
@@ -6283,16 +6500,19 @@
           if (name === "hours" || name === "activity") needHours = true;
           else rest.push(name);
         }
-        if (needHours) await refreshOneSlideTab("hours");
+        if (needHours) {
+          if (epoch !== slideRefreshEpoch || !document.body.classList.contains("is-full")) return;
+          await refreshOneSlideTab("hours");
+        }
         for (const name of rest) {
-          if (!document.body.classList.contains("is-full")) break;
+          if (epoch !== slideRefreshEpoch || !document.body.classList.contains("is-full")) break;
           try {
             await refreshOneSlideTab(name);
           } catch (e) {
             console.warn("slide refresh " + name + ":", e.message || e);
           }
         }
-        fitHoursStage();
+        if (epoch === slideRefreshEpoch) fitHoursStage();
       } finally {
         slideDataInflight = false;
       }
@@ -6352,6 +6572,7 @@
       document.getElementById("tab-debtors").hidden = name !== "debtors";
       document.getElementById("tab-mbalance").hidden = name !== "mbalance";
       document.getElementById("tab-clientpay").hidden = name !== "clientpay";
+      document.getElementById("tab-clientquality").hidden = name !== "clientquality";
       document.getElementById("tab-seo").hidden = name !== "seo";
       document.getElementById("tab-seoqueries").hidden = name !== "seoqueries";
       document.getElementById("tab-seoproducts").hidden = name !== "seoproducts";
@@ -6367,7 +6588,7 @@
       if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
       document.body.classList.toggle(
         "wide-report",
-        name === "plan" || name === "budget" || name === "ozon" || name === "ozondrr" || name === "ozonfbs" || name === "ozonfbo" || name === "ozonfbofilters" || name === "units" || name === "wb" || name === "wbfbs" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
+        name === "plan" || name === "budget" || name === "ozon" || name === "ozondrr" || name === "ozonfbs" || name === "ozonfbo" || name === "ozonfbofilters" || name === "units" || name === "wb" || name === "wbfbs" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "clientquality" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
       );
       document.body.classList.remove("wide-plan");
       if (name === "settings") loadSettingsTabOrder();
@@ -6375,12 +6596,14 @@
       if (name === "ozonfbo") loadOzonFboReport();
       if (name === "ozonfbofilters") loadOzonFboFiltersReport();
       if (name === "wbfbs") loadWbFbsSupplies();
+      if (name === "clientquality") loadClientQualityReport();
       if (name === "cache") loadCacheBoard();
       if (name === "admin") loadAdminUsers();
       if (name === "activity" && data?.activity) fillActivityFilters(data.activity);
       // В обычном режиме отчёты только по «Сформировать»; часы/активность — при открытии вкладки.
       if (
         !document.body.classList.contains("is-full") &&
+        Date.now() >= justExitedFullUntil &&
         (name === "hours" || name === "activity") &&
         (USER.tabs?.hours === true || USER.tabs?.activity === true)
       ) {
@@ -6540,13 +6763,27 @@
       }
     }
 
+    async function confirmLoggedOut() {
+      if (!allowAuthRedirect()) return false;
+      try {
+        const res = await fetch("/api/me", { credentials: "same-origin", cache: "no-store" });
+        if (res.ok) return false;
+      } catch (_) {}
+      return true;
+    }
+
+    async function redirectToLoginIfNeeded() {
+      if (!(await confirmLoggedOut())) return;
+      location.href = "/login.html";
+    }
+
     async function api(url, opts = {}) {
       const res = await fetch(url, { credentials: "same-origin", cache: "no-store", ...opts });
       const text = await res.text();
       let data = {};
       try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
       if (res.status === 401) {
-        location.href = "/login.html";
+        await redirectToLoginIfNeeded();
         throw new Error("Нужно войти");
       }
       if (!res.ok) {
@@ -6577,6 +6814,7 @@
         ["debtors", "Задолженность"],
         ["mbalance", "Упр. баланс"],
         ["clientpay", "Оплаты клиентов"],
+        ["clientquality", "Качество работы с клиентами"],
         ["seo", "Поиск SEO"],
         ["seoqueries", "SEO запросы"],
         ["seoproducts", "Все запросы по продуктам"],
@@ -6827,6 +7065,17 @@
     let chromeHideTimer = 0;
     const CHROME_IDLE_MS = 2500;
 
+    function syncFullChromePad() {
+      const root = document.documentElement;
+      if (!document.body.classList.contains("is-full") || !document.body.classList.contains("chrome-open")) {
+        root.style.removeProperty("--full-chrome-h");
+        return;
+      }
+      const header = document.querySelector("header");
+      const h = header ? Math.ceil(header.getBoundingClientRect().height) : 56;
+      root.style.setProperty("--full-chrome-h", `${Math.max(h, 40)}px`);
+    }
+
     function clearChromeHide() {
       if (chromeHideTimer) {
         clearTimeout(chromeHideTimer);
@@ -6846,12 +7095,14 @@
           return;
         }
         document.body.classList.remove("chrome-open");
+        syncFullChromePad();
       }, CHROME_IDLE_MS);
     }
 
     function revealChrome(keepOpen = false) {
       if (!document.body.classList.contains("is-full")) return;
       document.body.classList.add("chrome-open");
+      syncFullChromePad();
       if (keepOpen || document.body.classList.contains("filters-open")) {
         clearChromeHide();
         return;
@@ -6860,11 +7111,20 @@
     }
 
     function setFull(on) {
+      const wasFull = document.body.classList.contains("is-full");
+      if (!on && wasFull) {
+        suppressAuthRedirect(8000);
+        justExitedFullUntil = Date.now() + 8000;
+        slideRefreshEpoch += 1;
+        clearSlideTimer();
+        clearSlideDataRefresh();
+      }
       document.body.classList.toggle("is-full", on);
       if (!on) {
         setFiltersOpen(false);
         clearChromeHide();
         document.body.classList.remove("chrome-open");
+        syncFullChromePad();
         seopositionsSlideIndex = 0;
         planSlideIndex = 0;
       } else {
@@ -6873,12 +7133,8 @@
       }
       const btn = document.getElementById("btn-full");
       if (btn) btn.textContent = on ? "Окно" : "На весь экран";
-      if (on) {
-        document.documentElement.requestFullscreen?.().catch(() => {});
-        revealChrome(false);
-      } else if (document.fullscreenElement) {
-        document.exitFullscreen?.().catch(() => {});
-      }
+      // Только CSS-режим: browser Fullscreen API на части машин сбрасывает сессию/перезагружает вкладку.
+      if (on) revealChrome(false);
       if (seopositionsLastReport) renderSeoPositions(seopositionsLastReport);
       if (planData) renderPlan(planData);
       syncSlideBar();
@@ -6980,6 +7236,7 @@
               debtors: document.getElementById("new-debtors").checked,
               mbalance: document.getElementById("new-mbalance").checked,
               clientpay: document.getElementById("new-clientpay").checked,
+              clientquality: document.getElementById("new-clientquality").checked,
               seo: document.getElementById("new-seo").checked,
               seoqueries: document.getElementById("new-seoqueries").checked,
               seoproducts: document.getElementById("new-seoproducts").checked,
@@ -7329,18 +7586,14 @@
       }
     });
     document.addEventListener("fullscreenchange", () => {
+      // На случай, если браузерный fullscreen включили вручную (F11/API) — не разлогиниваем.
       if (!document.fullscreenElement && document.body.classList.contains("is-full")) {
-        document.body.classList.remove("is-full");
-        document.body.classList.remove("chrome-open");
-        clearChromeHide();
-        setFiltersOpen(false);
-        const btn = document.getElementById("btn-full");
-        if (btn) btn.textContent = "На весь экран";
-        syncSlideBar();
+        setFull(false);
       }
       requestAnimationFrame(() => requestAnimationFrame(fitHoursStage));
     });
     window.addEventListener("resize", () => {
+      syncFullChromePad();
       requestAnimationFrame(fitHoursStage);
     });
     document.getElementById("activity-table").addEventListener("click", (e) => {
@@ -7496,6 +7749,11 @@
       clientpayLoaded = false;
       loadClientPayReport();
     });
+    document.getElementById("clientquality-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      clientqualityLoaded = false;
+      loadClientQualityReport();
+    });
     document.getElementById("seo-form").addEventListener("submit", (e) => {
       e.preventDefault();
       seoLoaded = false;
@@ -7538,7 +7796,7 @@
     if (EMBEDDED?.activity) fillActivityFilters(EMBEDDED.activity);
     showTab(location.hash.replace("#", ""));
 
-    async function loadLive(force = false) {
+    async function loadLive(force = false, { redirectOn401 = true } = {}) {
       const qs = force ? "?force=1" : "";
       const urls = ["/api/employees" + qs];
       let last = "нет ответа";
@@ -7549,7 +7807,10 @@
             credentials: "same-origin",
             signal: AbortSignal.timeout(force ? 300000 : 180000),
           });
-          if (res.status === 401) { location.href = "/login.html"; throw new Error("Нужно войти"); }
+          if (res.status === 401) {
+            if (redirectOn401) await redirectToLoginIfNeeded();
+            throw new Error("Нужно войти");
+          }
           if (!res.ok) { last = "код " + res.status; continue; }
           return res.json();
         } catch (e) {
@@ -7569,14 +7830,14 @@
       return Object.values(charts).some((rows) => Array.isArray(rows) && rows.length > 0);
     }
 
-    async function boot(force = false) {
+    async function boot(force = false, opts = {}) {
       const err = document.getElementById("error");
       if (hasHoursData(EMBEDDED) && !data) {
         data = EMBEDDED;
         render();
       }
       try {
-        data = await loadLive(force);
+        data = await loadLive(force, opts);
         err.hidden = true;
         render();
       } catch (e) {

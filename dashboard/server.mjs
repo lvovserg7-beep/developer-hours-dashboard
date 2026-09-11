@@ -20,6 +20,7 @@ import { loadWbFbsSuppliesReport, getWbFbsSupplyQr, deliverWbFbsSupplyAndQr } fr
 import { loadDebtors } from "./lib/load-debtors.mjs";
 import { loadMBalance } from "./lib/load-mbalance.mjs";
 import { loadClientPayments } from "./lib/load-client-payments.mjs";
+import { loadClientQuality, ingestClientQualityEvents } from "./lib/load-client-quality.mjs";
 import { loadSeoReport, loadSeoProductsReport, loadSeoPositionsReport, refreshSeoTrailingCache, attachYandexSqi } from "./lib/load-seo.mjs";
 import {
   cookieName,
@@ -617,6 +618,34 @@ const server = createServer(async (req, res) => {
       return send(res, 200, readFileSync(file), types[ext] || "application/octet-stream", headers);
     }
 
+    // Ingest событий от Cursor / внешних обработчиков (токен или сессия).
+    if (path === "/api/clientquality/events" && req.method === "POST") {
+      const ingestToken = String(process.env.CLIENT_QUALITY_INGEST_TOKEN || "").trim();
+      const authHeader = String(req.headers.authorization || "").trim();
+      const bearer = authHeader.toLowerCase().startsWith("bearer ")
+        ? authHeader.slice(7).trim()
+        : "";
+      const headerToken = String(req.headers["x-client-quality-token"] || "").trim();
+      const tokenOk =
+        !!ingestToken && (bearer === ingestToken || headerToken === ingestToken);
+      const sessionUser = currentUser(req);
+      const sessionOk = sessionUser && (sessionUser.admin || userHasTab(sessionUser, "clientquality"));
+      if (!tokenOk && !sessionOk) {
+        return json(res, 401, { error: "Нужен CLIENT_QUALITY_INGEST_TOKEN или сессия с доступом к доске" });
+      }
+      try {
+        const body = await readJson(req);
+        const data = ingestClientQualityEvents(body, {
+          source: body?.source || (tokenOk ? "cursor" : "ui"),
+        });
+        return json(res, 200, { ok: true, board: data });
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /Ожидается|events/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
     if (path === "/api/login" && req.method === "POST") {
       const body = await readJson(req);
       const login = String(body.login || "");
@@ -1076,6 +1105,20 @@ const server = createServer(async (req, res) => {
           database: "trade",
         });
         return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/clientquality") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "clientquality")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Качество работы с клиентами»." });
+      }
+      try {
+        return json(res, 200, loadClientQuality());
       } catch (err) {
         const msg = String(err.message || err);
         console.error(err);

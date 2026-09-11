@@ -231,6 +231,8 @@ export async function loadActiveEmployees() {
   for (const status of completedStatuses) {
     const chunk = await fetchByStatus(status.id);
     for (const task of chunk) {
+      // Попадос — не клиентская работа; в выполненные часы (в т.ч. по клиентам) не входит.
+      if (task.Попадос) continue;
       const meta = statusById.get(task.Статус_Key);
       if (!meta || !isCompletedOrder(meta.order)) continue;
       completed.push(task);

@@ -1,13 +1,14 @@
 import { randomBytes, scryptSync, timingSafeEqual, createHmac } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, renameSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const USERS_FILE = join(root, "users.json");
+const USERS_TMP = join(root, "users.json.tmp");
 const COOKIE = "dash_session";
 const SESSION_MS = 14 * 24 * 60 * 60 * 1000;
-const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "seo", "seoqueries", "seoproducts", "seopositions"];
+const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "clientquality", "seo", "seoqueries", "seoproducts", "seopositions"];
 
 const TAB_LABELS = {
   hours: "Часы",
@@ -29,6 +30,7 @@ const TAB_LABELS = {
   debtors: "Задолженность клиентов",
   mbalance: "Управленческий баланс",
   clientpay: "Реестр оплат клиентов",
+  clientquality: "Качество работы с клиентами",
   seo: "Поиск SEO",
   seoqueries: "SEO запросы",
   seoproducts: "Все запросы по продуктам",
@@ -55,21 +57,39 @@ function envValues() {
   return values;
 }
 
+let memoryStore = null;
+
 function loadStore() {
-  if (!existsSync(USERS_FILE)) return { secret: "", users: [] };
+  if (!existsSync(USERS_FILE)) return memoryStore || { secret: "", users: [] };
   try {
     const raw = JSON.parse(readFileSync(USERS_FILE, "utf8"));
-    return {
+    memoryStore = {
       secret: String(raw.secret || ""),
       users: Array.isArray(raw.users) ? raw.users : [],
     };
-  } catch {
+    return memoryStore;
+  } catch (err) {
+    console.warn("users.json read failed, using memory copy:", err.message || err);
+    if (memoryStore) return memoryStore;
     return { secret: "", users: [] };
   }
 }
 
 function saveStore(store) {
-  writeFileSync(USERS_FILE, JSON.stringify(store, null, 2), "utf8");
+  memoryStore = store;
+  const body = JSON.stringify(store, null, 2);
+  try {
+    writeFileSync(USERS_TMP, body, "utf8");
+    try {
+      unlinkSync(USERS_FILE);
+    } catch {
+      /* файла могло не быть */
+    }
+    renameSync(USERS_TMP, USERS_FILE);
+  } catch (err) {
+    console.warn("users.json atomic write failed, direct write:", err.message || err);
+    writeFileSync(USERS_FILE, body, "utf8");
+  }
 }
 
 function hashPassword(password, salt = randomBytes(16).toString("hex")) {
@@ -134,33 +154,64 @@ export function ensureAuthReady() {
   const store = loadStore();
   let changed = false;
   if (!store.secret) {
-    store.secret = envValues().DASHBOARD_SESSION_SECRET || randomBytes(32).toString("hex");
+    // Не пересоздаём секрет, если в памяти уже был — иначе слетают все сессии.
+    store.secret =
+      (memoryStore && memoryStore.secret) ||
+      envValues().DASHBOARD_SESSION_SECRET ||
+      randomBytes(32).toString("hex");
     changed = true;
   }
   if (!store.users.length) {
-    const env = envValues();
-    const login = String(env.DASHBOARD_ADMIN_LOGIN || "admin").trim() || "admin";
-    let password = String(env.DASHBOARD_ADMIN_PASSWORD || "").trim();
-    let generated = false;
-    if (!password) {
-      password = randomBytes(6).toString("base64url");
-      generated = true;
+    if (memoryStore && Array.isArray(memoryStore.users) && memoryStore.users.length) {
+      store.users = memoryStore.users.map((u) => ({ ...u }));
+      if (memoryStore.secret) store.secret = memoryStore.secret;
+      changed = true;
+    } else {
+      const env = envValues();
+      const login = String(env.DASHBOARD_ADMIN_LOGIN || "admin").trim() || "admin";
+      let password = String(env.DASHBOARD_ADMIN_PASSWORD || "").trim();
+      let generated = false;
+      if (!password) {
+        password = randomBytes(6).toString("base64url");
+        generated = true;
+      }
+      const { salt, hash } = hashPassword(password);
+      store.users.push({
+        id: randomBytes(8).toString("hex"),
+        login,
+        salt,
+        hash,
+        admin: true,
+        theme: "light",
+        tabs: {
+          hours: true,
+          activity: true,
+          pnl: true,
+          pnlecotidy: true,
+          units: true,
+          plan: true,
+          budget: true,
+          bitrix: true,
+          bitrixfreq: true,
+          ozon: true,
+          ozondrr: true,
+          ozonfbs: true,
+          ozonfbo: true,
+          ozonfbofilters: true,
+          wb: true,
+          wbfbs: true,
+          debtors: true,
+          mbalance: true,
+          clientpay: true,
+          clientquality: true,
+        },
+        tabOrder: [...TABS],
+      });
+      changed = true;
+      console.log(`First admin login: ${login}`);
+      if (generated) console.log(`First admin password: ${password}`);
+      else console.log("First admin password taken from DASHBOARD_ADMIN_PASSWORD");
     }
-    const { salt, hash } = hashPassword(password);
-    store.users.push({
-      id: randomBytes(8).toString("hex"),
-      login,
-      salt,
-      hash,
-      admin: true,
-      theme: "light",
-      tabs: { hours: true, activity: true, pnl: true, pnlecotidy: true, units: true, plan: true, budget: true, bitrix: true, bitrixfreq: true, ozon: true, ozondrr: true, ozonfbs: true, ozonfbo: true, ozonfbofilters: true, wb: true, wbfbs: true, debtors: true, mbalance: true, clientpay: true },
-      tabOrder: [...TABS],
-    });
-    changed = true;
-    console.log(`First admin login: ${login}`);
-    if (generated) console.log(`First admin password: ${password}`);
-    else console.log("First admin password taken from DASHBOARD_ADMIN_PASSWORD");
   }
   for (const user of store.users) {
     if (user.theme !== "dark" && user.theme !== "light") {
@@ -188,6 +239,11 @@ export function ensureAuthReady() {
       user.tabs.wbfbs = !!user.tabs.wb;
       changed = true;
     }
+    if (user.tabs.clientquality == null) {
+      // Новая доска: админам сразу, остальным — вручную.
+      user.tabs.clientquality = !!user.admin;
+      changed = true;
+    }
     // Новые доски (ключ отсутствует) — выключены, включает только администратор.
     for (const key of TABS) {
       if (user.tabs[key] == null) {
@@ -202,6 +258,7 @@ export function ensureAuthReady() {
     }
   }
   if (changed) saveStore(store);
+  else memoryStore = store;
   return store;
 }
 
@@ -389,6 +446,7 @@ export function filterDashboardData(data, user) {
   if (!tabs.debtors) out.debtors = null;
   if (!tabs.mbalance) out.mbalance = null;
   if (!tabs.clientpay) out.clientpay = null;
+  if (!tabs.clientquality) out.clientquality = null;
   return out;
 }
 
