@@ -21,5 +21,6 @@ alwaysApply: true
 - Списки — через `bitrixAll` (учёт `next`), не выдумывать сделки и задачи.
 - Права ограничены правами пользователя, от имени которого создан webhook.
 - Вкладка дашборда **Bitrix**: `dashboard/lib/load-bitrix.mjs`, API `/api/bitrix`, право `tabs.bitrix`.
-- Вкладка **Чистота ведения Битрикс**: `dashboard/lib/load-bitrix-freq.mjs`, API `/api/bitrixfreq`, право `tabs.bitrixfreq` (заполненность сделок, лиды без активности / недозвоны, сделки без задачи, просроченные задачи).
+- Вкладка **Чистота ведения Битрикс**: `dashboard/lib/load-bitrix-freq.mjs`, API `/api/bitrixfreq`, право `tabs.bitrixfreq` (заполненность сделок, лиды без активности / недозвоны, сделки без задачи CRM, просроченные задачи модуля Задачи).
+- **Сделки без задачи** — по незакрытым делам CRM (`crm.activity.list`, `PROVIDER_ID=CRM_TODO`, `COMPLETED=N`, `OWNER_TYPE_ID=2`), не по задачам модуля Задачи (`tasks.task`).
 - Воронка сделок **«Архив»** в оба отчёта не входит.

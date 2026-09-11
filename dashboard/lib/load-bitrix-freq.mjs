@@ -152,15 +152,9 @@ function isTaskOverdue(task, now) {
   return deadline.getTime() < now.getTime();
 }
 
-function crmDealIdsFromTask(task) {
-  const raw = task.ufCrmTask || task.UF_CRM_TASK || [];
-  const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
-  const ids = new Set();
-  for (const item of list) {
-    const m = String(item || "").match(/^D_(\d+)$/i);
-    if (m) ids.add(m[1]);
-  }
-  return ids;
+function crmDealIdFromTodo(activity) {
+  if (String(activity?.OWNER_TYPE_ID) !== "2") return "";
+  return nonemptyId(activity?.OWNER_ID);
 }
 
 function emptyManager() {
@@ -221,7 +215,7 @@ export async function loadBitrixFrequency() {
     if (co) companyIds.add(co);
   }
 
-  const [requisites, calls, tasksOpen] = await Promise.all([
+  const [requisites, calls, tasksOpen, crmTodosOpen] = await Promise.all([
     withRetry(
       () =>
         bitrixAll(
@@ -261,12 +255,32 @@ export async function loadBitrixFrequency() {
       () =>
         bitrixTasksAll(
           { REAL_STATUS: [1, 2, 3, 6] },
-          ["ID", "RESPONSIBLE_ID", "DEADLINE", "STATUS", "UF_CRM_TASK"],
+          ["ID", "RESPONSIBLE_ID", "DEADLINE", "STATUS"],
           { maxPages: 40 }
         ),
       "tasks"
     ).catch((err) => {
       warnings.push(`Задачи: ${String(err.message || err).slice(0, 160)}`);
+      return [];
+    }),
+    withRetry(
+      () =>
+        bitrixAll(
+          "crm.activity.list",
+          {
+            filter: {
+              PROVIDER_ID: "CRM_TODO",
+              COMPLETED: "N",
+              OWNER_TYPE_ID: 2,
+            },
+            select: ["ID", "OWNER_TYPE_ID", "OWNER_ID", "COMPLETED", "PROVIDER_ID"],
+            order: { ID: "DESC" },
+          },
+          { maxPages: 80 }
+        ),
+      "crm-todo"
+    ).catch((err) => {
+      warnings.push(`Задачи CRM: ${String(err.message || err).slice(0, 160)}`);
       return [];
     }),
   ]);
@@ -304,11 +318,10 @@ export async function loadBitrixFrequency() {
     bump(missedByLead, leadId, 1);
   }
 
-  const dealsWithOpenTask = new Set();
-  for (const task of tasksOpen) {
-    for (const dealId of crmDealIdsFromTask(task)) {
-      dealsWithOpenTask.add(dealId);
-    }
+  const dealsWithOpenCrmTodo = new Set();
+  for (const activity of crmTodosOpen) {
+    const dealId = crmDealIdFromTodo(activity);
+    if (dealId) dealsWithOpenCrmTodo.add(dealId);
   }
 
   const byManager = new Map();
@@ -336,7 +349,7 @@ export async function loadBitrixFrequency() {
       mgr.dealsFilledOk += 1;
     }
 
-    if (!dealsWithOpenTask.has(String(deal.ID))) {
+    if (!dealsWithOpenCrmTodo.has(String(deal.ID))) {
       mgr.dealsWithoutTask += 1;
     }
   }
@@ -400,7 +413,7 @@ export async function loadBitrixFrequency() {
       filledDeal: "Открытая сделка: контрагент (компания или контакт), телефон, ИНН в реквизитах, сумма > 0",
       inactiveLead: `Открытый лид без активности ${INACTIVE_DAYS}+ дн. (LAST_ACTIVITY_TIME / DATE_MODIFY)`,
       missedCalls: `Открытый лид с более чем ${MISSED_CALLS_THRESHOLD} исходящими недозвонами за ${MISSED_CALL_LOOKBACK_DAYS} дн. (код ≠ 200 или длительность 0)`,
-      dealWithoutTask: "Открытая сделка без незакрытой задачи с привязкой D_{id}",
+      dealWithoutTask: "Открытая сделка без незакрытой задачи CRM (дело в карточке сделки, не задача модуля Задачи)",
       overdueTask: "Незавершённая задача с дедлайном раньше текущего момента",
     },
     totals: {
@@ -411,7 +424,7 @@ export async function loadBitrixFrequency() {
     managers,
     warnings: [...new Set(warnings.filter(Boolean))],
     note:
-      "Снимок на сейчас: открытые сделки и лиды, просроченные задачи, недозвоны по лидам. " +
-      "«ННН» = ИНН в реквизитах контакта/компании, привязанных к сделке.",
+      "Снимок на сейчас: открытые сделки и лиды, просроченные задачи модуля Задачи, недозвоны по лидам. " +
+      "«Сделки без задачи» — нет незакрытого дела CRM в карточке сделки. «ННН» = ИНН в реквизитах контакта/компании, привязанных к сделке.",
   };
 }
