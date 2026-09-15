@@ -1617,7 +1617,6 @@
         <button type="button" class="tab" data-tab="plan" role="tab" aria-selected="false">Исполнение плана</button>
         <button type="button" class="tab" data-tab="bitrix" role="tab" aria-selected="false">Bitrix</button>
         <button type="button" class="tab" data-tab="bitrixfreq" role="tab" aria-selected="false">Чистота ведения Битрикс</button>
-        <button type="button" class="tab" data-tab="ozon" role="tab" aria-selected="false">Озон себестоимость</button>
         <button type="button" class="tab" data-tab="ozondrr" role="tab" aria-selected="false">Озон ДРР</button>
         <button type="button" class="tab" data-tab="ozonfbs" role="tab" aria-selected="false">Отгрузки ФБС ozon</button>
         <button type="button" class="tab" data-tab="ozonfbo" role="tab" aria-selected="false">Отгрузки ФБО Озон</button>
@@ -1740,7 +1739,6 @@
             <label><input type="checkbox" id="new-plan"> Исполнение плана</label>
             <label><input type="checkbox" id="new-bitrix"> Bitrix</label>
             <label><input type="checkbox" id="new-bitrixfreq"> Чистота ведения Битрикс</label>
-            <label><input type="checkbox" id="new-ozon"> Озон себестоимость</label>
             <label><input type="checkbox" id="new-ozondrr"> Озон ДРР</label>
             <label><input type="checkbox" id="new-ozonfbs"> Отгрузки ФБС ozon</label>
             <label><input type="checkbox" id="new-ozonfbo"> Отгрузки ФБО Озон</label>
@@ -2018,30 +2016,6 @@
         <div id="bitrixfreq-report"></div>
       </section>
     </div>
-    <div id="tab-ozon" class="tab-panel" hidden>
-      <section class="panel">
-        <h2 class="tab-intro">Расчёт себестоимости Озон</h2>
-        <p class="lead tab-intro">Как отчёт 1С: продажи и комиссия из начислений Ozon, доп. услуги и реклама из регистров ALSN, себестоимость из регистра «Себестоимость товаров». База — Первый интегратор (ecotidy).</p>
-        <form class="pnl-toolbar" id="ozon-form">
-          <div class="filter-dates">
-            <label>Период</label>
-            <div class="dates">
-              <div>
-                <span>с</span>
-                <input id="ozon-from" type="date" required>
-              </div>
-              <div>
-                <span>по</span>
-                <input id="ozon-to" type="date" required>
-              </div>
-            </div>
-          </div>
-          <button type="submit" id="ozon-run">Сформировать</button>
-        </form>
-        <div id="ozon-err" class="err" hidden></div>
-        <div id="ozon-report"></div>
-      </section>
-    </div>
     <div id="tab-ozondrr" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Расчёт доли рекламных расходов</h2>
@@ -2080,10 +2054,10 @@
     <div id="tab-ozonfbo" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Отгрузки ФБО Озон</h2>
-        <p class="lead tab-intro">Поставки FBO из 1С (документ Alsn_ПоставкаOzon) и текущий статус заявки в личном кабинете Ozon. Фильтр — планируемая дата отгрузки.</p>
+        <p class="lead tab-intro">Поставки FBO из 1С (документ Alsn_ПоставкаOzon) и текущий статус заявки в личном кабинете Ozon. Фильтр — дата таймслота отгрузки (весь выбранный день).</p>
         <form class="pnl-toolbar" id="ozonfbo-form">
           <div class="filter-dates">
-            <label for="ozonfbo-day">Планируемая дата отгрузки</label>
+            <label for="ozonfbo-day">Дата таймслота отгрузки</label>
             <div class="dates">
               <div>
                 <input id="ozonfbo-day" type="date" required>
@@ -2099,10 +2073,10 @@
     <div id="tab-ozonfbofilters" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Поставки ФБО с фильтрами</h2>
-        <p class="lead tab-intro">Полный список поставок FBO из 1С за период. Фильтры по дате отгрузки, статусу, кросс-докингу, особым условиям, кластеру и складам. По умолчанию — последний месяц.</p>
+        <p class="lead tab-intro">Полный список поставок FBO из 1С за период. Фильтры по дате таймслота отгрузки, статусу, кросс-докингу, особым условиям, кластеру и складам. По умолчанию — последний месяц.</p>
         <form class="pnl-toolbar" id="ozonfbofilters-form">
           <div class="filter-dates">
-            <label>Планируемая дата отгрузки</label>
+            <label>Дата таймслота отгрузки</label>
             <div class="dates">
               <div>
                 <span>с</span>
@@ -3900,226 +3874,9 @@
       loadBitrixFreqReport();
     }
 
-    let ozonLoaded = false;
-    let ozonInflight = false;
-
-    function initOzonDates() {
-      const from = document.getElementById("ozon-from");
-      const to = document.getElementById("ozon-to");
-      if (!from || !to || from.value) return;
-      const now = new Date();
-      const start = new Date(now.getFullYear(), now.getMonth(), 1);
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      const p = (n) => String(n).padStart(2, "0");
-      const ymd = (d) => d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
-      from.value = ymd(start);
-      to.value = ymd(end);
-    }
-
-    function ozonErr(text) {
-      const el = document.getElementById("ozon-err");
-      if (!text) {
-        el.hidden = true;
-        el.textContent = "";
-        return;
-      }
-      el.hidden = false;
-      el.textContent = text;
-    }
-
     function formatOzonNum(v, digits = 2) {
       const n = Number(v) || 0;
       return n.toLocaleString("ru-RU", { minimumFractionDigits: digits, maximumFractionDigits: digits });
-    }
-
-    /** Колонки как в 1С «Расчёт себестоимости»; нулевые по итогу скрываются. */
-    const OZON_COL_GROUPS = [
-      {
-        title: null,
-        cols: [
-          { key: "qty", label: "Количество", digits: 0, always: true },
-        ],
-      },
-      {
-        title: "Выручка",
-        cols: [
-          { key: "sale", label: "продажа", always: true },
-          { key: "returns", label: "возвраты" },
-        ],
-      },
-      {
-        title: "Себестоимость",
-        cols: [
-          { key: "cost", label: "себестоимость", always: true },
-          { key: "costPerUnit", label: "за ед.", always: true },
-        ],
-      },
-      {
-        title: "Комиссии",
-        cols: [
-          { key: "commission", label: "комиссия", always: true },
-          { key: "acquiring", label: "эквайринг" },
-        ],
-      },
-      {
-        title: "Доставка",
-        cols: [
-          { key: "deliveryOzon", label: "Ozon" },
-          { key: "deliveryReturn", label: "возврат/отмена/невыкуп" },
-          { key: "crossDock", label: "кросс-докинг" },
-          { key: "deliveryCancel", label: "отмена начисления" },
-          { key: "deliveryRfbs", label: "rFBS" },
-          { key: "deliveryBias", label: "перекос" },
-          { key: "deliveryKgt", label: "КГТ" },
-        ],
-      },
-      {
-        title: "Хранение",
-        cols: [
-          { key: "storageOps", label: "операции склада" },
-          { key: "storageServices", label: "размещение" },
-        ],
-      },
-      {
-        title: null,
-        cols: [{ key: "otherFulfillment", label: "Прочее" }],
-      },
-      {
-        title: "Реклама",
-        cols: [
-          { key: "adStencil", label: "трафареты" },
-          { key: "adSearch", label: "поиск" },
-          { key: "adOrder", label: "заказ" },
-          { key: "premium", label: "Premium" },
-        ],
-      },
-      {
-        title: null,
-        cols: [{ key: "tax", label: "Налог", always: true }],
-      },
-      {
-        title: "Компенсация",
-        cols: [
-          { key: "decompensation", label: "декомпенсация на сток" },
-          { key: "compShortage", label: "недостача" },
-          { key: "compLoss", label: "утеря" },
-        ],
-      },
-      {
-        title: "Маржинальная прибыль",
-        cols: [
-          { key: "margin", label: "руб.", always: true },
-          { key: "marginPct", label: "%", always: true },
-        ],
-      },
-      {
-        title: "Валовая прибыль",
-        cols: [
-          { key: "gross", label: "руб.", always: true },
-          { key: "grossPct", label: "%", always: true },
-        ],
-      },
-      {
-        title: null,
-        cols: [{ key: "roi", label: "ROI %", always: true }],
-      },
-    ];
-
-    function ozonVisibleGroups(total) {
-      const t = total || {};
-      return OZON_COL_GROUPS.map((g) => ({
-        ...g,
-        cols: g.cols.filter((c) => c.always || Math.abs(Number(t[c.key]) || 0) > 0.005),
-      })).filter((g) => g.cols.length);
-    }
-
-    function ozonMetricCells(m, visibleGroups) {
-      return visibleGroups
-        .flatMap((g) => g.cols)
-        .map((c) => `<td class="num">${formatOzonNum(m[c.key], c.digits ?? 2)}</td>`)
-        .join("");
-    }
-
-    function renderOzon(report) {
-      const box = document.getElementById("ozon-report");
-      if (!report) {
-        box.innerHTML = "";
-        return;
-      }
-      const visible = ozonVisibleGroups(report.total);
-      const colCount = 1 + visible.reduce((n, g) => n + g.cols.length, 0);
-      const headTop = [`<th rowspan="2">Номенклатура. Товарная категория / Номенклатура</th>`];
-      const headSub = [];
-      for (const g of visible) {
-        if (g.title && g.cols.length > 1) {
-          headTop.push(`<th colspan="${g.cols.length}">${escapeHtml(g.title)}</th>`);
-          for (const c of g.cols) headSub.push(`<th>${escapeHtml(c.label)}</th>`);
-        } else if (g.title && g.cols.length === 1) {
-          headTop.push(`<th rowspan="2">${escapeHtml(g.title)}<br><span class="ozon-sub">${escapeHtml(g.cols[0].label)}</span></th>`);
-        } else {
-          for (const c of g.cols) headTop.push(`<th rowspan="2">${escapeHtml(c.label)}</th>`);
-        }
-      }
-      const head = `<tr>${headTop.join("")}</tr>` + (headSub.length ? `<tr>${headSub.join("")}</tr>` : "");
-      const body = [];
-      for (const group of report.groups || []) {
-        body.push(`<tr class="group"><td class="name">${escapeHtml(group.name)}</td>${ozonMetricCells(group.metrics, visible)}</tr>`);
-        for (const child of group.children || []) {
-          body.push(`<tr><td class="name ozon-child">${escapeHtml(child.name)}</td>${ozonMetricCells(child.metrics, visible)}</tr>`);
-        }
-      }
-      if (report.total) {
-        body.push(`<tr class="total"><td class="name">Итого</td>${ozonMetricCells(report.total, visible)}</tr>`);
-      }
-      const warn = (report.warnings || []).length
-        ? `<p class="pnl-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
-        : "";
-      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
-      const period = report.period
-        ? `<p class="pnl-note">Период ${escapeHtml(report.period.from)} – ${escapeHtml(report.period.to)} · налог ${escapeHtml(String(report.taxRate || 0))}%${report.cached ? ` · кэш ${escapeHtml(String(report.cacheAgeSec || 0))} с` : ""}</p>`
-        : "";
-      box.innerHTML = warn + note + period + `
-        <div class="pnl-section">
-          <div class="pnl-scroll"><table class="ozon">
-            <thead>${head}</thead>
-            <tbody>${body.join("") || `<tr><td colspan="${colCount}">Нет данных за период</td></tr>`}</tbody>
-          </table></div>
-        </div>`;
-    }
-
-    async function loadOzonReport() {
-      if (USER.tabs?.ozon === false || ozonInflight) return;
-      const from = document.getElementById("ozon-from").value;
-      const to = document.getElementById("ozon-to").value;
-      if (!from || !to) {
-        ozonErr("Укажите период с и по");
-        return;
-      }
-      ozonInflight = true;
-      const btn = document.getElementById("ozon-run");
-      if (btn) btn.disabled = true;
-      ozonErr("");
-      document.getElementById("ozon-report").innerHTML = `<p class="pnl-note">Считаем отчёт из 1С (ecotidy), как «Расчёт себестоимости». Первый расчёт за месяц может занять несколько минут; повторные берутся из кэша.</p>`;
-      try {
-        const report = await api(
-          "/api/ozon?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to),
-          { method: "GET" }
-        );
-        ozonLoaded = true;
-        renderOzon(report);
-      } catch (e) {
-        ozonLoaded = false;
-        renderOzon(null);
-        ozonErr(e.message || String(e));
-      } finally {
-        ozonInflight = false;
-        if (btn) btn.disabled = false;
-      }
-    }
-
-    function loadOzonIfNeeded() {
-      if (ozonLoaded || ozonInflight) return;
-      loadOzonReport();
     }
 
     let ozondrrLoaded = false;
@@ -4247,6 +4004,21 @@
       }
       el.hidden = false;
       el.textContent = text;
+    }
+
+    function formatOzonFboTimeslot(from, to) {
+      const startRaw = String(from || "").trim();
+      if (!startRaw || startRaw.startsWith("0001-01-01")) return "—";
+      const start = new Date(startRaw);
+      if (Number.isNaN(start.getTime())) return formatOzonFbsDate(startRaw);
+      const datePart = start.toLocaleDateString("ru-RU");
+      const timeFrom = start.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+      const endRaw = String(to || "").trim();
+      if (!endRaw || endRaw.startsWith("0001-01-01")) return datePart + ", " + timeFrom;
+      const end = new Date(endRaw);
+      if (Number.isNaN(end.getTime())) return datePart + ", " + timeFrom;
+      const timeTo = end.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+      return datePart + ", " + timeFrom + "–" + timeTo;
     }
 
     function formatOzonFbsDate(value) {
@@ -4615,7 +4387,7 @@
             <td>${escapeHtml(s.statusOzonLabel || s.statusOzon || "—")}</td>
             <td class="num">${formatSeoNum(s.cargoPlaces)}</td>
             <td>${escapeHtml(s.cluster || "—")}</td>
-            <td>${escapeHtml(formatOzonFbsDate(s.shipmentDate))}</td>
+            <td>${escapeHtml(formatOzonFboTimeslot(s.shipmentDate, s.shipmentTimeslotTo))}</td>
             <td class="name">${escapeHtml(s.dropOffPoint || "—")}</td>
             <td>${escapeHtml(s.driver || "—")}</td>
             <td class="num">${formatSeoNum(s.goodsCount)}</td>
@@ -4636,7 +4408,7 @@
                   <div class="ozon-fbo-badges">${badges}</div>
                 </div>
                 <dl class="ozon-fbo-meta">
-                  <div><dt>Дата отгрузки</dt><dd>${escapeHtml(formatOzonFbsDate(s.shipmentDate))}</dd></div>
+                  <div><dt>Таймслот отгрузки</dt><dd>${escapeHtml(formatOzonFboTimeslot(s.shipmentDate, s.shipmentTimeslotTo))}</dd></div>
                   <div><dt>Грузомест</dt><dd>${formatSeoNum(s.cargoPlaces)}</dd></div>
                   <div><dt>Товаров</dt><dd>${formatSeoNum(s.goodsCount)}</dd></div>
                   <div><dt>Кластер</dt><dd>${escapeHtml(s.cluster || "—")}</dd></div>
@@ -4646,7 +4418,7 @@
               </article>`;
             })
             .join("")
-        : `<div class="ozon-fbo-empty">Нет поставок на выбранную дату</div>`;
+        : `<div class="ozon-fbo-empty">Нет поставок на выбранную дату таймслота</div>`;
       box.innerHTML =
         note +
         ozonWarn +
@@ -4664,12 +4436,12 @@
               <th>Статус ЛК Ozon</th>
               <th class="num">Всего грузомест</th>
               <th>Кластер</th>
-              <th>Дата отгрузки</th>
+              <th>Таймслот отгрузки</th>
               <th>Пункт отгрузки</th>
               <th>Водитель</th>
               <th class="num">Товаров</th>
             </tr></thead>
-            <tbody>${body || `<tr><td colspan="9">Нет поставок на выбранную планируемую дату отгрузки</td></tr>`}</tbody>
+            <tbody>${body || `<tr><td colspan="9">Нет поставок на выбранную дату таймслота отгрузки</td></tr>`}</tbody>
           </table></div>
         </div>`;
     }
@@ -4797,7 +4569,7 @@
             <td>${escapeHtml(s.statusOzonLabel || s.statusOzon || "—")}</td>
             <td class="num">${formatSeoNum(s.cargoPlaces)}</td>
             <td>${escapeHtml(s.cluster || "—")}</td>
-            <td>${escapeHtml(formatOzonFbsDate(s.shipmentDate))}</td>
+            <td>${escapeHtml(formatOzonFboTimeslot(s.shipmentDate, s.shipmentTimeslotTo))}</td>
             <td class="name">${escapeHtml(s.dropOffPoint || "—")}</td>
             <td>${escapeHtml(s.driver || "—")}</td>
             <td class="num">${formatSeoNum(s.goodsCount)}</td>
@@ -4822,7 +4594,7 @@
               <th>Статус ЛК Ozon</th>
               <th class="num">Всего грузомест</th>
               <th>Кластер</th>
-              <th>Дата отгрузки</th>
+              <th>Таймслот отгрузки</th>
               <th>Пункт отгрузки</th>
               <th>Водитель</th>
               <th class="num">Товаров</th>
@@ -6254,7 +6026,7 @@
       }
     }
 
-    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
+    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
     const TAB_LABELS = {
       hours: "Часы",
       activity: "Активность",
@@ -6265,7 +6037,6 @@
       budget: "Бюджет",
       bitrix: "Bitrix",
       bitrixfreq: "Чистота Битрикс",
-      ozon: "Озон",
       ozondrr: "Озон ДРР",
       ozonfbs: "Отгрузки ФБС ozon",
       ozonfbo: "Отгрузки ФБО Озон",
@@ -6501,11 +6272,6 @@
         await loadBitrixFreqReport();
         return;
       }
-      if (name === "ozon") {
-        ozonLoaded = false;
-        await loadOzonReport();
-        return;
-      }
       if (name === "ozondrr") {
         ozondrrLoaded = false;
         await loadOzonDrrReport();
@@ -6659,7 +6425,6 @@
       document.getElementById("tab-plan").hidden = name !== "plan";
       document.getElementById("tab-bitrix").hidden = name !== "bitrix";
       document.getElementById("tab-bitrixfreq").hidden = name !== "bitrixfreq";
-      document.getElementById("tab-ozon").hidden = name !== "ozon";
       document.getElementById("tab-ozondrr").hidden = name !== "ozondrr";
       document.getElementById("tab-ozonfbs").hidden = name !== "ozonfbs";
       document.getElementById("tab-ozonfbo").hidden = name !== "ozonfbo";
@@ -6686,7 +6451,7 @@
       if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
       document.body.classList.toggle(
         "wide-report",
-        name === "plan" || name === "budget" || name === "ozon" || name === "ozondrr" || name === "ozonfbs" || name === "ozonfbo" || name === "ozonfbofilters" || name === "units" || name === "wb" || name === "wbfbs" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "clientquality" || name === "clientqualitytv" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
+        name === "plan" || name === "budget" || name === "ozondrr" || name === "ozonfbs" || name === "ozonfbo" || name === "ozonfbofilters" || name === "units" || name === "wb" || name === "wbfbs" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "clientquality" || name === "clientqualitytv" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
       );
       document.body.classList.remove("wide-plan");
       if (name === "settings") loadSettingsTabOrder();
@@ -6800,7 +6565,6 @@
       if (board === "all" || board === "hours" || board === "activity") {
         /* часы подтянутся при следующем открытии вкладки */
       }
-      if (board === "all" || board === "ozon") ozonLoaded = false;
       if (board === "all" || board === "seo") seoLoaded = false;
       if (board === "all" || board === "seoqueries") seoqueriesLoaded = false;
       if (board === "all" || board === "seopositions") seopositionsLoaded = false;
@@ -6903,7 +6667,6 @@
         ["plan", "План"],
         ["bitrix", "Bitrix"],
         ["bitrixfreq", "Чистота Битрикс"],
-        ["ozon", "Озон"],
         ["ozondrr", "Озон ДРР"],
         ["ozonfbs", "Отгрузки ФБС ozon"],
         ["ozonfbo", "Отгрузки ФБО Озон"],
@@ -7326,7 +7089,6 @@
               plan: document.getElementById("new-plan").checked,
               bitrix: document.getElementById("new-bitrix").checked,
               bitrixfreq: document.getElementById("new-bitrixfreq").checked,
-              ozon: document.getElementById("new-ozon").checked,
               ozondrr: document.getElementById("new-ozondrr").checked,
               ozonfbs: document.getElementById("new-ozonfbs").checked,
               ozonfbo: document.getElementById("new-ozonfbo").checked,
@@ -7777,11 +7539,6 @@
       bitrixfreqLoaded = false;
       loadBitrixFreqReport();
     });
-    document.getElementById("ozon-form").addEventListener("submit", (e) => {
-      e.preventDefault();
-      ozonLoaded = false;
-      loadOzonReport();
-    });
     document.getElementById("ozondrr-form").addEventListener("submit", (e) => {
       e.preventDefault();
       ozondrrLoaded = false;
@@ -7886,7 +7643,6 @@
     initUnitsDates();
     initBudgetDates();
     initPlanDates();
-    initOzonDates();
     initOzonDrrDates();
     initOzonFboDates();
     initWbDates();

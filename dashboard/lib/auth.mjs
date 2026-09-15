@@ -8,7 +8,7 @@ const USERS_FILE = join(root, "users.json");
 const USERS_TMP = join(root, "users.json.tmp");
 const COOKIE = "dash_session";
 const SESSION_MS = 14 * 24 * 60 * 60 * 1000;
-const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozon", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
+const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
 
 const TAB_LABELS = {
   hours: "Часы",
@@ -20,7 +20,6 @@ const TAB_LABELS = {
   budget: "Бюджет план-факт",
   bitrix: "Bitrix",
   bitrixfreq: "Чистота ведения Битрикс",
-  ozon: "Озон себестоимость",
   ozondrr: "Озон ДРР",
   ozonfbs: "Отгрузки ФБС ozon",
   ozonfbo: "Отгрузки ФБО Озон",
@@ -417,7 +416,7 @@ export function userHasTab(user, tab) {
  */
 export function sessionRefreshNeeds(user) {
   if (!user) return { hours: false, seo: false, ozon: false };
-  if (user.admin) return { hours: true, seo: true, ozon: true };
+  if (user.admin) return { hours: true, seo: true, ozon: false };
   return {
     hours: userHasTab(user, "hours") || userHasTab(user, "activity"),
     seo:
@@ -425,7 +424,7 @@ export function sessionRefreshNeeds(user) {
       userHasTab(user, "seoqueries") ||
       userHasTab(user, "seoproducts") ||
       userHasTab(user, "seopositions"),
-    ozon: userHasTab(user, "ozon") || userHasTab(user, "ozondrr"),
+    ozon: false,
   };
 }
 

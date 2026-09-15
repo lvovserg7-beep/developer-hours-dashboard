@@ -11,7 +11,6 @@ import { loadPlan, defaultPlanRange } from "./lib/load-plan.mjs";
 import { loadBudget, defaultBudgetRange } from "./lib/load-budget.mjs";
 import { loadBitrixAnalytics, defaultBitrixRange } from "./lib/load-bitrix.mjs";
 import { loadBitrixFrequency } from "./lib/load-bitrix-freq.mjs";
-import { loadOzonCost, defaultOzonRange } from "./lib/load-ozon.mjs";
 import { loadOzonDrr, defaultOzonDrrRange } from "./lib/load-ozon-drr.mjs";
 import { loadOzonFbsDashboard } from "./lib/load-ozon-fbs-acts.mjs";
 import { loadOzonFboSupplies, defaultOzonFboRange, defaultOzonFboFilterRange } from "./lib/load-ozon-fbo.mjs";
@@ -53,6 +52,26 @@ import {
 } from "./lib/board-cache.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
+
+/** Подставить в process.env пустые ключи из dashboard/.env (PM2 часто не читает файл сам). */
+function loadDotEnv() {
+  const envPath = join(root, ".env");
+  if (!existsSync(envPath)) return;
+  for (const line of readFileSync(envPath, "utf8").split(/\r?\n/)) {
+    const text = line.trim();
+    if (!text || text.startsWith("#")) continue;
+    const eq = text.indexOf("=");
+    if (eq < 1) continue;
+    const key = text.slice(0, eq).trim();
+    let val = text.slice(eq + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    if (process.env[key] == null || process.env[key] === "") process.env[key] = val;
+  }
+}
+loadDotEnv();
+
 const PORT = Number(process.env.PORT || 8787);
 /** IIS-снимок: только если задан IIS_PUBLISH_DIR, либо дефолт на Windows. На Linux без env — не публикуем. */
 const IIS_DIR = (() => {
@@ -303,23 +322,9 @@ function runSeoTrailingRefresh(reason, opts = {}) {
     .catch((err) => console.warn(`SEO trailing ${reason} failed:`, err.message || err));
 }
 
-async function refreshOzonTrailingCache(period) {
-  console.log(`Ozon trailing refresh: ${period.from}…${period.to}...`);
-  try {
-    const report = await loadOzonCost(period.from, period.to, {
-      refresh: true,
-      log: true,
-    });
-    const rows = Array.isArray(report?.rows) ? report.rows.length : 0;
-    console.log(`Ozon trailing OK: ${period.from}…${period.to}, rows=${rows}`);
-  } catch (err) {
-    console.warn(`Ozon trailing ${period.from}…${period.to} failed:`, err.message || err);
-  }
-}
-
 /**
- * Сброс SEO-кэша за окно (без Озона) и перечитывание.
- * Озон при автозапуске по умолчанию выключен — полный пересчёт валит Node на слабых машинах.
+ * Сброс SEO-кэша за окно и перечитывание.
+ * Доска себестоимости Озон снята — тяжёлый OData-пересчёт больше не запускается.
  * Часы обновляются при открытии главной (`refresh(true)`), если у пользователя есть доска часов/активности.
  * @param {string} reason
  * @param {{ days?: number, boards?: { seo?: boolean, ozon?: boolean } }} [opts]
@@ -335,7 +340,7 @@ async function runAllTrailingCacheRefresh(reason, opts = {}) {
   }
   const days = opts.days != null ? Math.max(1, Math.floor(Number(opts.days) || 1)) : trailingCacheDays();
   const period = trailingCachePeriod(days);
-  const boards = opts.boards || { seo: true, ozon: true };
+  const boards = opts.boards || { seo: true, ozon: false };
   console.log(
     `Cache trailing ${reason}: last ${days} day(s) (${period.from}…${period.to}), boards seo=${!!boards.seo} ozon=${!!boards.ozon}...`
   );
@@ -363,17 +368,9 @@ async function runAllTrailingCacheRefresh(reason, opts = {}) {
     console.log(`SEO trailing skipped (${reason}: нет доступа к SEO-доскам в сеансе)`);
   }
 
-  // Озон: тяжёлый OData-пересчёт. По умолчанию выкл. — иначе Node часто падает (OOM / kill).
-  if (boards.ozon && envFlagOn("CACHE_TRAILING_OZON", false)) {
-    try {
-      await refreshOzonTrailingCache(period);
-    } catch (err) {
-      console.warn(`Cache trailing Ozon ${reason} failed:`, err.message || err);
-    }
-  } else if (boards.ozon) {
-    console.log("Ozon trailing skipped (default off; set CACHE_TRAILING_OZON=1 to enable)");
-  } else {
-    console.log(`Ozon trailing skipped (${reason}: нет доступа к Озон-доскам в сеансе)`);
+  // Доска «Озон себестоимость» снята — тяжёлый пересчёт больше не запускаем.
+  if (boards.ozon) {
+    console.log("Ozon trailing skipped (доска себестоимости Озон снята с ЦУК)");
   }
 
   if (reason === "startup") {
@@ -381,7 +378,7 @@ async function runAllTrailingCacheRefresh(reason, opts = {}) {
       reason: "startup",
       boards: {
         seo: Boolean(boards.seo),
-        ozon: Boolean(boards.ozon && envFlagOn("CACHE_TRAILING_OZON", false)),
+        ozon: false,
       },
     });
   }
@@ -890,28 +887,6 @@ const server = createServer(async (req, res) => {
         const msg = String(err.message || err);
         console.error(err);
         return json(res, /webhook|Bitrix24/i.test(msg) ? 400 : 502, { error: msg });
-      }
-    }
-
-    if (path === "/api/ozon") {
-      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
-      if (!userHasTab(user, "ozon")) {
-        return json(res, 403, { error: "Нет доступа к вкладке «Озон»." });
-      }
-      const range = defaultOzonRange();
-      const from = String(url.searchParams.get("from") || range.from);
-      const to = String(url.searchParams.get("to") || range.to);
-      try {
-        // Полный отчёт как в 1С. Ускорение: ?cost=0 и/или ?registers=0. Сброс кэша: ?refresh=1
-        const skipCost = url.searchParams.get("cost") === "0";
-        const skipRegisters = url.searchParams.get("registers") === "0";
-        const refresh = url.searchParams.get("refresh") === "1";
-        const data = await loadOzonCost(from, to, { skipCost, skipRegisters, refresh });
-        return json(res, 200, data);
-      } catch (err) {
-        const msg = String(err.message || err);
-        console.error(err);
-        return json(res, /период/i.test(msg) ? 400 : 502, { error: msg });
       }
     }
 

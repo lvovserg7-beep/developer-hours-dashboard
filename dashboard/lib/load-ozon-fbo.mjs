@@ -123,9 +123,14 @@ function driverName(doc) {
   return "";
 }
 
+function isEmpty1cDate(value) {
+  const s = String(value || "").trim();
+  return !s || s.startsWith("0001-01-01");
+}
+
 async function fetchSupplies(fromIso, toIsoExclusive) {
   const filter = encodeURIComponent(
-    `DeletionMark eq false and ПланируемаяДатаОтгрузки ge datetime'${fromIso}' and ПланируемаяДатаОтгрузки lt datetime'${toIsoExclusive}'`
+    `DeletionMark eq false and ДатаНачалаИнтервалаПоставкиПоМестномуВремени ge datetime'${fromIso}' and ДатаНачалаИнтервалаПоставкиПоМестномуВремени lt datetime'${toIsoExclusive}'`
   );
   const rows = [];
   for (let page = 0; page < 50; page += 1) {
@@ -396,7 +401,12 @@ function mapSupply(doc, ozonMap) {
     cargoPlaces: resolveCargoPlaces(doc, ozon),
     cargoPlacesSource: cargoPlaceCount(doc.Грузоместа) > 0 ? "1c" : ozon?.cargoPlaces > 0 ? "ozon" : "",
     createdAt: doc.ДатаСозданияЗаявкиНаПоставку || doc.Date || "",
-    shipmentDate: doc.ПланируемаяДатаОтгрузки || "",
+    shipmentDate: isEmpty1cDate(doc.ДатаНачалаИнтервалаПоставкиПоМестномуВремени)
+      ? ""
+      : doc.ДатаНачалаИнтервалаПоставкиПоМестномуВремени,
+    shipmentTimeslotTo: isEmpty1cDate(doc.ДатаОкончанияИнтервалаПоставкиПоМестномуВремени)
+      ? ""
+      : doc.ДатаОкончанияИнтервалаПоставкиПоМестномуВремени,
     dropOffPoint: dropOff,
     storageWarehouse: resolveStorageWarehouse(doc, ozon),
     cluster: String(doc.НазваниеКластера || "").trim(),
@@ -467,7 +477,8 @@ export async function loadOzonFboSupplies(fromRaw, toRaw) {
     supplies,
     note:
       "Поставки из документа 1С Alsn_ПоставкаOzon, база Первый интегратор (ecotidy). " +
-      "Фильтр — реквизит ПланируемаяДатаОтгрузки. " +
+      "Фильтр и колонка даты — реквизит ДатаНачалаИнтервалаПоставкиПоМестномуВремени (таймслот отгрузки); " +
+      "выбранный день берётся целиком (с 00:00 до 24:00), время слота в отборе не режет сутки. " +
       "Грузоместа: сначала табличная часть 1С, если пусто — /v1/cargoes/supplies/get из ЛК Ozon. " +
       "Особые условия — маркировка / ЭТрН / Меркурий / ювелирка (1С и supply_tags Ozon).",
   };
