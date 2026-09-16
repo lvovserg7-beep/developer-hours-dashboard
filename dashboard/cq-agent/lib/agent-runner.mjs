@@ -1,7 +1,7 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { existsSync, readFileSync } from "node:fs";
-import { dashboardDir, DATA_DIR, saveSettings } from "./settings.mjs";
+import { dashboardDir, DATA_DIR, saveSettings, questionPeriodLabel } from "./settings.mjs";
 import { resolvedList, resolvedPromptBlock } from "./resolved.mjs";
 
 const agentDir = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -20,7 +20,10 @@ function buildPrompt(settings, digestPath) {
   const base = existsSync(PROMPT_PATH) ? readFileSync(PROMPT_PATH, "utf8") : "";
   const qs = (settings.questions || []).filter((q) => q.enabled);
   const list = qs
-    .map((q, i) => `${i + 1}. ${q.text}${q.section ? ` [секция: ${q.section}]` : " [секция: customAnswers]"}`)
+    .map((q, i) => {
+      const section = q.section ? ` [секция: ${q.section}]` : " [секция: customAnswers]";
+      return `${i + 1}. ${q.text}${section} [период: ${questionPeriodLabel(q)}]`;
+    })
     .join("\n");
   const closed = resolvedPromptBlock(resolvedList(settings));
   return `${base}

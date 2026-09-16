@@ -160,59 +160,69 @@ function renderHtml(data, user) {
     .replace("__CHART_DEV_DONE__", parts.devDone)
     .replace("__ACTIVITY__", parts.activity)
     .replace("__CLIENT_OPTIONS__", parts.clientOptions)
-    .replace("__STATUS_OPTIONS__", parts.statusOptions);
+    .replace("__STATUS_OPTIONS__", parts.statusOptions)
+    .replace("__AUTHOR_OPTIONS__", parts.authorOptions);
 }
 
-async function refresh(force = false) {
+/**
+ * Обновление часов из 1С.
+ * @param {boolean} force игнорировать TTL
+ * @param {{ wait?: boolean }} [opts] wait:true — дождаться 1С, даже если снимок уже есть
+ */
+async function refresh(force = false, opts = {}) {
+  const wait = opts.wait === true;
   const now = Date.now();
-  const ttl = cache.stale || !hasHoursPayload(cache.data) ? RETRY_MS : CACHE_MS;
-  if (!force && cache.data && now - cache.at < ttl) return cache;
-  if (cache.inflight) return cache.inflight;
+  const hasPayload = hasHoursPayload(cache.data);
+  const ttl = cache.stale || !hasPayload ? RETRY_MS : CACHE_MS;
+  if (!force && hasPayload && now - cache.at < ttl) return cache;
 
-  const epoch = hoursEpoch;
-  cache.inflight = (async () => {
-    const data = await loadActiveEmployees();
-    if (epoch !== hoursEpoch) return cache;
-    if (!hasHoursPayload(data)) {
-      throw new Error("1С вернула пустой снимок часов");
-    }
-    cache = {
-      at: Date.now(),
-      data,
-      html: "",
-      error: null,
-      inflight: null,
-      stale: false,
-    };
-    saveSnapshotToDisk(data);
-    publishToIis();
-    return cache;
-  })().catch((err) => {
-    if (epoch !== hoursEpoch) return cache;
-    cache.inflight = null;
-    cache.error = String(err.message || err);
-    if (hasHoursPayload(cache.data)) {
-      cache.stale = true;
-      cache.at = Date.now();
-      console.warn("hours refresh failed, keeping previous snapshot:", cache.error);
-    } else {
-      const disk = loadSnapshotFromDisk();
-      if (disk) {
-        cache.data = disk;
+  if (!cache.inflight) {
+    const epoch = hoursEpoch;
+    cache.inflight = (async () => {
+      const data = await loadActiveEmployees();
+      if (epoch !== hoursEpoch) return cache;
+      if (!hasHoursPayload(data)) {
+        throw new Error("1С вернула пустой снимок часов");
+      }
+      cache = {
+        at: Date.now(),
+        data,
+        html: "",
+        error: null,
+        inflight: null,
+        stale: false,
+      };
+      saveSnapshotToDisk(data);
+      publishToIis();
+      return cache;
+    })().catch((err) => {
+      if (epoch !== hoursEpoch) return cache;
+      cache.inflight = null;
+      cache.error = String(err.message || err);
+      if (hasHoursPayload(cache.data)) {
         cache.stale = true;
         cache.at = Date.now();
-        console.warn("hours refresh failed, loaded disk snapshot:", cache.error);
+        console.warn("hours refresh failed, keeping previous snapshot:", cache.error);
       } else {
-        cache.data = EMPTY_DATA;
-        cache.stale = true;
-        cache.at = 0;
-        console.warn("hours refresh failed, no snapshot yet:", cache.error);
+        const disk = loadSnapshotFromDisk();
+        if (disk) {
+          cache.data = disk;
+          cache.stale = true;
+          cache.at = Date.now();
+          console.warn("hours refresh failed, loaded disk snapshot:", cache.error);
+        } else {
+          cache.data = EMPTY_DATA;
+          cache.stale = true;
+          cache.at = 0;
+          console.warn("hours refresh failed, no snapshot yet:", cache.error);
+        }
       }
-    }
-    return cache;
-  });
+      return cache;
+    });
+  }
 
-  return cache.inflight;
+  if (wait || !hasPayload) return cache.inflight;
+  return cache;
 }
 
 registerHoursCacheHooks({
@@ -231,7 +241,7 @@ registerHoursCacheHooks({
 
 function startHoursRefreshLoop() {
   setInterval(() => {
-    refresh(true)
+    refresh(true, { wait: true })
       .then((snap) => {
         if (snap.error) return;
         const t = snap.data?.totals || {};
@@ -325,7 +335,8 @@ function runSeoTrailingRefresh(reason, opts = {}) {
 /**
  * Сброс SEO-кэша за окно и перечитывание.
  * Доска себестоимости Озон снята — тяжёлый OData-пересчёт больше не запускается.
- * Часы обновляются при открытии главной (`refresh(true)`), если у пользователя есть доска часов/активности.
+ * Часы при старте отдаются со снимка на диске; выгрузка из 1С идёт в фоне.
+ * Принудительное обновление — `/api/employees?force=1`, если у пользователя есть доска часов/активности.
  * @param {string} reason
  * @param {{ days?: number, boards?: { seo?: boolean, ozon?: boolean } }} [opts]
  */
@@ -1214,7 +1225,7 @@ const server = createServer(async (req, res) => {
       const needs = sessionRefreshNeeds(user);
       // Не-админ без досок часов/активности не дергает 1С за часами в этом сеансе.
       const force = Boolean(forceRequested && needs.hours);
-      const snap = await refresh(force);
+      const snap = await refresh(force, { wait: force });
       if (path === "/api/health") {
         return json(res, 200, {
           ok: true,
@@ -1258,8 +1269,24 @@ ensureAuthReady();
   }
 }
 
-console.log("Updating hours cache from 1C on startup...");
-refresh(true)
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`Dashboard http://localhost:${PORT}/`);
+  if (APP_VERSION) console.log(`Version ${APP_VERSION}`);
+  if (IIS_DIR && existsSync(join(IIS_DIR, "index.html"))) {
+    console.log(`IIS snapshot http://localhost/employees/`);
+  }
+  startHoursRefreshLoop();
+  startSeoRefreshLoop();
+  // Откладываем trailing, чтобы порт уже отвечал, даже если SEO ещё идёт.
+  setTimeout(() => {
+    runAllTrailingCacheRefresh("startup").catch((err) =>
+      console.warn("Startup trailing cache refresh failed:", err.message || err)
+    );
+  }, 3000);
+});
+
+console.log("Updating hours cache from 1C in background...");
+refresh(true, { wait: true })
   .then((snap) => {
     if (snap.error) {
       console.warn(`Startup hours refresh: ${snap.error}`);
@@ -1273,23 +1300,6 @@ refresh(true)
   })
   .catch((err) => {
     console.warn("Startup hours refresh failed:", err.message || err);
-  })
-  .finally(() => {
-    server.listen(PORT, "0.0.0.0", () => {
-      console.log(`Dashboard http://localhost:${PORT}/`);
-      if (APP_VERSION) console.log(`Version ${APP_VERSION}`);
-      if (IIS_DIR && existsSync(join(IIS_DIR, "index.html"))) {
-        console.log(`IIS snapshot http://localhost/employees/`);
-      }
-      startHoursRefreshLoop();
-      startSeoRefreshLoop();
-      // Откладываем trailing, чтобы порт уже отвечал, даже если SEO ещё идёт.
-      setTimeout(() => {
-        runAllTrailingCacheRefresh("startup").catch((err) =>
-          console.warn("Startup trailing cache refresh failed:", err.message || err)
-        );
-      }, 3000);
-    });
   });
 
 process.on("uncaughtException", (err) => {

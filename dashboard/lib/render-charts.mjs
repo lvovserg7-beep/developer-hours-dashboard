@@ -125,6 +125,10 @@ export function renderChartParts(data, opts = {}) {
     statusOptions: selectOptions(
       uniqueFilterValues((data.activity || []).map((r) => r.status || "Без статуса"), true)
     ),
+    authorOptions: selectOptions(
+      uniqueFilterValues((data.activity || []).map((r) => r.author).filter(Boolean)),
+      (data.activity || []).some((r) => !r.author) ? { value: "__none__", label: "Без автора" } : null
+    ),
   };
 }
 
@@ -165,6 +169,7 @@ export function renderActivityTable(rows) {
         <td class="client">${escapeHtml(row.client || "Без клиента")}</td>
         <td class="status">${escapeHtml(row.status || "Без статуса")}</td>
         <td class="comment"><div class="comment-body">${comment}</div></td>
+        <td class="author">${escapeHtml(row.author || "—")}</td>
         <td class="when">${escapeHtml(date)}</td>
       </tr>`;
   }).join("");
@@ -176,6 +181,7 @@ export function renderActivityTable(rows) {
           <th class="client">Клиент</th>
           <th class="status">Статус</th>
           <th class="comment">Последний комментарий</th>
+          <th class="author">ФИО</th>
           <th class="when">Дата</th>
         </tr>
       </thead>

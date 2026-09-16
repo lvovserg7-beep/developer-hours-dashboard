@@ -48,7 +48,7 @@ while true; do
   sleep 1
   echo "Starting dashboard..."
   echo "Local:  http://localhost:${PORT}/"
-  echo "On start: hours + SEO trailing (Ozon auto-refresh is off by default)."
+  echo "On start: snapshot first, then 1C hours and SEO in background."
   echo "If the process exits, it will restart in 5 seconds. Ctrl+C to stop."
   set +e
   node server.mjs

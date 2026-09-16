@@ -771,6 +771,64 @@
       flex-shrink: 0;
       white-space: nowrap;
     }
+    #btn-logout {
+      appearance: none;
+      padding: 6px 14px;
+      margin: 2px 0 8px 8px;
+      font: inherit;
+      font-size: var(--fs-sm);
+      font-weight: var(--weight);
+      color: #fff;
+      background: var(--accent);
+      border: 1px solid var(--accent);
+      cursor: pointer;
+      white-space: nowrap;
+      border-radius: var(--radius);
+      flex-shrink: 0;
+    }
+    #btn-logout:hover { filter: brightness(0.96); }
+    html[data-theme="dark"] #btn-logout,
+    html[data-theme="dark"] body.is-full #btn-logout {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    #logout-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      background: rgba(0, 0, 0, 0.72);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    #logout-modal.is-open { display: flex; }
+    .logout-dialog {
+      background: var(--card);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      max-width: 400px;
+      width: 100%;
+      padding: 20px 22px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    }
+    .logout-dialog p {
+      margin: 0 0 18px;
+      font-size: 16px;
+      line-height: 1.4;
+    }
+    .logout-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    html[data-theme="dark"] .logout-dialog {
+      background: var(--card);
+      color: var(--ink);
+      border-color: var(--line);
+    }
     .who { font-size: 12px; color: var(--muted); padding: 8px 8px 10px; white-space: nowrap; }
     body.is-full #seopositions-report .pnl-note:not(.pos-slide-label),
     body.is-full #plan-report .pnl-note:not(.pos-slide-label) {
@@ -853,7 +911,7 @@
     }
     table.activity {
       width: 100%;
-      min-width: 960px;
+      min-width: 1100px;
       border-collapse: collapse;
       font-size: var(--fs-sm);
     }
@@ -881,6 +939,7 @@
     table.activity th.client, table.activity td.client { min-width: 140px; }
     table.activity th.status, table.activity td.status { min-width: 130px; }
     table.activity th.comment, table.activity td.comment { min-width: 240px; }
+    table.activity th.author, table.activity td.author { min-width: 140px; }
     .activity-filters,
     .pnl-toolbar {
       display: flex;
@@ -1028,6 +1087,29 @@
     .pnl-toolbar button:hover,
     .btn-primary:hover,
     .wbfbs-qr-btn:hover { filter: brightness(0.96); }
+    .export-actions {
+      display: flex;
+      gap: 6px;
+      align-items: flex-end;
+      margin-left: auto;
+    }
+    .pnl-toolbar button.export-excel,
+    .pnl-toolbar button.export-pdf,
+    .activity-filters button.export-excel,
+    .activity-filters button.export-pdf {
+      color: var(--ink);
+      background: var(--card);
+      border-color: var(--line);
+      font-weight: 500;
+    }
+    .pnl-toolbar button.export-excel:hover,
+    .pnl-toolbar button.export-pdf:hover,
+    .activity-filters button.export-excel:hover,
+    .activity-filters button.export-pdf:hover {
+      filter: none;
+      background: var(--accent-soft);
+    }
+    body.is-full .export-actions { display: none; }
     .comment-body { white-space: pre-wrap; word-break: break-word; max-height: 9em; overflow: auto; }
     table.activity th.when, table.activity td.when {
       width: 140px;
@@ -1651,9 +1733,11 @@
           </select>
         </span>
         <span class="who" id="who"></span>
-        <button type="button" class="tab-full" id="btn-logout">Выйти</button>
+        <button type="button" class="tab-full" id="btn-export-excel" title="Скачать открытый отчёт в Excel">Excel</button>
+        <button type="button" class="tab-full" id="btn-export-pdf" title="Скачать открытый отчёт в PDF">PDF</button>
         <button type="button" class="tab-full" id="btn-filters" aria-pressed="false" title="Показать или скрыть фильтры">Фильтры</button>
         <button type="button" class="tab-full" id="btn-full">На весь экран</button>
+        <button type="button" id="btn-logout">Выйти</button>
       </nav>
     </div>
   </header>
@@ -1674,7 +1758,7 @@
       <section class="panel" id="chart-analyst-done">__CHART_ANALYST_DONE__</section>
       <section class="panel" id="chart-dev-done">__CHART_DEV_DONE__</section>
     </div>
-    <footer>Часы в работе по статусам — реквизит «Часы». Часы в работе по разработчикам — реквизит «Часы разработки», не общие часы задачи. Выполненные по разработчикам: анализ = часы минус разработка и внедрение; разработка = часы разработки и внедрения. Выполненные по аналитикам: только реквизит «Часы внедрения», без часов анализа. Аналитик — реквизит «Руководитель проектов».</footer>
+    <footer>Часы в работе по статусам — реквизит «Часы». Часы в работе по разработчикам — реквизит «Часы разработки», не общие часы задачи. Выполненные по разработчикам: только реквизит «Часы разработки». Выполненные по аналитикам: только реквизит «Часы внедрения», без часов анализа. Аналитик — реквизит «Руководитель проектов».</footer>
     </div>
     </div>
     <div id="tab-settings" class="tab-panel" hidden>
@@ -1765,7 +1849,7 @@
     <div id="tab-activity" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Задачи в работе, последняя активность в чате</h2>
-        <p class="lead tab-intro">Только статусы с порядком 1–6. Номер, задача, клиент, статус, последний комментарий из чата, дата. Сортировка по дате — в фильтре. Клик по номеру копирует ссылку 1С.</p>
+        <p class="lead tab-intro">Только статусы с порядком 1–6. Номер, задача, клиент, статус, последний комментарий из чата, ФИО автора, дата. Сортировка по дате — в фильтре. Клик по номеру копирует ссылку 1С.</p>
         <form class="activity-filters" id="activity-filters">
           <div>
             <label for="f-number">Номер</label>
@@ -1786,6 +1870,10 @@
           <div>
             <label for="f-comment">Комментарий</label>
             <input id="f-comment" type="text" autocomplete="off">
+          </div>
+          <div>
+            <label for="f-author">ФИО</label>
+            <select id="f-author">__AUTHOR_OPTIONS__</select>
           </div>
           <div class="filter-dates">
             <label>Дата</label>
@@ -2445,6 +2533,15 @@
     </div>
   </main>
   <div id="copy-toast" class="copy-toast" hidden>Ссылка 1С скопирована</div>
+  <div id="logout-modal" aria-hidden="true">
+    <div class="logout-dialog" role="dialog" aria-modal="true" aria-labelledby="logout-title">
+      <p id="logout-title">Вы действительно хотите выйти?</p>
+      <div class="logout-actions">
+        <button type="button" class="btn-secondary" id="logout-no">Нет</button>
+        <button type="button" class="btn-primary" id="logout-yes">Да</button>
+      </div>
+    </div>
+  </div>
   <script>
     const EMBEDDED = __EMBEDDED_DATA__;
     const USER = __USER__;
@@ -2674,9 +2771,12 @@
     function fillActivityFilters(rows) {
       const clients = uniqueSorted(rows.map((r) => r.client).filter(Boolean));
       const statuses = uniqueSorted(rows.map((r) => r.status || "Без статуса"), true);
+      const authors = uniqueSorted(rows.map((r) => r.author).filter(Boolean));
       const hasEmptyClient = rows.some((r) => !r.client);
+      const hasEmptyAuthor = rows.some((r) => !r.author);
       fillSelect("f-client", clients, hasEmptyClient ? { value: "__none__", label: "Без клиента" } : null);
       fillSelect("f-status", statuses);
+      fillSelect("f-author", authors, hasEmptyAuthor ? { value: "__none__", label: "Без автора" } : null);
     }
 
     function filteredActivity(rows) {
@@ -2685,6 +2785,7 @@
       const client = document.getElementById("f-client")?.value || "";
       const status = document.getElementById("f-status")?.value || "";
       const comment = document.getElementById("f-comment")?.value || "";
+      const author = document.getElementById("f-author")?.value || "";
       const from = document.getElementById("f-from")?.value || "";
       const to = document.getElementById("f-to")?.value || "";
       const sortDir = document.getElementById("f-date-sort")?.value === "desc" ? -1 : 1;
@@ -2692,6 +2793,8 @@
         if (!hasSub(row.number, number)) return false;
         if (!hasSub(row.title, title)) return false;
         if (!hasSub(row.comment, comment)) return false;
+        if (author === "__none__" && row.author) return false;
+        if (author && author !== "__none__" && row.author !== author) return false;
         if (client === "__none__" && row.client) return false;
         if (client && client !== "__none__" && row.client !== client) return false;
         if (status && (row.status || "Без статуса") !== status) return false;
@@ -2738,6 +2841,7 @@
           <td class="client">${escapeHtml(row.client || "Без клиента")}</td>
           <td class="status">${escapeHtml(row.status || "Без статуса")}</td>
           <td class="comment"><div class="comment-body">${comment}</div></td>
+          <td class="author">${escapeHtml(row.author || "—")}</td>
           <td class="when">${escapeHtml(date)}</td>
         </tr>`;
       }).join("");
@@ -2749,7 +2853,7 @@
           ? "Сверху самые новые."
           : "Сверху самые старые.";
       return `<div class="activity-scroll"><table class="activity">
-        <thead><tr><th class="num">Номер</th><th class="title">Задача</th><th class="client">Клиент</th><th class="status">Статус</th><th class="comment">Последний комментарий</th><th class="when">Дата</th></tr></thead>
+        <thead><tr><th class="num">Номер</th><th class="title">Задача</th><th class="client">Клиент</th><th class="status">Статус</th><th class="comment">Последний комментарий</th><th class="author">ФИО</th><th class="when">Дата</th></tr></thead>
         <tbody>${body}</tbody>
       </table></div>
       <p class="meta tab-intro">Только задачи в работе (порядок статуса 1–6). ${sortLabel} ${count} Клик по номеру копирует ссылку 1С.</p>`;
@@ -7061,11 +7165,36 @@
       }
       clearCacheBoard(board, { periodAware });
     });
-    document.getElementById("btn-logout").addEventListener("click", async () => {
+    document.getElementById("btn-logout").addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const modal = document.getElementById("logout-modal");
+      if (!modal) return;
+      modal.classList.add("is-open");
+      modal.setAttribute("aria-hidden", "false");
+      document.getElementById("logout-no")?.focus();
+    });
+    function closeLogoutModal() {
+      const modal = document.getElementById("logout-modal");
+      if (!modal) return;
+      modal.classList.remove("is-open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+    async function confirmLogout() {
+      closeLogoutModal();
       try {
         await fetch("/api/logout", { method: "POST", credentials: "same-origin" });
       } catch {}
       location.href = "/login.html";
+    }
+    document.getElementById("logout-no")?.addEventListener("click", () => closeLogoutModal());
+    document.getElementById("logout-yes")?.addEventListener("click", () => confirmLogout());
+    document.getElementById("logout-modal")?.addEventListener("click", (e) => {
+      if (e.target.id === "logout-modal") closeLogoutModal();
+    });
+    document.addEventListener("keydown", (e) => {
+      const modal = document.getElementById("logout-modal");
+      if (e.key === "Escape" && modal?.classList.contains("is-open")) closeLogoutModal();
     });
     document.getElementById("user-create").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -7392,6 +7521,1075 @@
       }
     });
 
+    function currentExportTabName() {
+      const on = document.querySelector(".tab.is-on");
+      return (on && on.getAttribute("data-tab")) || location.hash.replace("#", "") || "hours";
+    }
+
+    function currentExportPanel(fromEl) {
+      if (fromEl) {
+        const tab = fromEl.closest(".tab-panel");
+        if (tab) return tab;
+      }
+      return document.getElementById("tab-" + currentExportTabName());
+    }
+
+    function exportTabTitle(panel) {
+      const name = (panel && panel.id || "").replace(/^tab-/, "");
+      return TAB_LABELS[name] || panel?.querySelector("h2.tab-intro")?.textContent?.trim() || "Отчёт";
+    }
+
+    function exportFileStamp() {
+      const d = new Date();
+      const p = (n) => String(n).padStart(2, "0");
+      return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+    }
+
+    function exportFileSlug(title) {
+      return String(title || "otchet")
+        .replace(/[\\/:*?"<>|]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 80) || "otchet";
+    }
+
+    function isShownEl(el) {
+      if (!el) return false;
+      const st = getComputedStyle(el);
+      if (st.display === "none" || st.visibility === "hidden") return false;
+      return true;
+    }
+
+    function cellText(el) {
+      return String(el?.innerText || "").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+    }
+
+    function tableToRows(table) {
+      const rows = [];
+      for (const tr of table.querySelectorAll("tr")) {
+        if (!isShownEl(tr)) continue;
+        const cells = [...tr.querySelectorAll("th, td")].filter(isShownEl).map(cellText);
+        if (cells.some(Boolean)) rows.push(cells);
+      }
+      return rows;
+    }
+
+    function uniqueSheetName(name, used) {
+      let base = String(name || "Лист")
+        .replace(/[:\\/?*\[\]]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 31) || "Лист";
+      let out = base;
+      let n = 2;
+      while (used.has(out.toLowerCase())) {
+        const suffix = " " + n;
+        out = (base.slice(0, Math.max(1, 31 - suffix.length)) + suffix).trim();
+        n += 1;
+      }
+      used.add(out.toLowerCase());
+      return out;
+    }
+
+    function panelHasInfographic(panel) {
+      if (!panel) return false;
+      return Boolean(panel.querySelector(
+        ".bar-row, .seo-bar-row, .gauge-value, .seo-bars, .pos-band-1, .pos-band-10, .pos-band-30, .pos-band-bad"
+      ));
+    }
+
+    function collectKpiPairs(panel) {
+      const kpiRows = [];
+      const strips = [
+        ...panel.querySelectorAll(".kpi-strip"),
+        ...panel.querySelectorAll("#bitrix-kpis"),
+      ];
+      const seen = new Set();
+      for (const strip of strips) {
+        if (!isShownEl(strip) || seen.has(strip)) continue;
+        seen.add(strip);
+        for (const bt of strip.querySelectorAll(".bt")) {
+          const lab = cellText(bt.querySelector(".lab"));
+          const val = cellText(bt.querySelector(".val"));
+          if (lab || val) kpiRows.push([lab, val]);
+        }
+      }
+      if (!kpiRows.length) {
+        for (const kpi of panel.querySelectorAll(".kpi")) {
+          if (!isShownEl(kpi)) continue;
+          const label = cellText(kpi).replace(cellText(kpi.querySelector("b")), "").trim();
+          const val = cellText(kpi.querySelector("b"));
+          if (label || val) kpiRows.push([label || "Показатель", val]);
+        }
+      }
+      const gauge = panel.querySelector(".gauge-value");
+      if (gauge && isShownEl(gauge)) {
+        const caption = cellText(panel.querySelector(".gauge-caption")) || "Выполнено";
+        const val = cellText(gauge);
+        if (!kpiRows.some((row) => row[1] === val && String(row[0]).includes("Выполнено"))) {
+          kpiRows.unshift([caption, val]);
+        }
+      }
+      return kpiRows;
+    }
+
+    function parseSegTitle(title) {
+      const raw = String(title || "");
+      const m = raw.match(/^(.*):\s*(.+)$/);
+      return m ? { key: m[1].trim(), val: m[2].trim() } : { key: raw.trim(), val: "" };
+    }
+
+    function chartKeysFromBlock(block, barRows) {
+      const fromLegend = [...block.querySelectorAll(".legend span")]
+        .map((el) => cellText(el))
+        .filter(Boolean);
+      if (fromLegend.length) return fromLegend;
+      const keys = [];
+      const seen = new Set();
+      for (const row of barRows) {
+        for (const seg of row.querySelectorAll(".seg")) {
+          const key = parseSegTitle(seg.getAttribute("title")).key;
+          if (key && !seen.has(key)) {
+            seen.add(key);
+            keys.push(key);
+          }
+        }
+      }
+      return keys;
+    }
+
+    function collectChartBlocks(panel) {
+      const blocks = [];
+      const seenRows = new Set();
+      for (const block of panel.querySelectorAll(".panel, .pnl-section")) {
+        if (!isShownEl(block)) continue;
+        const barRows = [...block.querySelectorAll(".bar-row, .seo-bar-row")].filter((row) => {
+          if (!isShownEl(row) || seenRows.has(row)) return false;
+          seenRows.add(row);
+          return true;
+        });
+        if (!barRows.length) continue;
+        blocks.push({
+          title:
+            cellText(block.querySelector("h2, h3")) ||
+            cellText(block.querySelector(".gauge-caption")) ||
+            "График",
+          block,
+          barRows,
+          keys: chartKeysFromBlock(block, barRows),
+        });
+      }
+      return blocks;
+    }
+
+    function tableToRichRows(table) {
+      const rows = [];
+      for (const tr of table.querySelectorAll("tr")) {
+        if (!isShownEl(tr)) continue;
+        const cells = [...tr.querySelectorAll("th, td")].filter(isShownEl).map((td) => {
+          const st = getComputedStyle(td);
+          const bg = cssColorToHex(st.backgroundColor);
+          return {
+            v: cellText(td),
+            fill: bg,
+            bold: td.tagName === "TH" || Number(st.fontWeight) >= 600,
+            align: st.textAlign === "right" || td.classList.contains("num") ? "Right" : (st.textAlign === "center" ? "Center" : "Left"),
+          };
+        });
+        if (cells.some((c) => c.v)) rows.push({ cells });
+      }
+      return rows;
+    }
+
+    function collectExportSheets(panel) {
+      const sheets = [];
+      const used = new Set();
+      if (!panel) return sheets;
+      const notes = [...panel.querySelectorAll(".pnl-note")]
+        .filter(isShownEl)
+        .map(cellText)
+        .filter(Boolean)
+        .slice(0, 4);
+      const kpiRows = collectKpiPairs(panel);
+      if (kpiRows.length) {
+        sheets.push({ name: uniqueSheetName("Итоги", used), rows: [["Показатель", "Значение"], ...kpiRows] });
+      }
+      for (const chart of collectChartBlocks(panel)) {
+        const keys = chart.keys;
+        const head = keys.length
+          ? ["Название", "Итого", ...keys]
+          : ["Название", "Значение"];
+        const rows = [head];
+        for (const row of chart.barRows) {
+          const name = cellText(row.querySelector(".lab, .seo-bar-lab"));
+          const total = cellText(row.querySelector(".num, .seo-bar-val"));
+          if (keys.length) {
+            const byKey = {};
+            for (const seg of row.querySelectorAll(".seg")) {
+              const parsed = parseSegTitle(seg.getAttribute("title"));
+              if (parsed.key) byKey[parsed.key] = parsed.val;
+            }
+            rows.push([name, total, ...keys.map((k) => byKey[k] || "")]);
+          } else {
+            rows.push([name, total]);
+          }
+        }
+        sheets.push({ name: uniqueSheetName(chart.title, used), rows });
+      }
+      const tables = [...panel.querySelectorAll("table")].filter((table) => {
+        if (!isShownEl(table)) return false;
+        if (table.closest(".ozon-fbo-mobile")) return false;
+        return true;
+      });
+      tables.forEach((table, i) => {
+        const rich = tableToRichRows(table);
+        if (!rich.length) return;
+        const heading =
+          cellText(table.closest(".pnl-section")?.querySelector("h2, h3")) ||
+          cellText(panel.querySelector("h2.tab-intro")) ||
+          "Таблица " + (i + 1);
+        sheets.push({
+          name: uniqueSheetName(heading, used),
+          rich: true,
+          rows: rich,
+        });
+      });
+      if (notes.length && sheets.length) {
+        const first = sheets[0];
+        if (first.rich) {
+          first.rows = notes.map((n) => ({ cells: [{ v: n }] })).concat([{ cells: [{ v: "" }] }], first.rows);
+        } else {
+          first.rows = notes.map((n) => [n]).concat([[""]], first.rows);
+        }
+      }
+      return sheets;
+    }
+
+    function xmlEsc(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function cssColorToHex(color) {
+      const raw = String(color || "").trim();
+      if (!raw || raw === "transparent" || raw === "none") return "";
+      const hex = raw.match(/^#([0-9a-f]{3,8})$/i);
+      if (hex) {
+        const h = hex[1];
+        if (h.length === 3 || h.length === 4) {
+          return "#" + [...h].slice(0, 3).map((c) => c + c).join("").toLowerCase();
+        }
+        return "#" + h.slice(0, 6).toLowerCase();
+      }
+      const m = raw.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/i);
+      if (!m) return "";
+      if (m[4] !== undefined && Number(m[4]) <= 0.01) return "";
+      return "#" + [m[1], m[2], m[3]].map((n) => Math.max(0, Math.min(255, Math.round(Number(n)))).toString(16).padStart(2, "0")).join("");
+    }
+
+    function cssVarColor(name, fallback) {
+      return cssColorToHex(getComputedStyle(document.documentElement).getPropertyValue(name)) || fallback;
+    }
+
+    function excelTypeAndValue(value) {
+      const raw = String(value ?? "").trim();
+      const num = raw.replace(/\s/g, "").replace(",", ".");
+      if (raw && /^-?\d+(\.\d+)?$/.test(num) && num.length < 16 && !raw.includes("%")) {
+        return { type: "Number", value: num };
+      }
+      return { type: "String", value: raw };
+    }
+
+    function excelCell(value) {
+      const parsed = excelTypeAndValue(value);
+      return `<Cell><Data ss:Type="${parsed.type}">${xmlEsc(parsed.value)}</Data></Cell>`;
+    }
+
+    function excelStyleBook() {
+      const list = ['<Style ss:ID="Default"><Alignment ss:Vertical="Center"/><Font ss:FontName="Segoe UI" ss:Size="10"/></Style>'];
+      const seen = new Map();
+      const add = (key, inner) => {
+        if (seen.has(key)) return seen.get(key);
+        const id = "s" + seen.size;
+        seen.set(key, id);
+        list.push(`<Style ss:ID="${id}">${inner}</Style>`);
+        return id;
+      };
+      return {
+        id(opts = {}) {
+          const fill = opts.fill ? cssColorToHex(opts.fill) : "";
+          const color = opts.color ? cssColorToHex(opts.color) : "";
+          const align = opts.align || "Left";
+          const bold = opts.bold ? 1 : 0;
+          const size = opts.size || 10;
+          const wrap = opts.wrap ? 1 : 0;
+          const key = [fill, color, align, bold, size, wrap].join("|");
+          let inner = `<Alignment ss:Vertical="Center" ss:Horizontal="${align}"${wrap ? ' ss:WrapText="1"' : ""}/>`;
+          inner += `<Font ss:FontName="Segoe UI" ss:Size="${size}" ss:Bold="${bold}"${color ? ` ss:Color="${color}"` : ""}/>`;
+          if (fill) inner += `<Interior ss:Color="${fill}" ss:Pattern="Solid"/>`;
+          inner += `<Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DDD9D0"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DDD9D0"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DDD9D0"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#DDD9D0"/></Borders>`;
+          return add(key, inner);
+        },
+        xml() { return list.join(""); },
+      };
+    }
+
+    function serializeExcelCell(cell, styles) {
+      if (cell == null || cell === "") return "<Cell/>";
+      const spec = (cell && typeof cell === "object" && !Array.isArray(cell)) ? cell : { v: cell };
+      const parsed = excelTypeAndValue(spec.v);
+      const style = styles.id({
+        fill: spec.fill,
+        color: spec.color,
+        align: spec.align,
+        bold: spec.bold,
+        size: spec.size,
+        wrap: spec.wrap,
+      });
+      const merge = spec.mergeAcross ? ` ss:MergeAcross="${spec.mergeAcross}"` : "";
+      const index = spec.index ? ` ss:Index="${spec.index}"` : "";
+      return `<Cell ss:StyleID="${style}"${index}${merge}><Data ss:Type="${parsed.type}">${xmlEsc(parsed.value)}</Data></Cell>`;
+    }
+
+    function serializeExcelRow(row, styles) {
+      if (Array.isArray(row)) {
+        return `<Row>${row.map((cell) => serializeExcelCell(cell, styles)).join("")}</Row>`;
+      }
+      const height = row && row.height ? ` ss:Height="${row.height}" ss:AutoFitHeight="0"` : "";
+      const cells = (row && row.cells) || [];
+      return `<Row${height}>${cells.map((cell) => serializeExcelCell(cell, styles)).join("")}</Row>`;
+    }
+
+    function sheetsToExcelXml(title, sheets) {
+      const styles = excelStyleBook();
+      const body = sheets
+        .map((sheet) => {
+          const cols = (sheet.columns || [])
+            .map((w, i) => `<Column ss:Index="${i + 1}" ss:AutoFitWidth="0" ss:Width="${w}"/>`)
+            .join("");
+          const rows = (sheet.rows || []).map((row) => serializeExcelRow(row, styles)).join("");
+          return `<Worksheet ss:Name="${xmlEsc(sheet.name)}"><Table>${cols}${rows}</Table></Worksheet>`;
+        })
+        .join("");
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+<DocumentProperties xmlns="urn:schemas-microsoft-com:office:office"><Title>${xmlEsc(title)}</Title></DocumentProperties>
+<Styles>${styles.xml()}</Styles>
+${body}
+</Workbook>`;
+    }
+
+    const EXCEL_BAR_UNITS = 20;
+
+    function barUnitsFromRow(row) {
+      const fills = [...row.querySelectorAll(".seg, .seo-bar-fill")].map((el) => {
+        const pct = parseFloat(el.style.width);
+        const title = parseSegTitle(el.getAttribute("title"));
+        return {
+          fill: cssColorToHex(getComputedStyle(el).backgroundColor) || cssVarColor("--accent", "#8a5a12"),
+          pct: Number.isFinite(pct) ? pct : 0,
+          key: title.key,
+        };
+      });
+      const units = [];
+      let used = 0;
+      fills.forEach((seg, i) => {
+        let n = Math.round((seg.pct / 100) * EXCEL_BAR_UNITS);
+        if (seg.pct > 0 && n < 1) n = 1;
+        if (i === fills.length - 1) n = Math.max(0, Math.min(EXCEL_BAR_UNITS - used, n));
+        else n = Math.min(n, EXCEL_BAR_UNITS - used);
+        for (let k = 0; k < n; k++) units.push(seg.fill);
+        used += n;
+      });
+      const track = row.querySelector(".track, .seo-bar-track");
+      const empty = cssColorToHex(track ? getComputedStyle(track).backgroundColor : "") || cssVarColor("--accent-soft", "#f3ead3");
+      while (units.length < EXCEL_BAR_UNITS) units.push(empty);
+      return units;
+    }
+
+    function visualExcelSheet(panel, title) {
+      const ink = cssVarColor("--ink", "#1c1b18");
+      const muted = cssVarColor("--muted", "#5c5a54");
+      const card = cssVarColor("--card", "#ffffff");
+      const accentSoft = cssVarColor("--accent-soft", "#f3ead3");
+      const rows = [];
+      rows.push({
+        height: 24,
+        cells: [{ v: title, bold: true, size: 14, color: ink, fill: card, mergeAcross: EXCEL_BAR_UNITS + 1 }],
+      });
+      rows.push({
+        height: 16,
+        cells: [{ v: exportFileStamp(), size: 9, color: muted, fill: card, mergeAcross: EXCEL_BAR_UNITS + 1 }],
+      });
+      rows.push({ cells: [{ v: "" }] });
+
+      const kpiHosts = [
+        ...panel.querySelectorAll(".kpi-strip"),
+        ...panel.querySelectorAll("#bitrix-kpis"),
+      ].filter((el, i, arr) => isShownEl(el) && arr.indexOf(el) === i);
+      for (const strip of kpiHosts) {
+        const items = [...strip.querySelectorAll(".bt")].filter(isShownEl);
+        if (!items.length) continue;
+        const span = Math.max(1, Math.floor((EXCEL_BAR_UNITS + 2) / items.length) - 1);
+        rows.push({
+          height: 16,
+          cells: items.map((bt, i) => ({
+            v: cellText(bt.querySelector(".lab")),
+            size: 8,
+            color: muted,
+            fill: accentSoft,
+            align: "Center",
+            mergeAcross: span,
+            wrap: true,
+            index: i === 0 ? 1 : i * (span + 1) + 1,
+          })),
+        });
+        rows.push({
+          height: 28,
+          cells: items.map((bt, i) => ({
+            v: cellText(bt.querySelector(".val")),
+            size: 16,
+            bold: true,
+            color: ink,
+            fill: accentSoft,
+            align: "Center",
+            mergeAcross: span,
+            index: i === 0 ? 1 : i * (span + 1) + 1,
+          })),
+        });
+        rows.push({ cells: [{ v: "" }] });
+      }
+
+      const gauge = panel.querySelector(".gauge-value");
+      if (gauge && isShownEl(gauge)) {
+        rows.push({
+          height: 18,
+          cells: [{ v: cellText(panel.querySelector(".gauge-caption")) || "Выполнено", size: 9, color: muted, align: "Center", mergeAcross: EXCEL_BAR_UNITS + 1 }],
+        });
+        rows.push({
+          height: 32,
+          cells: [{ v: cellText(gauge), size: 20, bold: true, color: ink, align: "Center", mergeAcross: EXCEL_BAR_UNITS + 1 }],
+        });
+        for (const kpi of panel.querySelectorAll("#chart-kpis .kpi")) {
+          if (!isShownEl(kpi)) continue;
+          rows.push({
+            height: 20,
+            cells: [{
+              v: cellText(kpi),
+              size: 11,
+              color: ink,
+              align: "Center",
+              mergeAcross: EXCEL_BAR_UNITS + 1,
+            }],
+          });
+        }
+        rows.push({ cells: [{ v: "" }] });
+      }
+
+      for (const chart of collectChartBlocks(panel)) {
+        rows.push({
+          height: 22,
+          cells: [{ v: chart.title, bold: true, size: 12, color: ink, fill: accentSoft, mergeAcross: EXCEL_BAR_UNITS + 1 }],
+        });
+        for (const row of chart.barRows) {
+          const units = barUnitsFromRow(row);
+          const cells = [
+            { v: cellText(row.querySelector(".lab, .seo-bar-lab")), size: 9, color: ink, wrap: true },
+            ...units.map((fill) => ({ v: "", fill, align: "Center" })),
+            { v: cellText(row.querySelector(".num, .seo-bar-val")), size: 9, color: muted, align: "Right" },
+          ];
+          rows.push({ height: 16, cells });
+        }
+        if (chart.keys.length) {
+          const colorByKey = new Map();
+          for (const row of chart.barRows) {
+            for (const seg of row.querySelectorAll(".seg")) {
+              const key = parseSegTitle(seg.getAttribute("title")).key;
+              if (key && !colorByKey.has(key)) {
+                colorByKey.set(key, cssColorToHex(getComputedStyle(seg).backgroundColor));
+              }
+            }
+          }
+          const legendCells = [];
+          chart.keys.forEach((key) => {
+            legendCells.push({ v: "", fill: colorByKey.get(key) || cssVarColor("--accent", "#8a5a12") });
+            legendCells.push({ v: key, size: 8, color: muted, mergeAcross: 2 });
+          });
+          if (legendCells.length) rows.push({ height: 16, cells: legendCells });
+        }
+        rows.push({ cells: [{ v: "" }] });
+      }
+
+      const columns = [28, ...Array(EXCEL_BAR_UNITS).fill(8), 16];
+      return { name: "Доска", columns, rich: true, rows };
+    }
+
+    function infographicExcelXml(panel, title, dataSheets) {
+      const visual = visualExcelSheet(panel, title);
+      const rest = (dataSheets || []).filter((sheet) => sheet.name !== "Доска");
+      return sheetsToExcelXml(title, [visual, ...rest]);
+    }
+
+    function exportCaptureRoot(panel) {
+      if (!panel) return null;
+      return panel.querySelector(".hours-stage")
+        || panel.querySelector(".bitrix-stage")
+        || panel.querySelector(".report-stage-inner")
+        || panel;
+    }
+
+    function isTransparentColor(color) {
+      return !cssColorToHex(color);
+    }
+
+    function expandOverflowForCapture(root) {
+      const saved = [];
+      const remember = (el) => {
+        saved.push({
+          el,
+          overflow: el.style.overflow,
+          overflowX: el.style.overflowX,
+          overflowY: el.style.overflowY,
+          maxHeight: el.style.maxHeight,
+        });
+        el.style.overflow = "visible";
+        el.style.overflowX = "visible";
+        el.style.overflowY = "visible";
+        el.style.maxHeight = "none";
+      };
+      remember(root);
+      for (const el of root.querySelectorAll(".pnl-scroll, .seo-bars, .activity-scroll, .report-stage, .report-stage-inner")) {
+        remember(el);
+      }
+      void root.offsetHeight;
+      return () => {
+        for (const item of saved) {
+          item.el.style.overflow = item.overflow;
+          item.el.style.overflowX = item.overflowX;
+          item.el.style.overflowY = item.overflowY;
+          item.el.style.maxHeight = item.maxHeight;
+        }
+      };
+    }
+
+    function paintFittedText(ctx, text, st, x, y, w, h) {
+      if (!text || w < 2 || h < 2) return;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x, y, w, h);
+      ctx.clip();
+      ctx.font = st.font;
+      ctx.fillStyle = st.color || "#1c1b18";
+      const align = st.textAlign === "center" || st.textAlign === "right" ? st.textAlign : "left";
+      ctx.textAlign = align;
+      ctx.textBaseline = "middle";
+      let draw = String(text);
+      const maxW = Math.max(4, w - 4);
+      if ((st.whiteSpace === "nowrap" || st.textOverflow === "ellipsis") && ctx.measureText(draw).width > maxW) {
+        while (draw.length && ctx.measureText(draw + "…").width > maxW) draw = draw.slice(0, -1);
+        draw += "…";
+      }
+      const tx = align === "center" ? x + w / 2 : (align === "right" ? x + w - 2 : x + 2);
+      ctx.fillText(draw, tx, y + h / 2);
+      ctx.restore();
+    }
+
+    function resolvePaintColor(el, cssProp, attrName, fallback) {
+      const st = getComputedStyle(el);
+      const candidates = [st[cssProp], el.getAttribute(attrName), fallback];
+      for (const raw of candidates) {
+        if (!raw || raw === "none" || raw === "transparent") continue;
+        let value = String(raw).trim();
+        const varMatch = value.match(/var\(\s*(--[\w-]+)/);
+        if (varMatch) {
+          const resolved = getComputedStyle(document.documentElement).getPropertyValue(varMatch[1]).trim();
+          if (resolved) value = resolved;
+        }
+        if (value.includes("var(")) continue;
+        const hex = cssColorToHex(value);
+        if (hex) return hex;
+        if (value.startsWith("#") || value.startsWith("rgb")) return value;
+      }
+      return fallback || "#888888";
+    }
+
+    function paintSvgNode(ctx, svg, ox, oy) {
+      const r = svg.getBoundingClientRect();
+      const vb = svg.viewBox && svg.viewBox.baseVal;
+      const vw = (vb && vb.width) || Number(svg.getAttribute("width")) || r.width || 1;
+      const vh = (vb && vb.height) || Number(svg.getAttribute("height")) || r.height || 1;
+      ctx.save();
+      ctx.translate(r.left - ox, r.top - oy);
+      ctx.scale((r.width || 1) / vw, (r.height || 1) / vh);
+      for (const path of svg.querySelectorAll("path")) {
+        const d = path.getAttribute("d");
+        if (!d) continue;
+        ctx.lineWidth = Number(path.getAttribute("stroke-width") || parseFloat(getComputedStyle(path).strokeWidth) || 1);
+        ctx.strokeStyle = resolvePaintColor(path, "stroke", "stroke", "#888");
+        ctx.lineCap = "butt";
+        ctx.stroke(new Path2D(d));
+      }
+      for (const line of svg.querySelectorAll("line")) {
+        ctx.beginPath();
+        ctx.moveTo(Number(line.getAttribute("x1")), Number(line.getAttribute("y1")));
+        ctx.lineTo(Number(line.getAttribute("x2")), Number(line.getAttribute("y2")));
+        ctx.strokeStyle = resolvePaintColor(line, "stroke", "stroke", "#1c1b18");
+        ctx.lineWidth = Number(line.getAttribute("stroke-width") || 2);
+        ctx.stroke();
+      }
+      for (const circle of svg.querySelectorAll("circle")) {
+        ctx.beginPath();
+        ctx.arc(Number(circle.getAttribute("cx")), Number(circle.getAttribute("cy")), Number(circle.getAttribute("r") || 3), 0, Math.PI * 2);
+        ctx.fillStyle = resolvePaintColor(circle, "fill", "fill", "#1c1b18");
+        ctx.fill();
+      }
+      for (const text of svg.querySelectorAll("text")) {
+        ctx.fillStyle = resolvePaintColor(text, "fill", "fill", "#5c5a54");
+        ctx.font = `${text.getAttribute("font-size") || 11}px ${getComputedStyle(text).fontFamily || "sans-serif"}`;
+        ctx.textBaseline = "alphabetic";
+        ctx.fillText(text.textContent || "", Number(text.getAttribute("x") || 0), Number(text.getAttribute("y") || 0));
+      }
+      ctx.restore();
+    }
+
+    const EXPORT_SKIP_TAGS = new Set(["SCRIPT", "STYLE", "FORM", "BUTTON", "INPUT", "SELECT", "TEXTAREA", "NOSCRIPT"]);
+
+    function isInlinePaintChild(el) {
+      if (el.tagName === "IMG" || el.tagName === "CANVAS") return false;
+      if (String(el.tagName || "").toLowerCase() === "svg") return false;
+      if (el.classList.contains("seg") || el.classList.contains("seo-bar-fill") || el.classList.contains("track") || el.classList.contains("seo-bar-track")) return false;
+      if (el.querySelector("i, svg, .seg")) return false;
+      const st = getComputedStyle(el);
+      if (!isTransparentColor(st.backgroundColor)) return false;
+      if ((parseFloat(st.borderTopWidth) || 0) >= 1 && st.borderTopStyle !== "none") return false;
+      return ["B", "STRONG", "EM", "A", "SMALL", "SUP", "SUB", "BR"].includes(el.tagName);
+    }
+
+    function paintDomNode(ctx, node, ox, oy, clipTop, clipBottom) {
+      if (node.nodeType !== 1) return;
+      if (EXPORT_SKIP_TAGS.has(node.tagName)) return;
+      if (node.hasAttribute("hidden") || node.classList.contains("export-actions")) return;
+      const st = getComputedStyle(node);
+      if (st.display === "none" || st.visibility === "hidden" || st.opacity === "0") return;
+      const r = node.getBoundingClientRect();
+      const x = r.left - ox;
+      const y = r.top - oy;
+      if (r.width < 0.4 || r.height < 0.4) return;
+      if (y + r.height < clipTop - 1 || y > clipBottom + 1) return;
+
+      const bg = st.backgroundColor;
+      if (!isTransparentColor(bg)) {
+        ctx.fillStyle = bg;
+        ctx.fillRect(x, y, r.width, r.height);
+      }
+      const bw = parseFloat(st.borderTopWidth) || 0;
+      if (bw >= 0.5 && st.borderTopStyle !== "none" && !isTransparentColor(st.borderTopColor)) {
+        ctx.strokeStyle = st.borderTopColor;
+        ctx.lineWidth = bw;
+        ctx.strokeRect(x + bw / 2, y + bw / 2, Math.max(0, r.width - bw), Math.max(0, r.height - bw));
+      }
+
+      if (String(node.tagName || "").toLowerCase() === "svg") {
+        paintSvgNode(ctx, node, ox, oy);
+        return;
+      }
+
+      const kids = [...node.childNodes];
+      const elKids = kids.filter((k) => k.nodeType === 1 && !EXPORT_SKIP_TAGS.has(k.tagName));
+      const atomic = elKids.length > 0 && elKids.every(isInlinePaintChild);
+      if (elKids.length && !atomic) {
+        for (const child of elKids) paintDomNode(ctx, child, ox, oy, clipTop, clipBottom);
+        const directText = kids.filter((k) => k.nodeType === 3).map((k) => k.textContent).join("").replace(/\s+/g, " ").trim();
+        if (directText) {
+          const first = elKids[0];
+          const pad = first && first.tagName === "I" ? Math.min(r.width * 0.45, (first.getBoundingClientRect().width || 8) + 6) : 0;
+          paintFittedText(ctx, directText, st, x + pad, y, Math.max(4, r.width - pad), r.height);
+        }
+        return;
+      }
+      const text = String(node.textContent || "").replace(/\s+/g, " ").trim();
+      if (text) paintFittedText(ctx, text, st, x, y, r.width, r.height);
+    }
+
+    function captureRootToCanvases(root) {
+      const restore = expandOverflowForCapture(root);
+      try {
+        const rect = root.getBoundingClientRect();
+        const cssW = Math.max(320, Math.ceil(Math.max(rect.width, root.scrollWidth, root.offsetWidth)));
+        const cssH = Math.max(180, Math.ceil(Math.max(rect.height, root.scrollHeight, root.offsetHeight)));
+        const maxPx = 8000;
+        const scale = cssW * 2 > maxPx ? Math.max(1, maxPx / cssW) : 2;
+        const pageCssH = Math.max(420, Math.floor(maxPx / scale));
+        const pages = [];
+        const ox = rect.left;
+        const oy = rect.top;
+        const bg = cssVarColor("--bg", "#f4f2ed") || "#f4f2ed";
+        for (let top = 0; top < cssH; top += pageCssH) {
+          const sliceH = Math.min(pageCssH, cssH - top);
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(cssW * scale));
+          canvas.height = Math.max(1, Math.round(sliceH * scale));
+          const ctx = canvas.getContext("2d");
+          ctx.setTransform(scale, 0, 0, scale, 0, 0);
+          ctx.fillStyle = bg;
+          ctx.fillRect(0, 0, cssW, sliceH);
+          ctx.save();
+          ctx.translate(0, -top);
+          paintDomNode(ctx, root, ox, oy, top, top + sliceH);
+          ctx.restore();
+          pages.push(canvas);
+        }
+        return pages;
+      } finally {
+        restore();
+      }
+    }
+
+    function canvasesToPdfBytes(title, canvases) {
+      const pages = [];
+      let pageW = 842;
+      let pageH = 595;
+      const bg = cssVarColor("--bg", "#f4f2ed") || "#ffffff";
+      canvases.forEach((src) => {
+        const landscape = src.width >= src.height;
+        pageW = landscape ? 842 : 595;
+        pageH = landscape ? 595 : 842;
+        const canvas = document.createElement("canvas");
+        const scale = 2;
+        canvas.width = pageW * scale;
+        canvas.height = pageH * scale;
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(scale, 0, 0, scale, 0, 0);
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, pageW, pageH);
+        const margin = 12;
+        const boxW = pageW - margin * 2;
+        const boxH = pageH - margin * 2;
+        const fit = Math.min(boxW / src.width, boxH / src.height);
+        const dw = src.width * fit;
+        const dh = src.height * fit;
+        const dx = margin + (boxW - dw) / 2;
+        const dy = margin + (boxH - dh) / 2;
+        ctx.drawImage(src, dx, dy, dw, dh);
+        pages.push({ width: canvas.width, height: canvas.height, jpeg: canvasToJpeg(canvas) });
+      });
+      return jpegsToPdf(pages, pageW, pageH);
+    }
+
+    function visualPanelToPdfBytes(panel, title) {
+      const root = exportCaptureRoot(panel);
+      const canvases = captureRootToCanvases(root || panel);
+      if (!canvases.length) throw new Error("Пустой кадр доски");
+      return canvasesToPdfBytes(title, canvases);
+    }
+
+    function downloadBlob(filename, mime, data) {
+      const blob = data instanceof Blob ? data : new Blob([data], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
+    function pdfStr(text) {
+      return new TextEncoder().encode(text);
+    }
+
+    function pdfConcat(parts) {
+      const total = parts.reduce((s, p) => s + p.length, 0);
+      const out = new Uint8Array(total);
+      let o = 0;
+      for (const p of parts) {
+        out.set(p, o);
+        o += p.length;
+      }
+      return out;
+    }
+
+    function jpegsToPdf(pages, pageW, pageH) {
+      const parts = [];
+      const offsets = [];
+      let pos = 0;
+      const push = (chunk) => {
+        parts.push(chunk);
+        pos += chunk.length;
+      };
+      const obj = (num, chunk) => {
+        offsets[num] = pos;
+        push(pdfStr(num + " 0 obj\n"));
+        push(chunk);
+        push(pdfStr("\nendobj\n"));
+      };
+      push(pdfStr("%PDF-1.4\n"));
+      const kids = pages.map((_, i) => (3 + i * 3) + " 0 R").join(" ");
+      obj(1, pdfStr("<< /Type /Catalog /Pages 2 0 R >>"));
+      obj(2, pdfStr("<< /Type /Pages /Count " + pages.length + " /Kids [" + kids + "] >>"));
+      pages.forEach((page, i) => {
+        const pageNo = 3 + i * 3;
+        const contNo = pageNo + 1;
+        const imgNo = pageNo + 2;
+        const content = "q " + pageW + " 0 0 " + pageH + " 0 0 cm /Im" + i + " Do Q";
+        obj(pageNo, pdfStr(
+          "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + pageW + " " + pageH + "] " +
+          "/Contents " + contNo + " 0 R /Resources << /XObject << /Im" + i + " " + imgNo + " 0 R >> >> >>"
+        ));
+        obj(contNo, pdfStr("<< /Length " + content.length + " >>\nstream\n" + content + "\nendstream"));
+        obj(imgNo, pdfConcat([
+          pdfStr(
+            "<< /Type /XObject /Subtype /Image /Width " + page.width +
+            " /Height " + page.height +
+            " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " +
+            page.jpeg.length + " >>\nstream\n"
+          ),
+          page.jpeg,
+          pdfStr("\nendstream"),
+        ]));
+      });
+      const xrefPos = pos;
+      let xref = "xref\n0 " + (3 + pages.length * 3) + "\n0000000000 65535 f \n";
+      for (let i = 1; i < offsets.length; i++) {
+        xref += String(offsets[i]).padStart(10, "0") + " 00000 n \n";
+      }
+      push(pdfStr(xref));
+      push(pdfStr("trailer\n<< /Size " + (3 + pages.length * 3) + " /Root 1 0 R >>\nstartxref\n" + xrefPos + "\n%%EOF"));
+      return pdfConcat(parts);
+    }
+
+    function pdfWrapText(ctx, text, maxW) {
+      const raw = String(text ?? "").replace(/\s+/g, " ").trim();
+      if (!raw) return [""];
+      if (ctx.measureText(raw).width <= maxW) return [raw];
+      const words = raw.split(" ");
+      const lines = [];
+      let line = "";
+      const pushFit = (chunk) => {
+        if (ctx.measureText(chunk).width <= maxW) {
+          lines.push(chunk);
+          return;
+        }
+        let buf = "";
+        for (const ch of chunk) {
+          const next = buf + ch;
+          if (buf && ctx.measureText(next).width > maxW) {
+            lines.push(buf);
+            buf = ch;
+          } else buf = next;
+        }
+        if (buf) lines.push(buf);
+      };
+      for (const word of words) {
+        const trial = line ? line + " " + word : word;
+        if (ctx.measureText(trial).width <= maxW) {
+          line = trial;
+          continue;
+        }
+        if (line) lines.push(line);
+        line = "";
+        if (ctx.measureText(word).width <= maxW) line = word;
+        else pushFit(word);
+      }
+      if (line) lines.push(line);
+      return lines.length ? lines.slice(0, 8) : [""];
+    }
+
+    function canvasToJpeg(canvas) {
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+      const b64 = (dataUrl.split(",")[1] || "");
+      const bin = atob(b64);
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
+    }
+
+    function sheetsToPdfBytes(title, sheets) {
+      const pageW = 842;
+      const pageH = 595;
+      const scale = 2;
+      const margin = 28;
+      const canvas = document.createElement("canvas");
+      canvas.width = pageW * scale;
+      canvas.height = pageH * scale;
+      const ctx = canvas.getContext("2d");
+      const pages = [];
+      let y = 0;
+
+      const paintBg = () => {
+        ctx.setTransform(scale, 0, 0, scale, 0, 0);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, pageW, pageH);
+      };
+
+      const flush = () => {
+        pages.push({ width: canvas.width, height: canvas.height, jpeg: canvasToJpeg(canvas) });
+        paintBg();
+        y = margin;
+      };
+
+      const ensure = (need) => {
+        if (y + need > pageH - margin) flush();
+      };
+
+      paintBg();
+      y = margin;
+      ctx.fillStyle = "#1c1b18";
+      ctx.font = "bold 16px Segoe UI, system-ui, sans-serif";
+      ctx.fillText(String(title || "Отчёт"), margin, y + 16);
+      y += 22;
+      ctx.font = "11px Segoe UI, system-ui, sans-serif";
+      ctx.fillStyle = "#5c5a54";
+      ctx.fillText(exportFileStamp(), margin, y + 12);
+      y += 20;
+
+      const innerW = pageW - margin * 2;
+      for (const sheet of sheets) {
+        const rows = (sheet.rows || []).filter((row) => Array.isArray(row) && row.length);
+        if (!rows.length) continue;
+        ctx.font = "bold 12px Segoe UI, system-ui, sans-serif";
+        ctx.fillStyle = "#1c1b18";
+        ensure(20);
+        ctx.fillText(String(sheet.name || "Таблица"), margin, y + 12);
+        y += 18;
+
+        const colCount = Math.max(1, ...rows.map((r) => r.length));
+        ctx.font = "9px Segoe UI, system-ui, sans-serif";
+        const rawW = [];
+        for (let c = 0; c < colCount; c++) {
+          let w = 24;
+          for (const row of rows.slice(0, 80)) {
+            const t = String(row[c] ?? "");
+            w = Math.max(w, Math.min(220, ctx.measureText(t).width + 10));
+          }
+          rawW[c] = w;
+        }
+        const sumW = rawW.reduce((s, w) => s + w, 0) || 1;
+        const colW = rawW.map((w) => (w / sumW) * innerW);
+        const lineH = 11;
+        const pad = 3;
+
+        const drawRow = (row, header) => {
+          ctx.font = (header ? "bold " : "") + "9px Segoe UI, system-ui, sans-serif";
+          const lines = [];
+          let maxLines = 1;
+          for (let c = 0; c < colCount; c++) {
+            const wrapped = pdfWrapText(ctx, row[c], Math.max(12, colW[c] - 8));
+            lines[c] = wrapped;
+            maxLines = Math.max(maxLines, wrapped.length);
+          }
+          const rowH = maxLines * lineH + pad * 2;
+          ensure(rowH + 1);
+          let x = margin;
+          for (let c = 0; c < colCount; c++) {
+            ctx.fillStyle = header ? "#f3ead3" : "#ffffff";
+            ctx.fillRect(x, y, colW[c], rowH);
+            ctx.strokeStyle = "#cfc8bb";
+            ctx.strokeRect(x, y, colW[c], rowH);
+            ctx.fillStyle = "#1c1b18";
+            ctx.font = (header ? "bold " : "") + "9px Segoe UI, system-ui, sans-serif";
+            lines[c].forEach((line, i) => {
+              ctx.fillText(line, x + 4, y + pad + 9 + i * lineH);
+            });
+            x += colW[c];
+          }
+          y += rowH;
+        };
+
+        for (let i = 0; i < rows.length; i++) drawRow(rows[i], i === 0);
+        y += 12;
+      }
+
+      if (pages.length === 0 || y > margin + 8) flush();
+      return jpegsToPdf(pages, pageW, pageH);
+    }
+
+    function exportFlash(text) {
+      const el = document.getElementById("error");
+      if (!el) {
+        window.alert(text);
+        return;
+      }
+      el.hidden = !text;
+      el.textContent = text || "";
+      if (text) setTimeout(() => {
+        if (el.textContent === text) {
+          el.hidden = true;
+          el.textContent = "";
+        }
+      }, 4000);
+    }
+
+    function prepareExport(fromEl) {
+      const panel = currentExportPanel(fromEl);
+      const name = (panel && panel.id || "").replace(/^tab-/, "");
+      if (!panel || ["settings", "admin", "cache"].includes(name)) {
+        exportFlash("С этой вкладки отчёт не выгружается.");
+        return null;
+      }
+      const sheets = collectExportSheets(panel);
+      const visual = panelHasInfographic(panel);
+      if (!sheets.length && !visual) {
+        exportFlash("Сначала сформируйте отчёт на этой вкладке.");
+        return null;
+      }
+      return { panel, sheets, visual, title: exportTabTitle(panel) };
+    }
+
+    function exportCurrentExcel(fromEl) {
+      const pack = prepareExport(fromEl);
+      if (!pack) return;
+      const filename = exportFileSlug(pack.title) + "_" + exportFileStamp() + ".xls";
+      const xml = pack.visual
+        ? infographicExcelXml(pack.panel, pack.title, pack.sheets)
+        : sheetsToExcelXml(pack.title, pack.sheets);
+      downloadBlob(filename, "application/vnd.ms-excel;charset=utf-8", xml);
+      exportFlash("");
+    }
+
+    function exportCurrentPdf(fromEl) {
+      const pack = prepareExport(fromEl);
+      if (!pack) return;
+      const filename = exportFileSlug(pack.title) + "_" + exportFileStamp() + ".pdf";
+      try {
+        const bytes = pack.visual
+          ? visualPanelToPdfBytes(pack.panel, pack.title)
+          : sheetsToPdfBytes(pack.title, pack.sheets);
+        downloadBlob(filename, "application/pdf", bytes);
+        exportFlash("");
+      } catch (err) {
+        exportFlash("Не удалось сохранить PDF: " + (err.message || err));
+      }
+    }
+
+    function onExportButtonClick(e, kind) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!e.isTrusted) return;
+      if (kind === "pdf") exportCurrentPdf(e.currentTarget);
+      else exportCurrentExcel(e.currentTarget);
+    }
+
+    function installExportButtons() {
+      const toolbars = document.querySelectorAll("form.pnl-toolbar, form.activity-filters");
+      for (const form of toolbars) {
+        if (form.querySelector(".export-actions")) continue;
+        const wrap = document.createElement("div");
+        wrap.className = "export-actions";
+        wrap.innerHTML = '<button type="button" class="export-excel">Excel</button><button type="button" class="export-pdf">PDF</button>';
+        wrap.querySelector(".export-excel").addEventListener("click", (e) => onExportButtonClick(e, "excel"));
+        wrap.querySelector(".export-pdf").addEventListener("click", (e) => onExportButtonClick(e, "pdf"));
+        form.appendChild(wrap);
+      }
+    }
+
+    document.getElementById("btn-export-excel")?.addEventListener("click", (e) => onExportButtonClick(e, "excel"));
+    document.getElementById("btn-export-pdf")?.addEventListener("click", (e) => onExportButtonClick(e, "pdf"));
     document.getElementById("btn-full").addEventListener("click", () => {
       setFull(!document.body.classList.contains("is-full"));
     });
@@ -7654,6 +8852,7 @@
     initSeoPositionsDates();
     installMonthPickers();
     ensureReportStages();
+    installExportButtons();
     applyUserUi();
     if (EMBEDDED?.activity) fillActivityFilters(EMBEDDED.activity);
     showTab(location.hash.replace("#", ""));

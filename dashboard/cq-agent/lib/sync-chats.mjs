@@ -1,12 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { DATA_DIR, tradeCreds } from "./settings.mjs";
+import { DATA_DIR, analysisWindow, monthsAgoIso, normalizeMonths, tradeCreds } from "./settings.mjs";
 
 const EMPTY = "00000000-0000-0000-0000-000000000000";
 const CACHE_PATH = join(DATA_DIR, "client-chats-cache.json");
 const DIGEST_PATH = join(DATA_DIR, "client-chats-digest.json");
 const PAGE = 200;
-const DIGEST_PER_CHAT = 40;
+const DIGEST_PER_CHAT = 250;
 
 function enc(s) {
   return encodeURIComponent(s).replace(/%20/g, " ");
@@ -15,7 +15,34 @@ function enc(s) {
 function odataDateTime(v) {
   const s = String(v || "").trim().replace(/Z$/i, "");
   const m = s.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/);
-  return m ? m[1] : "2000-01-01T00:00:00";
+  return m ? m[1] : "";
+}
+
+function messageAt(m) {
+  return String(m?.at || "").trim();
+}
+
+/** Курсор инкремента: самый новый ДатаСоздания уже лежащих в кэше сообщений. */
+function chatCursorAt(chat) {
+  const times = [];
+  if (chat?.cursorAt) times.push(String(chat.cursorAt));
+  if (chat?.lastMessageAt) times.push(String(chat.lastMessageAt));
+  for (const m of chat?.messages || []) {
+    if (messageAt(m)) times.push(messageAt(m));
+  }
+  times.sort();
+  return times.length ? times[times.length - 1] : "";
+}
+
+function stamp(v) {
+  const s = String(v || "").trim().replace(/Z$/i, "");
+  const m = s.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/);
+  return m ? m[1] : s;
+}
+
+function inWindow(at, fromIso) {
+  if (!fromIso) return true;
+  return stamp(at) >= stamp(fromIso);
 }
 
 function emptyCache() {
@@ -71,10 +98,12 @@ async function pageAll(creds, entity, filter, select, orderby) {
   return rows;
 }
 
-function writeDigest(cache) {
+function writeDigest(cache, settings = {}) {
+  const win = analysisWindow(settings.questions);
   const chats = Object.values(cache.chats).map((c) => {
     const msgs = Array.isArray(c.messages) ? c.messages : [];
-    const tail = msgs.slice(-DIGEST_PER_CHAT);
+    const inPeriod = msgs.filter((m) => inWindow(m.at, win.from));
+    const tail = inPeriod.slice(-DIGEST_PER_CHAT);
     return {
       ref: c.ref,
       code: c.code,
@@ -86,6 +115,7 @@ function writeDigest(cache) {
       created: c.created,
       lastMessageAt: c.lastMessageAt,
       messageCount: msgs.length,
+      messageCountInWindow: inPeriod.length,
       recent: tail.map((m) => ({
         at: m.at,
         text: m.text,
@@ -96,8 +126,27 @@ function writeDigest(cache) {
   });
   const digest = {
     updatedAt: cache.updatedAt,
+    analysis: {
+      months: win.months,
+      from: win.from,
+      to: win.to,
+      note:
+        win.months === 0
+          ? "В дайджесте сообщения из всего кэша. Сам кэш не режется."
+          : `В дайджесте сообщения за последние ${win.months} мес. (самое широкое окно среди вопросов). Кэш хранит всю историю.`,
+    },
+    questions: (settings.questions || [])
+      .filter((q) => q.enabled !== false)
+      .map((q) => ({
+        id: q.id,
+        text: q.text,
+        section: q.section || "customAnswers",
+        months: normalizeMonths(q.months),
+        from: monthsAgoIso(q.months),
+      })),
     chatCount: chats.length,
     messageCount: chats.reduce((s, c) => s + c.messageCount, 0),
+    messageCountInWindow: chats.reduce((s, c) => s + c.messageCountInWindow, 0),
     chats: chats.sort((a, b) => String(b.lastMessageAt || "").localeCompare(String(a.lastMessageAt || ""))),
   };
   writeFileSync(DIGEST_PATH, JSON.stringify(digest, null, 2), "utf8");
@@ -140,17 +189,23 @@ export async function syncClientChats(settings) {
   }
 
   let newMessages = 0;
+  let newChats = 0;
   const contactNeed = new Set();
 
   for (const row of chatRows) {
+    const isNewChat = !cache.chats[row.Ref_Key];
+    if (isNewChat) newChats += 1;
     const prev = cache.chats[row.Ref_Key] || {
       ref: row.Ref_Key,
       messages: [],
     };
-    const lastAt = odataDateTime(prev.lastMessageAt);
+    const cursor = chatCursorAt(prev);
+    const cursorOdata = odataDateTime(cursor);
     let filter = `Owner_Key eq guid'${row.Ref_Key}' and DeletionMark eq false`;
-    if (prev.lastMessageAt) {
-      filter += ` and ДатаСоздания gt datetime'${lastAt}'`;
+    // Уже есть кэш по чату — только сообщения не старше курсора (ge + дедуп по Ref).
+    // Новый чат: полная история этого чата (кэш должен хранить весь период).
+    if (cursorOdata) {
+      filter += ` and ДатаСоздания ge datetime'${cursorOdata}'`;
     }
     const msgs = await pageAll(
       creds,
@@ -169,8 +224,11 @@ export async function syncClientChats(settings) {
     const seen = new Set((prev.messages || []).map((m) => m.ref));
     const added = mapped.filter((m) => m.ref && !seen.has(m.ref));
     newMessages += added.length;
-    const messages = [...(prev.messages || []), ...added];
+    const messages = [...(prev.messages || []), ...added].sort((a, b) =>
+      String(a.at || "").localeCompare(String(b.at || ""))
+    );
     const lastMsg = messages.length ? messages[messages.length - 1] : null;
+    const nextCursor = lastMsg?.at || cursor || null;
     cache.chats[row.Ref_Key] = {
       ref: row.Ref_Key,
       code: row.Code,
@@ -180,7 +238,8 @@ export async function syncClientChats(settings) {
       managerKey: row.Менеджер_Key,
       messenger: messengers.get(row.Owner_Key) || prev.messenger || "",
       created: row.ДатаСоздания,
-      lastMessageAt: lastMsg?.at || prev.lastMessageAt || null,
+      lastMessageAt: nextCursor,
+      cursorAt: nextCursor,
       messages,
     };
     for (const m of added) {
@@ -213,11 +272,12 @@ export async function syncClientChats(settings) {
 
   cache.updatedAt = new Date().toISOString();
   writeCache(cache);
-  const digest = writeDigest(cache);
+  const digest = writeDigest(cache, settings);
   return {
     chats: digest.chatCount,
     messages: digest.messageCount,
     newMessages,
+    newChats,
     digestPath: DIGEST_PATH,
     cachePath: CACHE_PATH,
   };

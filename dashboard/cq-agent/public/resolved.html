@@ -44,13 +44,14 @@
     .flash.ok { border-color: #bddbc3; color: var(--ok); }
     .item {
       display: grid;
-      grid-template-columns: 1fr auto;
+      grid-template-columns: auto 1fr;
       gap: 10px;
       align-items: start;
       border-top: 1px solid var(--line);
       padding: 10px 0;
     }
     .item:first-of-type { border-top: none; padding-top: 0; }
+    .item label.flag { display: flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; padding-top: 2px; }
     .meta { font-size: 12px; color: var(--muted); }
     .empty { color: var(--muted); margin: 0; }
   </style>
@@ -58,7 +59,7 @@
 <body>
   <main>
     <h1>Сбор клиентских чатов</h1>
-    <p class="lead">Пункты, отмеченные решёнными, не уходят на доску ЦУК и не поднимаются агентом снова.</p>
+    <p class="lead">Флаг «Решено» ставится и снимается, хранится в настройках сборщика. Решённые пункты не уходят на доску ЦУК и не поднимаются агентом, пока флаг не снять.</p>
     <nav class="tabs">
       <a href="/">Настройки</a>
       <a href="/resolved" aria-current="page">Закрытые пункты</a>
@@ -66,14 +67,14 @@
     <div id="flash" hidden></div>
 
     <section>
-      <h2>Открытые на доске</h2>
-      <p class="hint">Список из последнего снимка. «Решено» сразу снимает пункт с доски ЦУК, если заданы адрес и токен.</p>
-      <div id="open"></div>
+      <h2>Пункты последнего снимка</h2>
+      <p class="hint">Галочка «Решено» сразу обновляет доску ЦУК, если заданы адрес и токен. Снятие галочки возвращает пункт.</p>
+      <div id="items"></div>
     </section>
 
     <section>
-      <h2>Решённые</h2>
-      <p class="hint">«Вернуть» снова покажет пункт на доске. Агент к закрытым темам больше не возвращается, пока их не вернуть.</p>
+      <h2>Решённые вне текущего снимка</h2>
+      <p class="hint">Пункты, которые закрыли раньше и агент в последний раз уже не включал. Снимите галочку, чтобы снова разрешить тему.</p>
       <div id="resolved"></div>
     </section>
   </main>
@@ -92,17 +93,20 @@
       return data;
     }
 
-    function rowHtml(it, actionLabel) {
+    function rowHtml(it, checked) {
       const wrap = document.createElement("div");
       wrap.className = "item";
       wrap.innerHTML = `
+        <label class="flag"><input type="checkbox" class="q-resolved" ${checked ? "checked" : ""}> Решено</label>
         <div>
           <div><strong>${escapeHtml(it.sectionLabel || it.section || "")}</strong> · ${escapeHtml(it.client || "без клиента")}</div>
           <div>${escapeHtml(it.title || "—")}</div>
           <div class="meta">${it.resolvedAt ? "закрыто " + escapeHtml(it.resolvedAt) : (it.id ? "id " + escapeHtml(it.id) : "")}</div>
         </div>
-        <button type="button" class="ghost act">${actionLabel}</button>
       `;
+      wrap.querySelector(".q-resolved").addEventListener("change", (e) => {
+        setResolved(it, e.target.checked);
+      });
       return wrap;
     }
 
@@ -114,77 +118,71 @@
         .replace(/"/g, "&quot;");
     }
 
+    function fingerprintsOf(it) {
+      return [it.fingerprint, it.id].filter(Boolean);
+    }
+
     function render(data) {
-      const openBox = document.getElementById("open");
+      const itemsBox = document.getElementById("items");
       const resBox = document.getElementById("resolved");
-      openBox.innerHTML = "";
+      itemsBox.innerHTML = "";
       resBox.innerHTML = "";
-      const open = data.open || [];
-      const resolved = data.resolved || [];
-      if (!open.length) {
+      const items = data.items || [];
+      const onBoard = new Set(items.map((it) => it.fingerprint).filter(Boolean));
+      if (!items.length) {
         const p = document.createElement("p");
         p.className = "empty";
-        p.textContent = "Нет открытых пунктов. Они появятся после успешного тика.";
-        openBox.appendChild(p);
+        p.textContent = "Нет пунктов. Они появятся после успешного тика.";
+        itemsBox.appendChild(p);
       }
-      open.forEach((it) => {
-        const row = rowHtml(it, "Решено");
-        row.querySelector(".act").addEventListener("click", () => resolveOne(it));
-        openBox.appendChild(row);
-      });
-      if (!resolved.length) {
+      items.forEach((it) => itemsBox.appendChild(rowHtml(it, Boolean(it.resolved))));
+      const extra = (data.resolved || []).filter((r) => r.fingerprint && !onBoard.has(r.fingerprint));
+      if (!extra.length) {
         const p = document.createElement("p");
         p.className = "empty";
-        p.textContent = "Пока ничего не закрыто.";
+        p.textContent = "Нет закрытых пунктов вне текущего снимка.";
         resBox.appendChild(p);
       }
-      resolved.forEach((it) => {
-        const row = rowHtml({ ...it, sectionLabel: it.section }, "Вернуть");
-        row.querySelector(".act").addEventListener("click", () => reopenOne(it));
-        resBox.appendChild(row);
+      extra.forEach((it) => {
+        resBox.appendChild(rowHtml({ ...it, sectionLabel: it.section }, true));
       });
     }
 
-    async function resolveOne(it) {
+    async function setResolved(it, resolved) {
       flash("");
       try {
         const data = await api("/api/resolved", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "resolve",
-            items: [{
-              id: it.id,
-              section: it.section,
-              client: it.client,
-              title: it.title,
-              fingerprint: it.fingerprint,
-              item: it.item || it,
-            }],
-          }),
+          body: JSON.stringify(
+            resolved
+              ? {
+                  action: "resolve",
+                  items: [{
+                    id: it.id,
+                    section: it.section,
+                    client: it.client,
+                    title: it.title,
+                    fingerprint: it.fingerprint,
+                    item: it.item || it,
+                  }],
+                }
+              : {
+                  action: "reopen",
+                  fingerprints: fingerprintsOf(it),
+                }
+          ),
         });
         render(await api("/api/board"));
-        flash(data.posted ? "Снято с доски ЦУК." : "Закрыто локально. На ЦУК уйдёт при следующем тике или когда зададите адрес и токен.", true);
+        flash(
+          resolved
+            ? (data.posted ? "Решено: снято с доски ЦУК." : "Решено сохранено. На ЦУК уйдёт при следующем тике или когда зададите адрес и токен.")
+            : (data.posted ? "Флаг снят, пункт снова на доске ЦУК." : "Флаг снят и сохранён. На ЦУК уйдёт при следующем тике или когда зададите адрес и токен."),
+          true
+        );
       } catch (e) {
         flash(e.message || String(e), false);
-      }
-    }
-
-    async function reopenOne(it) {
-      flash("");
-      try {
-        const data = await api("/api/resolved", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "reopen",
-            fingerprints: [it.fingerprint, it.id].filter(Boolean),
-          }),
-        });
-        render(await api("/api/board"));
-        flash(data.posted ? "Вернули на доску ЦУК." : "Снова открыт. На ЦУК уйдёт при следующем тике или когда зададите адрес и токен.", true);
-      } catch (e) {
-        flash(e.message || String(e), false);
+        render(await api("/api/board").catch(() => ({ items: [], resolved: [] })));
       }
     }
 

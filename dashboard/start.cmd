@@ -17,7 +17,7 @@ ping -n 2 127.0.0.1 >nul
 echo Starting dashboard...
 echo Local:  http://localhost:8787/
 echo LAN:    http://192.168.10.240:8787/
-echo On start: hours + SEO trailing (Ozon auto-refresh is off by default).
+echo On start: snapshot first, then 1C hours and SEO in background.
 echo If the process exits, it will restart in 5 seconds. Close this window to stop.
 node server.mjs 2>&1
 set EXITCODE=%ERRORLEVEL%

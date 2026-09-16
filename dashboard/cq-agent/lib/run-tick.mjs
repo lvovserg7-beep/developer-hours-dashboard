@@ -78,6 +78,7 @@ export async function runTick(opts = {}) {
     chats: 0,
     messages: 0,
     newMessages: 0,
+    newChats: 0,
     ms: 0,
     forced: Boolean(opts.force),
   };
@@ -86,10 +87,12 @@ export async function runTick(opts = {}) {
     tick.chats = sync.chats;
     tick.messages = sync.messages;
     tick.newMessages = sync.newMessages;
+    tick.newChats = sync.newChats || 0;
     const { board } = await runCursorAgent(settings, DIGEST_PATH);
+    board.tvSections = tvSectionsFromQuestions(settings.questions);
+    writeLastBoard(board);
     const filtered = filterBoard(board, resolvedList(settings));
-    filtered.tvSections = tvSectionsFromQuestions(settings.questions);
-    writeLastBoard(filtered);
+    filtered.tvSections = board.tvSections;
     await postBoard(settings, filtered);
     tick.ok = true;
   } catch (err) {

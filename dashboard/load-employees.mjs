@@ -182,6 +182,7 @@ async function loadLatestChats(taskIds) {
       latest.set(id, {
         date: t ? row.Дата : null,
         comment: String(row.Сообщение || "").trim(),
+        authorKey: row.Автор_Key || "",
         _t: t,
       });
     }
@@ -190,7 +191,7 @@ async function loadLatestChats(taskIds) {
   for (let i = 0; i < skips.length; i += 4) {
     const chunk = skips.slice(i, i + 4);
     const pages = await Promise.all(chunk.map((skip) => odataGet(
-      `Catalog_ЧатыПоЗадачамРазработчиков?$format=json&$select=Задача,Дата,Сообщение,DeletionMark&$top=${pageSize}&$skip=${skip}`
+      `Catalog_ЧатыПоЗадачамРазработчиков?$format=json&$select=Задача,Дата,Сообщение,DeletionMark,Автор_Key&$top=${pageSize}&$skip=${skip}`
     )));
     for (const page of pages) absorb(page.value || []);
   }
@@ -306,9 +307,7 @@ export async function loadActiveEmployees() {
 
   const byDevType = new Map();
   for (const task of completed) {
-    const name = devName(task);
-    addSeg(byDevType, name, "Анализ", hoursAnalysis(task));
-    addSeg(byDevType, name, "Разработка", hoursDev(task));
+    addSeg(byDevType, devName(task), "Разработка", hoursDevelopment(task));
   }
 
   const byAnalystType = new Map();
@@ -370,16 +369,22 @@ export async function loadActiveEmployees() {
 
   const boardTasks = uniqueTasks([inWork]);
   const chats = await loadLatestChats(boardTasks.map((t) => t.Ref_Key));
+  const authors = await resolveNames(
+    [...chats.values()].map((c) => c.authorKey),
+    "Catalog_Пользователи"
+  );
   const activity = boardTasks.map((task) => {
     const chat = chats.get(task.Ref_Key);
     const chatDate = chat?.date && !isEmptyDate(chat.date) ? chat.date : null;
     const taskDate = !isEmptyDate(task.Date) ? task.Date : null;
+    const authorId = chat?.authorKey && chat.authorKey !== EMPTY_GUID ? chat.authorKey : "";
     return {
       number: documentNumber(task.Number),
       title: task.Задача || "Без названия",
       client: clients.get(task.Контрагент_Key) || "",
       status: taskStatus(task),
       comment: chat?.comment || "",
+      author: authorId ? (authors.get(authorId) || "") : "",
       date: chatDate || taskDate || null,
       navLink: taskNavLink(task.Ref_Key),
     };

@@ -66,13 +66,23 @@
       padding-bottom: 10px;
       border-bottom: 1px solid var(--line);
     }
-    .q-tv {
+    .q-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 18px;
+      align-items: center;
+      margin: 0 0 6px;
+    }
+    .q-tv, .q-months {
       display: flex;
       align-items: center;
       gap: 6px;
       font-size: 13px;
       color: var(--ink);
-      margin: 0 0 6px;
+      margin: 0;
+    }
+    .q-months input {
+      width: 64px;
     }
     .q-row {
       display: grid;
@@ -115,7 +125,7 @@
       <h2>Подключения</h2>
       <label for="cukUrl">Адрес боевого ЦУК</label>
       <input id="cukUrl" type="text" placeholder="http://192.168.10.240:8787" autocomplete="off">
-      <p class="hint">Без хвоста /api. Токен ingest — тот же, что CLIENT_QUALITY_INGEST_TOKEN на боевом сервере.</p>
+      <p class="hint">Без хвоста /api. Токен ingest — только значение после «=» из CLIENT_QUALITY_INGEST_TOKEN на боевом сервере. Пустое поле при сохранении старый токен не меняет.</p>
       <div class="row">
         <div>
           <label for="ingestToken">Токен выгрузки на ЦУК</label>
@@ -161,7 +171,7 @@
 
     <section>
       <h2>Вопросы анализа</h2>
-      <p class="hint">Включённые вопросы уходят в промпт агента. Секция — куда положить ответ на доске ЦУК. Галочка «Выводить на ТВ» — секция попадёт на вкладку «Качество работы с клиентами TV». Пустой список при сохранении снова заполняется стартовым набором. Если все выключить — тик не запускает анализ.</p>
+      <p class="hint">Включённые вопросы уходят в промпт агента. Секция — куда положить ответ на доске ЦУК. Галочка «Выводить на ТВ» — секция попадёт на вкладку «Качество работы с клиентами TV». «Период, мес.» — сколько месяцев истории смотреть для этого вопроса (по умолчанию 3; 0 = весь кэш). Кэш сообщений хранится целиком, режется только дайджест для анализа. Пустой список при сохранении снова заполняется стартовым набором. Если все выключить — тик не запускает анализ.</p>
       <div id="questions"></div>
       <div class="actions">
         <button type="button" class="ghost" id="add-q">Добавить вопрос</button>
@@ -220,7 +230,10 @@
       const wrap = document.createElement("div");
       wrap.className = "q-block";
       wrap.innerHTML = `
-        <label class="q-tv"><input type="checkbox" class="q-tv-on" ${q.tv === true ? "checked" : ""}> Выводить на ТВ</label>
+        <div class="q-head">
+          <label class="q-tv"><input type="checkbox" class="q-tv-on" ${q.tv === true ? "checked" : ""}> Выводить на ТВ</label>
+          <label class="q-months">Период, мес. <input type="number" class="q-mo" min="0" max="36" value="${Number.isFinite(Number(q.months)) ? Number(q.months) : 3}" title="0 = весь кэш"></label>
+        </div>
         <div class="q-row">
           <input type="checkbox" class="q-on" title="Включён" ${q.enabled !== false ? "checked" : ""}>
           <input type="text" class="q-text" value="${String(q.text || "").replace(/"/g, "&quot;")}">
@@ -238,6 +251,7 @@
         id: row.dataset.id || `q-${i + 1}`,
         enabled: row.querySelector(".q-on").checked,
         tv: row.querySelector(".q-tv-on").checked,
+        months: Number(row.querySelector(".q-mo").value),
         text: row.querySelector(".q-text").value.trim(),
         section: row.querySelector(".q-sec").value,
       })).filter((q) => q.text);
@@ -268,7 +282,7 @@
       if (!t) text = "Ещё не запускался.";
       else {
         text = (t.ok ? "Последний тик ок" : "Последний тик с ошибкой")
-          + `: ${t.at || "—"} · чатов ${t.chats ?? "—"} · новых сообщений ${t.newMessages ?? "—"}`
+          + `: ${t.at || "—"} · чатов ${t.chats ?? "—"} · новых чатов ${t.newChats ?? "—"} · новых сообщений ${t.newMessages ?? "—"}`
           + (t.error ? ` · ${t.error}` : "");
       }
       if (!enabled) text += " Нет включённых вопросов — анализ не пойдёт.";
@@ -311,6 +325,7 @@
         text: "",
         enabled: true,
         tv: false,
+        months: 3,
         section: "",
       }));
     });
@@ -331,15 +346,22 @@
           days: selectedDays(),
           questions: readQuestions(),
         };
-        fill(await api("/api/settings", {
+        const saved = await api("/api/settings", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
-        }));
+        });
+        fill(saved);
         document.getElementById("ingestToken").value = "";
         document.getElementById("cursorApiKey").value = "";
         document.getElementById("odataPassword").value = "";
-        flash("Сохранено. Расписание берётся из этих полей.", true);
+        if (saved.postError) {
+          flash("Настройки записаны, но ЦУК не принял выгрузку: " + saved.postError, false);
+        } else if (saved.posted) {
+          flash("Сохранено. Снимок доски принят ЦУК.", true);
+        } else {
+          flash("Сохранено. Расписание берётся из этих полей.", true);
+        }
       } catch (e) {
         flash(e.message || String(e), false);
       }

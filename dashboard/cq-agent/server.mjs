@@ -11,7 +11,6 @@ import {
   readLastBoard,
   reopenResolved,
   resolvedList,
-  writeLastBoard,
 } from "./lib/resolved.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -150,16 +149,20 @@ const server = createServer(async (req, res) => {
       const patch = await readJson(req);
       const next = saveSettings(applyPatch(loadSettings(), patch));
       const board = readLastBoard();
+      let posted = false;
+      let postError = "";
       if (board && next.cukUrl && (next.ingestToken || process.env.CLIENT_QUALITY_INGEST_TOKEN)) {
-        board.tvSections = tvSectionsFromQuestions(next.questions);
-        writeLastBoard(board);
+        const filtered = filterBoard(board, resolvedList(next));
+        filtered.tvSections = tvSectionsFromQuestions(next.questions);
         try {
-          await postBoard(next, board);
+          await postBoard(next, filtered);
+          posted = true;
         } catch (err) {
-          console.warn("cq-agent post after settings failed:", err.message || err);
+          postError = String(err.message || err);
+          console.warn("cq-agent post after settings failed:", postError);
         }
       }
-      return json(res, 200, publicSettings(next));
+      return json(res, 200, { ...publicSettings(next), posted, postError });
     }
     if (url === "/api/status" && req.method === "GET") {
       const s = loadSettings();
@@ -191,11 +194,19 @@ const server = createServer(async (req, res) => {
       const s = loadSettings();
       const resolved = resolvedList(s);
       const board = readLastBoard();
-      const open = flattenBoard(board).filter(
+      const all = flattenBoard(board);
+      const open = all.filter(
         (row) => !resolved.some((r) => r.fingerprint === row.fingerprint || (row.id && r.id === row.id && r.section === row.section))
       );
+      const items = all.map((row) => ({
+        ...row,
+        resolved: resolved.some(
+          (r) => r.fingerprint === row.fingerprint || (row.id && r.id === row.id && r.section === row.section)
+        ),
+      }));
       return json(res, 200, {
         generatedAt: board?.generatedAt || board?.period || null,
+        items,
         open,
         resolved,
       });
@@ -205,26 +216,24 @@ const server = createServer(async (req, res) => {
       const action = String(patch.action || "resolve");
       const s = loadSettings();
       let resolved;
-      if (action === "reopen") {
+      if (action === "reopen" || patch.resolved === false) {
         resolved = reopenResolved(s, patch.fingerprints || patch.ids || []);
       } else {
         resolved = markResolved(s, patch.items || []);
       }
       const board = readLastBoard();
       let posted = false;
-      if (board) {
-        const filtered = filterBoard(board, resolved);
-        writeLastBoard(filtered);
-        if (s.cukUrl && (s.ingestToken || process.env.CLIENT_QUALITY_INGEST_TOKEN)) {
-          try {
-            await postBoard(s, filtered);
-            posted = true;
-          } catch (err) {
-            console.warn("cq-agent post after resolve failed:", err.message || err);
-          }
+      if (board && s.cukUrl && (s.ingestToken || process.env.CLIENT_QUALITY_INGEST_TOKEN)) {
+        try {
+          const filtered = filterBoard(board, resolved);
+          filtered.tvSections = tvSectionsFromQuestions(s.questions);
+          await postBoard(s, filtered);
+          posted = true;
+        } catch (err) {
+          console.warn("cq-agent post after resolve failed:", err.message || err);
         }
       }
-      return json(res, 200, { resolved, posted, open: flattenBoard(readLastBoard()) });
+      return json(res, 200, { resolved, posted, open: flattenBoard(board).filter((row) => !resolved.some((r) => r.fingerprint === row.fingerprint || (row.id && r.id === row.id && r.section === row.section))) });
     }
     if (req.method === "GET") return serveStatic(req, res);
     return json(res, 405, { error: "Метод не поддерживается" });

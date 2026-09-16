@@ -3,6 +3,7 @@ import { DATA_DIR, loadSettings, saveSettings } from "./settings.mjs";
 import { join } from "node:path";
 
 export const FINDING_SECTIONS = [
+  ["managers", "Менеджеры"],
   ["openPromises", "Обещания"],
   ["negativity", "Негатив"],
   ["dueThisWeek", "Срок на неделе"],
@@ -22,13 +23,21 @@ function compact(s) {
 }
 
 export function itemText(item) {
-  return String(item?.excerpt || item?.query || item?.question || item?.answer || item?.title || "").trim();
+  return String(
+    item?.excerpt || item?.query || item?.question || item?.answer || item?.title || item?.manager || ""
+  ).trim();
 }
 
 export function fingerprint(section, item) {
-  const client = compact(item?.client || (Array.isArray(item?.clients) ? item.clients[0] : "") || "");
+  const client = compact(
+    item?.client ||
+      (Array.isArray(item?.clients) ? item.clients[0] : "") ||
+      item?.manager ||
+      ""
+  );
   const text = compact(itemText(item));
-  return `${section}|${client}|${text}`;
+  const id = String(item?.id || "").trim();
+  return `${section}|${client}|${text}${id ? `|${id}` : ""}`;
 }
 
 export function normalizeResolved(list) {
@@ -84,7 +93,7 @@ export function flattenBoard(board) {
         id: String(item?.id || "").trim(),
         section,
         sectionLabel: label,
-        client: String(item?.client || (Array.isArray(item?.clients) ? item.clients.join(", ") : "") || "").trim(),
+        client: String(item?.client || (Array.isArray(item?.clients) ? item.clients.join(", ") : "") || item?.manager || "").trim(),
         title: itemText(item).slice(0, 240),
         fingerprint: fingerprint(section, item),
         item,
@@ -131,17 +140,21 @@ export function reopenResolved(settings, fingerprints) {
   const restoring = current.filter((r) => drop.has(r.fingerprint) || drop.has(r.id));
   const next = current.filter((r) => !drop.has(r.fingerprint) && !drop.has(r.id));
   const saved = saveSettings({ ...loadSettings(), resolvedItems: next });
-  const board = readLastBoard() || {};
-  for (const r of restoring) {
-    if (!r.section) continue;
-    const row = r.item && typeof r.item === "object" ? r.item : { id: r.id, client: r.client, excerpt: r.title };
-    const list = Array.isArray(board[r.section]) ? board[r.section] : [];
-    const fp = fingerprint(r.section, row);
-    if (!list.some((x) => fingerprint(r.section, x) === fp || (row.id && x.id === row.id))) {
-      board[r.section] = [...list, row];
+  const board = readLastBoard();
+  if (board && restoring.length) {
+    let changed = false;
+    for (const r of restoring) {
+      if (!r.section) continue;
+      const row = r.item && typeof r.item === "object" ? r.item : { id: r.id, client: r.client, excerpt: r.title };
+      const list = Array.isArray(board[r.section]) ? board[r.section] : [];
+      const fp = fingerprint(r.section, row);
+      if (!list.some((x) => fingerprint(r.section, x) === fp || (row.id && x.id === row.id))) {
+        board[r.section] = [...list, row];
+        changed = true;
+      }
     }
+    if (changed) writeLastBoard(board);
   }
-  if (restoring.length) writeLastBoard(board);
   return resolvedList(saved);
 }
 
