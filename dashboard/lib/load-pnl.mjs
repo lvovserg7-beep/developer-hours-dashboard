@@ -14,8 +14,8 @@ function roundMoney(value) {
   return Math.round(num(value) * 100) / 100;
 }
 
-function round1(value) {
-  return Math.round(num(value) * 10) / 10;
+function roundHours(value) {
+  return Math.round(num(value) * 100) / 100;
 }
 
 function roundPct(value) {
@@ -120,7 +120,7 @@ function addInto(map, name, index, amount, len) {
 
 function roundCell(kind, value) {
   if (kind === "pct") return roundPct(value);
-  if (kind === "hours") return round1(value);
+  if (kind === "hours") return roundHours(value);
   return roundMoney(value);
 }
 
@@ -193,11 +193,32 @@ function variantAllowed(value) {
   return ALLOWED_EXPENSE_VARIANTS.some((name) => text.includes(name));
 }
 
+function ymdParts(value) {
+  const text = String(value || "").trim();
+  const iso = text.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return { y: Number(iso[1]), m: Number(iso[2]), d: Number(iso[3]) };
+  const ms = text.match(/\/Date\((-?\d+)/);
+  const t = ms ? Number(ms[1]) : Date.parse(text);
+  if (!Number.isFinite(t)) return null;
+  const dt = new Date(t);
+  return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, d: dt.getUTCDate() };
+}
+
+function ymdCmp(a, b) {
+  return a.y - b.y || a.m - b.m || a.d - b.d;
+}
+
+/**
+ * ОП/КО как в отчёте 1С «Доходы и расходы»:
+ * весь месяц продажи — ОП, если дата окончания бонуса ОП не раньше 1-го числа этого месяца.
+ * Сравнение с датой самой продажи относит поздние продажи месяца в КО и ломает июль.
+ */
 export function classifyOpKo(bonusEnd, periodIso) {
-  const end = Date.parse(bonusEnd);
-  const period = Date.parse(periodIso);
-  if (!Number.isFinite(end) || !Number.isFinite(period) || end < Date.parse("2000-01-01T00:00:00")) return "КО";
-  return end > period ? "ОП" : "КО";
+  const end = ymdParts(bonusEnd);
+  const period = ymdParts(periodIso);
+  if (!end || !period || end.y < 2000) return "КО";
+  const monthStart = { y: period.y, m: period.m, d: 1 };
+  return ymdCmp(end, monthStart) >= 0 ? "ОП" : "КО";
 }
 
 async function tryPages(path) {
@@ -408,8 +429,10 @@ export function avgHourMetrics({
   const hourYield = avgPrice.map((v, i) => (v ? ((v - (avgCost[i] || 0)) / v) * 100 : 0));
   const hoursNetSum = hoursNet.reduce((s, v) => s + v, 0);
   const priceTotal = safeDiv(revenueSales.reduce((s, v) => s + v, 0), hoursNetSum);
+  // В 1С колонка «Итого» по себестоимости часа — без себестоимости продаж (только «Себестоимость прочая» минус cleanup).
+  // По месяцам формула другая: (прочая + продажи − cleanup) / часы. Из‑за этого Итого не равно средневзвешенному месяцу.
   const costTotal = safeDiv(
-    otherCogs.reduce((s, v) => s + v, 0) + cogs.reduce((s, v) => s + v, 0) - cleanup.reduce((s, v) => s + v, 0),
+    otherCogs.reduce((s, v) => s + v, 0) - cleanup.reduce((s, v) => s + v, 0),
     hoursNetSum
   );
   return { hoursNet, avgPrice, avgCost, hourRent, hourYield, priceTotal, costTotal, hoursNetSum };
@@ -548,7 +571,11 @@ export async function loadPnl(fromText, toText, groupBy = "month") {
     }
     const section = expenseSections.get(mapped.name);
     section.order = Math.min(section.order, mapped.order);
-    addInto(section.articles, articleName, i, firstNumber(row, ["СуммаПриход", "Сумма", "СуммаУпр", "СуммаРегл"]), n);
+    const articleId = articleKey || articleName;
+    if (!section.articles.has(articleId)) {
+      section.articles.set(articleId, { name: articleName, values: zeros(n) });
+    }
+    section.articles.get(articleId).values[i] += firstNumber(row, ["СуммаПриход", "Сумма", "СуммаУпр", "СуммаРегл"]);
   }
 
   const expenseBlocks = [];
@@ -556,11 +583,11 @@ export async function loadPnl(fromText, toText, groupBy = "month") {
   const orderedExpenseNames = [...expenseSections.entries()].sort((a, b) => a[1].order - b[1].order || a[0].localeCompare(b[0], "ru"));
   let otherCogs = zeros(n);
   for (const [title, section] of orderedExpenseNames) {
-    const articleRows = [...section.articles.entries()]
-      .sort((a, b) => a[0].localeCompare(b[0], "ru"))
-      .map(([name, values]) => rowMoney(name, values))
+    const articleRows = [...section.articles.values()]
+      .sort((a, b) => a.name.localeCompare(b.name, "ru"))
+      .map((article) => rowMoney(article.name, article.values))
       .filter((r) => r.total !== 0 || r.values.some((v) => v));
-    const costVec = sumVec([...section.articles.values()], n);
+    const costVec = sumVec([...section.articles.values()].map((article) => article.values), n);
     if (title === "Себестоимость прочая") otherCogs = costVec;
     const totals = totalsAndRent(`Итого ${title}:`, costVec, profit, revenue);
     profit = totals.profit;
@@ -595,9 +622,17 @@ export async function loadPnl(fromText, toText, groupBy = "month") {
     ],
   };
 
-  const firstTwo = salesKeys.slice(0, 2);
-  const revenueSales = sumVec(firstTwo.map((k) => revenueMap.get(k) || zeros(n)), n);
-  const cogsSales = sumVec(firstTwo.map((k) => cogsMap.get(k) || zeros(n)), n);
+  const salesByName = (name) =>
+    salesKeys.filter((k) => (rowMeta.get(k) || {}).name === name);
+  const salesRevKeys = salesByName("от продаж");
+  const revenueSales = sumVec(
+    (salesRevKeys.length ? salesRevKeys : salesKeys.slice(0, 2)).map((k) => revenueMap.get(k) || zeros(n)),
+    n
+  );
+  const cogsSales = sumVec(
+    (salesRevKeys.length ? salesRevKeys : salesKeys.slice(0, 2)).map((k) => cogsMap.get(k) || zeros(n)),
+    n
+  );
   const supportKeys = salesKeys.filter((k) => (rowMeta.get(k) || {}).order === 4);
   const support = supportKeys.length
     ? revenueMap.get(supportKeys[supportKeys.length - 1]) || zeros(n)
@@ -617,8 +652,8 @@ export async function loadPnl(fromText, toText, groupBy = "month") {
   const refBlock = {
     title: "Справочно",
     rows: [
-      { name: "Количество закрытых часов", kind: "hours", values: hours.map(round1), total: round1(hoursTotal) },
-      { name: "Из них маркетинга", kind: "hours", values: marketing.map(round1), total: round1(marketingTotal) },
+      { name: "Количество закрытых часов", kind: "hours", values: hours.map(roundHours), total: roundHours(hoursTotal) },
+      { name: "Из них маркетинга", kind: "hours", values: marketing.map(roundHours), total: roundHours(marketingTotal) },
       {
         name: "Средняя цена часа:",
         kind: "line",
