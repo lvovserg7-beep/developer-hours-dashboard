@@ -152,7 +152,9 @@ async function fetchByKeys(entity, keys, select) {
   for (let i = 0; i < list.length; i += 8) {
     const part = list.slice(i, i + 8);
     const filter = encodeURIComponent(part.map((id) => `Ref_Key eq guid'${id}'`).join(" or "));
-    const rows = await fetchAll(`${entity}?$format=json&$filter=${filter}&$select=${select}`);
+    const rows = await fetchAll(`${entity}?$format=json&$filter=${filter}&$select=${select}`).catch(() =>
+      fetchAll(`${entity}?$format=json&$filter=${filter}`)
+    );
     for (const row of rows) map.set(row.Ref_Key, row);
   }
   return map;
@@ -165,10 +167,25 @@ async function resolveOrgKey() {
   return (exact || fuzzy)?.Ref_Key || "";
 }
 
-function isCommissionOp(op) {
-  const text = String(op || "");
-  // Только явное комиссионное вознаграждение; «через комиссионера» и т.п. — в выручку.
-  return /комиссионн(ое|ый).*вознагражд/i.test(text) || /^комиссионноевознаграждение$/i.test(text.replace(/\s+/g, ""));
+function isReceipt(row) {
+  const rt = String(row.RecordType || "");
+  if (!rt) return true;
+  if (/Expense|Расход/i.test(rt)) return false;
+  return true;
+}
+
+function expenseVariantAllowed(article) {
+  const text = String(
+    article?.ВариантРаспределенияРасходовУпр ||
+      article?.ВариантРаспределенияРасходовРегл ||
+      article?.ВариантРаспределенияРасходов ||
+      ""
+  );
+  return ALLOWED_EXPENSE_VARIANTS.some((name) => text.includes(name));
+}
+
+function salesExpense(row) {
+  return num(row.РасходыНаПродажуУпр) || num(row.РасходыНаПродажуСНДС) || num(row.РасходыНаПродажуРегл);
 }
 
 /**
@@ -198,20 +215,26 @@ export async function loadPnlEcotidy(fromText, toText, groupBy = "month") {
     "СуммаВыручки",
     "Стоимость",
     "ДопРасходы",
+    "РасходыНаПродажуУпр",
+    "РасходыНаПродажуСНДС",
+    "РасходыНаПродажуРегл",
   ].join(",");
 
   const salesByDay = new Array(days.length);
   await mapPool(days, 4, async (day, idx) => {
+    const filter = encodeURIComponent(
+      `Period ge datetime'${day}T00:00:00' and Period le datetime'${day}T23:59:59' and Active eq true`
+    );
+    const path = `AccumulationRegister_ВыручкаИСебестоимостьПродаж_RecordType?$format=json&$filter=${filter}`;
     try {
-      const filter = encodeURIComponent(
-        `Period ge datetime'${day}T00:00:00' and Period le datetime'${day}T23:59:59' and Active eq true`
-      );
-      salesByDay[idx] = await fetchAll(
-        `AccumulationRegister_ВыручкаИСебестоимостьПродаж_RecordType?$format=json&$filter=${filter}&$select=${salesSelect}`
-      );
-    } catch (err) {
-      warnings.push(`Продажи ${day}: ${String(err.message || err).slice(0, 100)}`);
-      salesByDay[idx] = [];
+      salesByDay[idx] = await fetchAll(`${path}&$select=${salesSelect}`);
+    } catch {
+      try {
+        salesByDay[idx] = await fetchAll(path);
+      } catch (err) {
+        warnings.push(`Продажи ${day}: ${String(err.message || err).slice(0, 100)}`);
+        salesByDay[idx] = [];
+      }
     }
   });
 
@@ -236,8 +259,8 @@ export async function loadPnlEcotidy(fromText, toText, groupBy = "month") {
     if (i < 0) continue;
     const amount = num(row.СуммаВыручки);
     const cost = num(row.Стоимость) + num(row.ДопРасходы);
-    if (isCommissionOp(row.ХозяйственнаяОперация)) commission[i] += amount;
-    else revenue[i] += amount;
+    revenue[i] += amount;
+    commission[i] += salesExpense(row);
     cogs[i] += cost;
   }
 
@@ -274,7 +297,7 @@ export async function loadPnlEcotidy(fromText, toText, groupBy = "month") {
   const expenseArticles = await fetchByKeys(
     "ChartOfCharacteristicTypes_СтатьиРасходов",
     expenseRows.map((r) => r.СтатьяРасходов_Key),
-    "Ref_Key,Description"
+    "Ref_Key,Description,ВариантРаспределенияРасходовУпр,ВариантРаспределенияРасходовРегл,ВариантРаспределенияРасходов"
   );
   const incomeArticles = await fetchByKeys(
     "ChartOfCharacteristicTypes_СтатьиДоходов",
@@ -284,8 +307,10 @@ export async function loadPnlEcotidy(fromText, toText, groupBy = "month") {
 
   const expenseMap = new Map();
   for (const row of expenseRows) {
+    if (!isReceipt(row)) continue;
     if (orgKey && row.Организация_Key && row.Организация_Key !== orgKey) continue;
     const article = expenseArticles.get(row.СтатьяРасходов_Key);
+    if (!expenseVariantAllowed(article)) continue;
     const i = periodIndex(months, row.Period, group);
     if (i < 0) continue;
     const amount = num(row.Сумма) || num(row.СуммаУпр) || num(row.СуммаРегл);
@@ -303,7 +328,7 @@ export async function loadPnlEcotidy(fromText, toText, groupBy = "month") {
     addInto(incomeMap, name, i, amount, n);
   }
 
-  const salesProfit = subVec(addVec(revenue, commission), cogs);
+  const salesProfit = subVec(subVec(revenue, commission), cogs);
   const expenseVec = sumVec([...expenseMap.values()], n);
   const incomeVec = sumVec([...incomeMap.values()], n);
   // В отчёте 1С расходы выводятся со знаком «−»
@@ -312,7 +337,7 @@ export async function loadPnlEcotidy(fromText, toText, groupBy = "month") {
 
   const salesRowsOut = [
     rowMoney("Выручка от продаж", revenue),
-    ...(commission.some((v) => v) ? [rowMoney("Комиссионное вознаграждение", commission)] : []),
+    ...(commission.some((v) => v) ? [rowMoney("Комиссионное вознаграждение", negVec(commission))] : []),
     rowMoney("Себестоимость продаж", negVec(cogs)),
     rowMoney("Продажи", salesProfit, "total"),
   ];
@@ -367,8 +392,9 @@ export async function loadPnlEcotidy(fromText, toText, groupBy = "month") {
     warnings: [...new Set(warnings.filter(Boolean))],
     generatedAt: new Date().toISOString(),
     note:
-      "Типовой отчёт 1С «Доходы и расходы»: выручка и себестоимость — регистр «Выручка и себестоимость продаж»; " +
-      "прочие доходы/расходы — соответствующие регистры по статьям. Организация — ПЕРВЫЙ ИНТЕГРАТОР ООО (ecotidy).",
+      "Типовой отчёт 1С «Доходы и расходы»: выручка и себестоимость — регистр «Выручка и себестоимость продаж» " +
+      "(комиссионное вознаграждение — «Расходы на продажу»); прочие доходы/расходы — регистры по статьям " +
+      "с вариантом «на направления деятельности» / «не распределять». Организация — ПЕРВЫЙ ИНТЕГРАТОР ООО (ecotidy).",
   };
 }
 
