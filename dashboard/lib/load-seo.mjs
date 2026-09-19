@@ -8,6 +8,7 @@ import {
   upsertQueryClasses,
   overwriteQueryClasses,
   readQueryClassMap,
+  readQueryClassRows,
   readQueryDailyRows,
   upsertQueryDailyRows,
   readWordstatMap,
@@ -354,7 +355,8 @@ function applySeoQueryClasses() {
   const cls = ensureSeoQueryClasses(readQueryRows().map((r) => r.query));
   const brand = reclassifyBrandSeoQueries();
   const boxes = reclassifyBoxesSeoQueries();
-  return { cls, brand, boxes };
+  const marketplaces = reclassifyMarketplacesSeoQueries();
+  return { cls, brand, boxes, marketplaces };
 }
 
 /**
@@ -694,10 +696,18 @@ export function reclassifyBoxesSeoQueries(queries) {
   return reclassifySeoQueriesForProduct("boxes", queries);
 }
 
+/** Переклассификация запросов продукта «Маркетплейсы». */
+export function reclassifyMarketplacesSeoQueries(queries) {
+  return reclassifySeoQueriesForProduct("marketplaces", queries);
+}
+
 function reclassifySeoQueriesForProduct(productId, queries) {
   const list = Array.isArray(queries) && queries.length
     ? queries
-    : readQueryRows().map((r) => r.query);
+    : [
+        ...readQueryRows().map((r) => r.query),
+        ...readQueryClassRows().map((r) => r.query),
+      ];
   const incoming = [];
   const seen = new Set();
   for (const raw of list) {
@@ -801,6 +811,12 @@ async function fetchPeriodQueryStats({ from, to, source = "all", site = "" }) {
           for (const hostId of list) {
             const popular = await yandexPopularQueries(hostId, from, to, { limit: 500 });
             const rows = popular.queries || popular.popular_queries || popular.items || [];
+            const apiTo = String(popular.date_to || "").slice(0, 10);
+            if (!rows.length && apiTo && apiTo < to) {
+              warnings.push(
+                `Яндекс.Вебмастер (${hostId}): свежие дни ещё не пришли, в API период обрезан до ${apiTo}. Клики за ${from}–${to} по запросам пока 0.`
+              );
+            }
             for (const q of rows) {
               const text = String(q.query_text || q.query || q.text || "").trim();
               put("yandex", hostId, text, yandexPopularMetrics(q));
@@ -879,6 +895,12 @@ export async function loadSeoProductsReport({
     source: srcFilter,
     site: siteFilter,
   });
+
+  try {
+    reclassifyMarketplacesSeoQueries();
+  } catch (err) {
+    periodStats.warnings.push(`Классификация маркетплейсов: ${String(err.message || err).slice(0, 160)}`);
+  }
 
   // подтянуть классы для всех известных запросов
   ensureSeoQueryClasses(readQueryRows().map((r) => r.query));
