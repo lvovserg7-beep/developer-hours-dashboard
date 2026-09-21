@@ -1969,7 +1969,7 @@
     <div id="tab-units" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Сводка юнитов</h2>
-        <p class="lead tab-intro">Аллсан Интеграция + Первый интегратор (Экотайди) + УК. УК — доли расходов, вынесенные из юнитов на общие. Настройки — <code>units/units-config.json</code>.</p>
+        <p class="lead tab-intro">Сумма отчётов «Доходы и расходы» (Аллсан) и «ДИР Первый интегратор». Затем доли расходов переносятся в УК по правилам (зарплаты, аренда, налоги). Итог сводки должен совпасть с суммой исходных отчётов. По умолчанию — три последних месяца.</p>
         <form class="pnl-toolbar" id="units-form">
           <div class="filter-dates">
             <label>Месяц</label>
@@ -3172,7 +3172,7 @@
       const to = document.getElementById("units-to");
       if (!from || !to || from.value) return;
       const now = new Date();
-      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
       const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       const p = (n) => String(n).padStart(2, "0");
       const ymd = (d) => d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
@@ -3211,7 +3211,7 @@
       ];
       const money = (unit, field) => formatUnitsMoney(unit?.[field] || 0);
       const topRows = [
-        ["Выручка+кр+излишки", "revenue"],
+        ["Выручка (продажи + прочие доходы)", "revenue"],
         ["Себестоимость", "cogs"],
         ["Расходы", "expenses"],
         ["Итого", "net"],
@@ -3238,23 +3238,45 @@
       if (detail) {
         const block = (title, rows) => {
           if (!rows?.length) return "";
-          const body = rows.map((r) =>
-            `<tr><td class="name">${escapeHtml(r.name)}</td><td class="num">${formatUnitsMoney(r.amount)}</td></tr>`
-          ).join("");
+          const body = rows.map((r) => {
+            const extra = r.monthly
+              ? ` (${formatUnitsMoney(r.monthly)} × ${r.months || 1})`
+              : "";
+            return `<tr><td class="name">${escapeHtml(r.name)}${extra}</td><td class="num">${formatUnitsMoney(r.amount)}</td></tr>`;
+          }).join("");
           return `<div class="pnl-section"><h2>${escapeHtml(title)}</h2>
             <div class="pnl-scroll"><table class="pnl"><tbody>${body}</tbody></table></div></div>`;
         };
-        detailHtml = `<div class="units-detail">
-          ${block("УК", detail["ук"] || detail.uk)}
-          ${block("Эко", detail["эко"] || detail.eco)}
-          ${block("Алсн", detail["алсн"] || detail.allsan)}
-        </div>`;
+        detailHtml = `<div class="units-detail">${block("Перенос в УК", detail["ук"] || detail.uk)}</div>`;
+      }
+
+      let sourceHtml = "";
+      if (report.source) {
+        const srcCols = [
+          { key: "allsan", title: "ДИР Аллсан" },
+          { key: "ecotidy", title: "ДИР Первый интегратор" },
+          { key: "combined", title: "Сумма исходных" },
+        ];
+        const srcRows = [
+          ["Выручка", "revenue"],
+          ["Себестоимость", "cogs"],
+          ["Расходы", "expenses"],
+          ["Итого", "net"],
+        ].map(([label, field]) => {
+          const cls = field === "net" ? "total" : "";
+          const cells = srcCols.map((c) => `<td class="num">${money(report.source[c.key], field)}</td>`).join("");
+          return `<tr class="${cls}"><td class="name">${escapeHtml(label)}</td>${cells}</tr>`;
+        }).join("");
+        const shead = ["<th>Исходные отчёты</th>"]
+          .concat(srcCols.map((c) => `<th class="num">${escapeHtml(c.title)}</th>`))
+          .join("");
+        sourceHtml = `<div class="pnl-section"><h2>Исходные ДИР (до переноса в УК)</h2>
+          <div class="pnl-scroll"><table class="pnl"><thead><tr>${shead}</tr></thead><tbody>${srcRows}</tbody></table></div></div>`;
       }
 
       let compareHtml = "";
-      if (report.compare) {
-        const cmpCols = ["allsan", "ecotidy", "uk", "total"];
-        const labels = { allsan: "Аллсан", ecotidy: "Экотайди", uk: "УК", total: "Итого" };
+      if (report.identity || report.compare?.total) {
+        const ident = report.identity || report.compare.total;
         const metrics = [
           ["revenue", "Выручка"],
           ["cogs", "Себестоимость"],
@@ -3262,20 +3284,22 @@
           ["net", "Итого"],
         ];
         const rows = metrics.map(([key, label]) => {
-          const cells = cmpCols.map((c) => {
-            const cell = report.compare[c]?.[key];
-            if (!cell) return "<td class=\"num\">—</td>";
-            const d = Number(cell.delta) || 0;
-            const cls = Math.abs(d) < 0.005 ? "" : d > 0 ? "diff-bad" : "diff-ok";
-            return `<td class="num ${cls}">${formatUnitsMoney(d)}</td>`;
-          }).join("");
-          return `<tr><td class="name">Δ ${escapeHtml(label)}</td>${cells}</tr>`;
+          const cell = ident[key];
+          if (!cell) return `<tr><td class="name">${escapeHtml(label)}</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>`;
+          const d = Number(cell.delta) || 0;
+          const cls = Math.abs(d) < 0.05 ? "diff-ok" : "diff-bad";
+          return `<tr>
+            <td class="name">Δ ${escapeHtml(label)}</td>
+            <td class="num">${formatUnitsMoney(cell.actual)}</td>
+            <td class="num">${formatUnitsMoney(cell.expected)}</td>
+            <td class="num ${cls}">${formatUnitsMoney(d)}</td>
+          </tr>`;
         }).join("");
-        const chead = ["<th>Сверка со sheet (факт − эталон)</th>"]
-          .concat(cmpCols.map((c) => `<th class="num">${escapeHtml(labels[c])}</th>`))
-          .join("");
-        compareHtml = `<div class="pnl-section"><h2>${escapeHtml(report.compare.source || "Сверка")}</h2>
-          <div class="pnl-scroll"><table class="pnl"><thead><tr>${chead}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
+        compareHtml = `<div class="pnl-section"><h2>Сверка: итог сводки vs сумма исходных ДИР</h2>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead><tr><th></th><th class="num">Сводка (итого)</th><th class="num">Аллсан + ПИ</th><th class="num">Δ</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table></div></div>`;
       }
 
       const warn = (report.warnings || []).length
@@ -3297,6 +3321,7 @@
             <tbody>${expenseRows}</tbody>
           </table></div>
         </div>
+        ${sourceHtml}
         ${detailHtml}
         ${compareHtml}`;
     }

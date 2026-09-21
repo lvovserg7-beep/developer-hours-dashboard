@@ -582,6 +582,7 @@ export async function loadPnl(fromText, toText, groupBy = "month") {
   let profit = cogsTotals.profit;
   const orderedExpenseNames = [...expenseSections.entries()].sort((a, b) => a[1].order - b[1].order || a[0].localeCompare(b[0], "ru"));
   let otherCogs = zeros(n);
+  let operating = zeros(n);
   for (const [title, section] of orderedExpenseNames) {
     const articleRows = [...section.articles.values()]
       .sort((a, b) => a.name.localeCompare(b.name, "ru"))
@@ -589,9 +590,10 @@ export async function loadPnl(fromText, toText, groupBy = "month") {
       .filter((r) => r.total !== 0 || r.values.some((v) => v));
     const costVec = sumVec([...section.articles.values()].map((article) => article.values), n);
     if (title === "Себестоимость прочая") otherCogs = costVec;
-    const totals = totalsAndRent(`Итого ${title}:`, costVec, profit, revenue);
-    profit = totals.profit;
-    expenseBlocks.push({ title, rows: [...articleRows, ...totals.rows] });
+    else operating = addVec(operating, costVec);
+    const blockTotals = totalsAndRent(`Итого ${title}:`, costVec, profit, revenue);
+    profit = blockTotals.profit;
+    expenseBlocks.push({ title, rows: [...articleRows, ...blockTotals.rows] });
   }
 
   const incomeRowsRaw = rowsOf(incomeReg).filter((row) => row.Active !== false && isReceipt(row));
@@ -620,6 +622,26 @@ export async function loadPnl(fromText, toText, groupBy = "month") {
       rowFromValues("Итого прибыль:", profitAfterIncome, "total"),
       { name: "Рентабельность:", kind: "pct", values: rentFinal.map(roundPct), total: revSum ? roundPct((profitSum / revSum) * 100) : 0 },
     ],
+  };
+
+  const monthTotals = months.map((m, i) => ({
+    key: m.key,
+    label: m.label,
+    revenue: roundMoney(revenue[i]),
+    cogs: roundMoney(cogs[i]),
+    otherCogs: roundMoney(otherCogs[i]),
+    expenses: roundMoney(operating[i]),
+    otherIncome: roundMoney(incomeVec[i]),
+    net: roundMoney(profitAfterIncome[i]),
+  }));
+  const pnlTotals = {
+    revenue: roundMoney(revenue.reduce((s, v) => s + v, 0)),
+    cogs: roundMoney(cogs.reduce((s, v) => s + v, 0)),
+    otherCogs: roundMoney(otherCogs.reduce((s, v) => s + v, 0)),
+    expenses: roundMoney(operating.reduce((s, v) => s + v, 0)),
+    otherIncome: roundMoney(incomeVec.reduce((s, v) => s + v, 0)),
+    net: roundMoney(profitAfterIncome.reduce((s, v) => s + v, 0)),
+    byMonth: monthTotals,
   };
 
   const salesByName = (name) =>
@@ -688,6 +710,7 @@ export async function loadPnl(fromText, toText, groupBy = "month") {
     organization: ORG_NAME,
     months: months.map((m) => ({ key: m.key, label: m.label })),
     sections: [salesBlock, cogsBlock, ...expenseBlocks, incomeBlock, refBlock],
+    totals: pnlTotals,
     warnings: [...new Set(warnings.filter(Boolean))],
     generatedAt: new Date().toISOString(),
     note: "Считается как отчёт 1С «Доходы и расходы»: выручка и себестоимость — обороты регистра «Выручка и себестоимость продаж» (ОП/КО по «ОкончанияБонусовОП»), статьи — справочник «НастройкаДИР», расходы — «Прочие расходы» (на направления деятельности / не распределять), прочие доходы — регистр «Прочие доходы». Закрытые часы — количество с номенклатуры настройки порядка 1, не задачи разработчика.",
