@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Расхождения сводки юнитов и Google Sheet — апрель–июнь 2026</title>
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --card: #fffdf8;
+      --ink: #1f1b16;
+      --muted: #6b6258;
+      --line: #e4d9c8;
+      --bad: #b42318;
+      --ok: #067647;
+      --warn: #b54708;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 16px/1.45 "Segoe UI", system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+    main { max-width: 1100px; margin: 0 auto; padding: 28px 16px 64px; }
+    h1 { font-size: 1.6rem; margin: 0 0 8px; }
+    h2 { font-size: 1.25rem; margin: 32px 0 12px; }
+    p.lead, .note { color: var(--muted); }
+    a { color: #155eef; }
+    .meta { display: grid; gap: 8px; margin: 16px 0 24px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin: 0 0 16px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 8px 10px; vertical-align: top; }
+    th { text-align: left; font-weight: 600; background: #f8f3ea; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    td.name { width: 38%; }
+    tr.total td { font-weight: 700; }
+    .delta-bad { color: var(--bad); font-weight: 650; }
+    .delta-ok { color: var(--ok); }
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #f8ead0;
+      color: var(--warn);
+    }
+    .tag.bad { background: #fde8e6; color: var(--bad); }
+    ul { margin: 8px 0 0; padding-left: 18px; }
+    .eco td { color: var(--muted); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Расхождения сводки юнитов и Google Sheet</h1>
+  <p class="lead">Период: <strong>апрель, май, июнь 2026</strong>. Δ = сводка юнитов − таблица. Корректные цифры Аллсан взяты из отчёта 1С «Доходы и расходы». Сводка — после переноса расходов в УК.</p>
+  <div class="meta card">
+    <div>Таблица: <a href="https://docs.google.com/spreadsheets/d/1mx_szeVa2Fz3j8rPD3_SjXcHKsegf3b4qujidxylYN4/edit?gid=686455498#gid=686455498">Google Sheet «Отчет»</a> — листы Апрель / Май / Июнь 2026.</div>
+    <div>Сверка: 21.09.2026. ДИР Первый интегратор (ecotidy) с этой машины не прочитался — колонка «Экотайди» в сводке = 0.</div>
+  </div>
+
+  <div class="card">
+    <strong>Что повторяется во всех трёх месяцах</strong>
+    <ul>
+      <li>УК в таблице <strong>522 000 ₽</strong>, в сводке <strong>467 000 ₽</strong> (Δ <span class="delta-bad">−55 000</span>) — не вынесена <strong>Юля ЗП</strong> из Экотайди.</li>
+      <li>УК «Выплата заработной платы (Коммер)»: таблица 420 000, сводка 365 000 (те же −55 000).</li>
+      <li>Вся колонка Экотайди в сводке пустая. Ниже её цифры из таблицы — без сверки с 1С ПИ.</li>
+    </ul>
+  </div>
+
+  <h2>Апрель 2026</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>Показатель</th><th class="num">Таблица</th><th class="num">Сводка</th><th class="num">Δ</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="name">Аллсан выручка</td><td class="num">4 658 287,00</td><td class="num">4 673 917,00</td><td class="num delta-bad">+15 630,00</td></tr>
+        <tr><td class="name">Аллсан себестоимость</td><td class="num">2 410 091,99</td><td class="num">2 498 289,01</td><td class="num delta-bad">+88 197,02</td></tr>
+        <tr><td class="name">Аллсан расходы</td><td class="num">1 189 500,45</td><td class="num">1 202 087,08</td><td class="num delta-bad">+12 586,63</td></tr>
+        <tr class="total"><td class="name">Аллсан итого</td><td class="num">1 058 694,56</td><td class="num">973 540,91</td><td class="num delta-bad">−85 153,65</td></tr>
+        <tr><td class="name">УК расходы</td><td class="num">522 000,00</td><td class="num">467 000,00</td><td class="num delta-bad">−55 000,00</td></tr>
+        <tr><td class="name">УК итого</td><td class="num">−522 000,00</td><td class="num">−467 000,00</td><td class="num delta-bad">+55 000,00</td></tr>
+        <tr><td class="name">Аллсан комиссия</td><td class="num">20 415,56</td><td class="num">19 176,41</td><td class="num delta-bad">−1 239,15</td></tr>
+        <tr><td class="name">Аллсан офис</td><td class="num">104 092,12</td><td class="num">54 917,90</td><td class="num delta-bad">−49 174,22</td></tr>
+        <tr><td class="name">УК ЗП (Коммер)</td><td class="num">420 000,00</td><td class="num">365 000,00</td><td class="num delta-bad">−55 000,00</td></tr>
+        <tr><td class="name">Аллсан «Обучение» (в сводке «Прочие»)</td><td class="num">нет строки</td><td class="num">63 000,00</td><td class="num delta-bad">+63 000,00</td></tr>
+        <tr class="eco"><td class="name">Экотайди выручка <span class="tag">нет 1С</span></td><td class="num">5 023 527,64</td><td class="num">0,00</td><td class="num delta-bad">−5 023 527,64</td></tr>
+        <tr class="eco"><td class="name">Экотайди себестоимость</td><td class="num">1 119 732,32</td><td class="num">0,00</td><td class="num delta-bad">−1 119 732,32</td></tr>
+        <tr class="eco"><td class="name">Экотайди расходы</td><td class="num">4 149 208,98</td><td class="num">0,00</td><td class="num delta-bad">−4 149 208,98</td></tr>
+        <tr class="eco total"><td class="name">Экотайди итого</td><td class="num">−245 413,66</td><td class="num">0,00</td><td class="num delta-bad">+245 413,66</td></tr>
+      </tbody>
+    </table>
+    <p class="note">В 1С офис Аллсан = Офис 36 605 + Связь 18 312,90. «Обучение» 63 000 в таблице отдельной строкой нет. Выручка и себестоимость Аллсан в 1С выше, чем в таблице.</p>
+  </div>
+
+  <h2>Май 2026</h2>
+  <div class="card">
+    <p><span class="tag">Аллсан почти совпал</span> кроме 60 ₽ выручки и Юли в УК.</p>
+    <table>
+      <thead>
+        <tr><th>Показатель</th><th class="num">Таблица</th><th class="num">Сводка</th><th class="num">Δ</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="name">Аллсан выручка</td><td class="num">5 937 300,00</td><td class="num">5 937 360,00</td><td class="num delta-bad">+60,00</td></tr>
+        <tr><td class="name">Аллсан себестоимость</td><td class="num">3 211 384,04</td><td class="num">3 211 384,03</td><td class="num delta-ok">0,00</td></tr>
+        <tr><td class="name">Аллсан расходы</td><td class="num">1 111 440,42</td><td class="num">1 111 440,82</td><td class="num delta-ok">0,00</td></tr>
+        <tr class="total"><td class="name">Аллсан итого</td><td class="num">1 614 475,54</td><td class="num">1 614 535,15</td><td class="num delta-bad">+59,61</td></tr>
+        <tr><td class="name">УК расходы / ЗП (Коммер)</td><td class="num">522 000 / 420 000</td><td class="num">467 000 / 365 000</td><td class="num delta-bad">−55 000,00</td></tr>
+        <tr class="eco"><td class="name">Экотайди выручка <span class="tag">нет 1С</span></td><td class="num">7 779 875,97</td><td class="num">0,00</td><td class="num delta-bad">−7 779 875,97</td></tr>
+        <tr class="eco"><td class="name">Экотайди себестоимость</td><td class="num">1 403 535,95</td><td class="num">0,00</td><td class="num delta-bad">−1 403 535,95</td></tr>
+        <tr class="eco"><td class="name">Экотайди расходы</td><td class="num">4 826 003,41</td><td class="num">0,00</td><td class="num delta-bad">−4 826 003,41</td></tr>
+        <tr class="eco total"><td class="name">Экотайди итого</td><td class="num">1 550 336,61</td><td class="num">0,00</td><td class="num delta-bad">−1 550 336,61</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Июнь 2026</h2>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>Показатель</th><th class="num">Таблица</th><th class="num">Сводка</th><th class="num">Δ</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="name">Аллсан выручка</td><td class="num">4 954 325,00</td><td class="num">4 954 325,00</td><td class="num delta-ok">0,00</td></tr>
+        <tr><td class="name">Аллсан себестоимость</td><td class="num">2 549 344,06</td><td class="num">2 626 326,14</td><td class="num delta-bad">+76 982,08</td></tr>
+        <tr><td class="name">Аллсан расходы</td><td class="num">1 100 623,42</td><td class="num">1 110 988,43</td><td class="num delta-bad">+10 365,01</td></tr>
+        <tr class="total"><td class="name">Аллсан итого</td><td class="num">1 304 357,52</td><td class="num">1 217 010,43</td><td class="num delta-bad">−87 347,09</td></tr>
+        <tr><td class="name">УК расходы / ЗП (Коммер)</td><td class="num">522 000 / 420 000</td><td class="num">467 000 / 365 000</td><td class="num delta-bad">−55 000,00</td></tr>
+        <tr><td class="name">Аллсан комиссия</td><td class="num">28 826,00</td><td class="num">29 516,00</td><td class="num delta-bad">+690,00</td></tr>
+        <tr><td class="name">Аллсан аренда серверов</td><td class="num">5 325,00</td><td class="num">0,00</td><td class="num delta-bad">−5 325,00</td></tr>
+        <tr><td class="name">Аллсан R&amp;D (в сводке «Прочие»)</td><td class="num">нет строки</td><td class="num">15 000,00</td><td class="num delta-bad">+15 000,00</td></tr>
+        <tr class="eco"><td class="name">Экотайди выручка <span class="tag">нет 1С</span></td><td class="num">9 430 863,66</td><td class="num">0,00</td><td class="num delta-bad">−9 430 863,66</td></tr>
+        <tr class="eco"><td class="name">Экотайди себестоимость</td><td class="num">1 962 380,16</td><td class="num">0,00</td><td class="num delta-bad">−1 962 380,16</td></tr>
+        <tr class="eco"><td class="name">Экотайди расходы</td><td class="num">5 292 909,78</td><td class="num">0,00</td><td class="num delta-bad">−5 292 909,78</td></tr>
+        <tr class="eco total"><td class="name">Экотайди итого</td><td class="num">2 175 573,72</td><td class="num">0,00</td><td class="num delta-bad">−2 175 573,72</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Расходы июня: 15 000 (R&amp;D) + 690 (комиссия) − 5 325 (аренда серверов только в таблице) = <strong>+10 365</strong> — это Δ расходов. Себестоимость сводки включает всю «Себестоимость прочая» из ДИР (в т.ч. бонус ОП 47 720); таблица часть прочей себестоимости, похоже, не берёт.</p>
+  </div>
+
+  <h2>Сводка по смыслу</h2>
+  <div class="card">
+    <ul>
+      <li>Май по Аллсан бьётся с таблицей (60 ₽ выручки).</li>
+      <li>Апрель и июнь расходятся составом себестоимости, офиса, R&amp;D и аренды серверов.</li>
+      <li>УК каждый месяц короче таблицы на 55 000, пока нет ДИР Первого интегратора.</li>
+    </ul>
+  </div>
+</main>
+</body>
+</html>
