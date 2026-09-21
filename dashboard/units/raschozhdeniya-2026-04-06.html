@@ -22,7 +22,7 @@
       color: var(--ink);
       background: var(--bg);
     }
-    main { max-width: 1100px; margin: 0 auto; padding: 28px 16px 64px; }
+    main { max-width: 1120px; margin: 0 auto; padding: 28px 16px 64px; }
     h1 { font-size: 1.6rem; margin: 0 0 8px; }
     h2 { font-size: 1.25rem; margin: 32px 0 12px; }
     p.lead, .note { color: var(--muted); }
@@ -39,7 +39,7 @@
     th, td { border-bottom: 1px solid var(--line); padding: 8px 10px; vertical-align: top; }
     th { text-align: left; font-weight: 600; background: #f8f3ea; }
     td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    td.name { width: 38%; }
+    td.name { width: 42%; }
     tr.total td { font-weight: 700; }
     .delta-bad { color: var(--bad); font-weight: 650; }
     .delta-ok { color: var(--ok); }
@@ -51,6 +51,7 @@
       background: #f8ead0;
       color: var(--warn);
     }
+    .tag.ok { background: #e7f6ee; color: var(--ok); }
     .tag.bad { background: #fde8e6; color: var(--bad); }
     ul { margin: 8px 0 0; padding-left: 18px; }
     .eco td { color: var(--muted); }
@@ -59,18 +60,32 @@
 <body>
 <main>
   <h1>Расхождения сводки юнитов и Google Sheet</h1>
-  <p class="lead">Период: <strong>апрель, май, июнь 2026</strong>. Δ = сводка юнитов − таблица. Корректные цифры Аллсан взяты из отчёта 1С «Доходы и расходы». Сводка — после переноса расходов в УК.</p>
+  <p class="lead">Период сверки с файлом: <strong>апрель, май, июнь 2026</strong>. Δ = сводка юнитов (1С) − таблица. Отчёты пересчитаны 21.09.2026.</p>
   <div class="meta card">
-    <div>Таблица: <a href="https://docs.google.com/spreadsheets/d/1mx_szeVa2Fz3j8rPD3_SjXcHKsegf3b4qujidxylYN4/edit?gid=686455498#gid=686455498">Google Sheet «Отчет»</a> — листы Апрель / Май / Июнь 2026.</div>
-    <div>Сверка: 21.09.2026. ДИР Первый интегратор (ecotidy) с этой машины не прочитался — колонка «Экотайди» в сводке = 0.</div>
+    <div>Таблица: <a href="https://docs.google.com/spreadsheets/d/1mx_szeVa2Fz3j8rPD3_SjXcHKsegf3b4qujidxylYN4/edit?gid=686455498#gid=686455498">Google Sheet</a> — листы Апрель / Май / Июнь 2026 (открытый gid — июнь).</div>
+    <div>Сводка юнитов и ДИР Аллсан — из 1С trade. ДИР Первый интегратор (ecotidy) с этой машины не читается (IIS 401) — колонка Экотайди в сводке = 0.</div>
+    <div>Вкладка «Сводка юнитов» по умолчанию считает <strong>июль–сентябрь 2026</strong>; с таблицей сравниваются апрель–июнь, потому что в файле есть только они.</div>
   </div>
 
   <div class="card">
-    <strong>Что повторяется во всех трёх месяцах</strong>
+    <strong>Юля — совпадает</strong>
+    <p>В таблице (колонка «ук») каждый месяц стоит <strong>Юля = 55 000 ₽</strong>. В сводке то же правило: «Юля ЗП» 55 000 ₽ в месяц из коммерческой зарплаты Экотайди в УК.</p>
+    <p>Прошлая формулировка «УК короче на 55 000 — не вынесена Юля» была про <em>факт переноса в этой среде</em>, а не про то, что ставка Юли другая. Ставка одна и та же.</p>
     <ul>
-      <li>УК в таблице <strong>522 000 ₽</strong>, в сводке <strong>467 000 ₽</strong> (Δ <span class="delta-bad">−55 000</span>) — не вынесена <strong>Юля ЗП</strong> из Экотайди.</li>
-      <li>УК «Выплата заработной платы (Коммер)»: таблица 420 000, сводка 365 000 (те же −55 000).</li>
-      <li>Вся колонка Экотайди в сводке пустая. Ниже её цифры из таблицы — без сверки с 1С ПИ.</li>
+      <li>Таблица УК коммер: <strong>420 000</strong> = 365 000 (ЛС + ПД + Виктория + Полина из Аллсан) + <strong>55 000 Юля</strong>.</li>
+      <li>Сводка УК коммер здесь: <strong>365 000</strong> — те же четыре человека из Аллсан. Юлю перенести не из чего: ДИР ПИ недоступен, коммер Экотайди = 0.</li>
+      <li>На боевом ЦУК с рабочей учёткой ecotidy перенос Юли должен дать УК 522 000, как в таблице.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <strong>Что совпало по Аллсан (не Юля)</strong>
+    <ul>
+      <li>Аренда офиса после выноса 20 000 в УК: 115 307,42 во всех трёх месяцах.</li>
+      <li>Налоги после выноса 82 000 в УК: апрель 503 000, май и июнь 533 000.</li>
+      <li>ЗП операционные / развитие / коммер Аллсан после переноса (коммер = 0).</li>
+      <li>Май почти весь: себестоимость, офис, комиссия, серверы. Расходится выручка на 60 ₽.</li>
+      <li>Июнь выручка 4 954 325,00 — точка в точку.</li>
     </ul>
   </div>
 
@@ -81,53 +96,61 @@
         <tr><th>Показатель</th><th class="num">Таблица</th><th class="num">Сводка</th><th class="num">Δ</th></tr>
       </thead>
       <tbody>
+        <tr><td class="name">Юля (правило переноса) <span class="tag ok">совпало</span></td><td class="num">55 000,00</td><td class="num">55 000,00</td><td class="num delta-ok">0,00</td></tr>
+        <tr><td class="name">Юля фактически перенесена в УК</td><td class="num">55 000,00</td><td class="num">0,00</td><td class="num delta-bad">−55 000,00</td></tr>
         <tr><td class="name">Аллсан выручка</td><td class="num">4 658 287,00</td><td class="num">4 673 917,00</td><td class="num delta-bad">+15 630,00</td></tr>
         <tr><td class="name">Аллсан себестоимость</td><td class="num">2 410 091,99</td><td class="num">2 498 289,01</td><td class="num delta-bad">+88 197,02</td></tr>
         <tr><td class="name">Аллсан расходы</td><td class="num">1 189 500,45</td><td class="num">1 202 087,08</td><td class="num delta-bad">+12 586,63</td></tr>
         <tr class="total"><td class="name">Аллсан итого</td><td class="num">1 058 694,56</td><td class="num">973 540,91</td><td class="num delta-bad">−85 153,65</td></tr>
         <tr><td class="name">УК расходы</td><td class="num">522 000,00</td><td class="num">467 000,00</td><td class="num delta-bad">−55 000,00</td></tr>
-        <tr><td class="name">УК итого</td><td class="num">−522 000,00</td><td class="num">−467 000,00</td><td class="num delta-bad">+55 000,00</td></tr>
+        <tr><td class="name">УК ЗП (Коммер)</td><td class="num">420 000,00</td><td class="num">365 000,00</td><td class="num delta-bad">−55 000,00</td></tr>
+        <tr><td class="name">Аллсан аренда офиса / налоги / ЗП опер / ЗП разв / серверы</td><td class="num">как в таблице</td><td class="num">как в таблице</td><td class="num delta-ok">0,00</td></tr>
         <tr><td class="name">Аллсан комиссия</td><td class="num">20 415,56</td><td class="num">19 176,41</td><td class="num delta-bad">−1 239,15</td></tr>
         <tr><td class="name">Аллсан офис</td><td class="num">104 092,12</td><td class="num">54 917,90</td><td class="num delta-bad">−49 174,22</td></tr>
-        <tr><td class="name">УК ЗП (Коммер)</td><td class="num">420 000,00</td><td class="num">365 000,00</td><td class="num delta-bad">−55 000,00</td></tr>
         <tr><td class="name">Аллсан «Обучение» (в сводке «Прочие»)</td><td class="num">нет строки</td><td class="num">63 000,00</td><td class="num delta-bad">+63 000,00</td></tr>
-        <tr class="eco"><td class="name">Экотайди выручка <span class="tag">нет 1С</span></td><td class="num">5 023 527,64</td><td class="num">0,00</td><td class="num delta-bad">−5 023 527,64</td></tr>
+        <tr class="eco"><td class="name">Экотайди выручка <span class="tag">нет 1С ПИ</span></td><td class="num">5 023 527,64</td><td class="num">0,00</td><td class="num delta-bad">−5 023 527,64</td></tr>
         <tr class="eco"><td class="name">Экотайди себестоимость</td><td class="num">1 119 732,32</td><td class="num">0,00</td><td class="num delta-bad">−1 119 732,32</td></tr>
         <tr class="eco"><td class="name">Экотайди расходы</td><td class="num">4 149 208,98</td><td class="num">0,00</td><td class="num delta-bad">−4 149 208,98</td></tr>
         <tr class="eco total"><td class="name">Экотайди итого</td><td class="num">−245 413,66</td><td class="num">0,00</td><td class="num delta-bad">+245 413,66</td></tr>
+        <tr class="eco"><td class="name">Экотайди ЗП (Коммер) после Юли</td><td class="num">100 000,00</td><td class="num">0,00</td><td class="num delta-bad">−100 000,00</td></tr>
       </tbody>
     </table>
-    <p class="note">В 1С офис Аллсан = Офис 36 605 + Связь 18 312,90. «Обучение» 63 000 в таблице отдельной строкой нет. Выручка и себестоимость Аллсан в 1С выше, чем в таблице.</p>
+    <p class="note">Офис в 1С = Офис 36 605 + Связь 18 312,90. «Обучение» 63 000 в таблице отдельной строкой нет. Выручка и себестоимость Аллсан в 1С выше, чем в таблице. Δ расходов Аллсан ≈ офис −49 174 + обучение +63 000 + комиссия −1 239.</p>
   </div>
 
   <h2>Май 2026</h2>
   <div class="card">
-    <p><span class="tag">Аллсан почти совпал</span> кроме 60 ₽ выручки и Юли в УК.</p>
+    <p><span class="tag ok">Аллсан почти совпал</span> кроме 60 ₽ выручки. Юля как ставка — 55 000, как и в таблице.</p>
     <table>
       <thead>
         <tr><th>Показатель</th><th class="num">Таблица</th><th class="num">Сводка</th><th class="num">Δ</th></tr>
       </thead>
       <tbody>
+        <tr><td class="name">Юля (правило переноса) <span class="tag ok">совпало</span></td><td class="num">55 000,00</td><td class="num">55 000,00</td><td class="num delta-ok">0,00</td></tr>
+        <tr><td class="name">Юля фактически перенесена в УК</td><td class="num">55 000,00</td><td class="num">0,00</td><td class="num delta-bad">−55 000,00</td></tr>
         <tr><td class="name">Аллсан выручка</td><td class="num">5 937 300,00</td><td class="num">5 937 360,00</td><td class="num delta-bad">+60,00</td></tr>
         <tr><td class="name">Аллсан себестоимость</td><td class="num">3 211 384,04</td><td class="num">3 211 384,03</td><td class="num delta-ok">0,00</td></tr>
-        <tr><td class="name">Аллсан расходы</td><td class="num">1 111 440,42</td><td class="num">1 111 440,82</td><td class="num delta-ok">0,00</td></tr>
+        <tr><td class="name">Аллсан расходы</td><td class="num">1 111 440,42</td><td class="num">1 111 440,82</td><td class="num delta-ok">0,40</td></tr>
         <tr class="total"><td class="name">Аллсан итого</td><td class="num">1 614 475,54</td><td class="num">1 614 535,15</td><td class="num delta-bad">+59,61</td></tr>
         <tr><td class="name">УК расходы / ЗП (Коммер)</td><td class="num">522 000 / 420 000</td><td class="num">467 000 / 365 000</td><td class="num delta-bad">−55 000,00</td></tr>
-        <tr class="eco"><td class="name">Экотайди выручка <span class="tag">нет 1С</span></td><td class="num">7 779 875,97</td><td class="num">0,00</td><td class="num delta-bad">−7 779 875,97</td></tr>
+        <tr class="eco"><td class="name">Экотайди выручка <span class="tag">нет 1С ПИ</span></td><td class="num">7 779 875,97</td><td class="num">0,00</td><td class="num delta-bad">−7 779 875,97</td></tr>
         <tr class="eco"><td class="name">Экотайди себестоимость</td><td class="num">1 403 535,95</td><td class="num">0,00</td><td class="num delta-bad">−1 403 535,95</td></tr>
         <tr class="eco"><td class="name">Экотайди расходы</td><td class="num">4 826 003,41</td><td class="num">0,00</td><td class="num delta-bad">−4 826 003,41</td></tr>
         <tr class="eco total"><td class="name">Экотайди итого</td><td class="num">1 550 336,61</td><td class="num">0,00</td><td class="num delta-bad">−1 550 336,61</td></tr>
+        <tr class="eco"><td class="name">Экотайди ЗП (Коммер) после Юли</td><td class="num">200 000,00</td><td class="num">0,00</td><td class="num delta-bad">−200 000,00</td></tr>
       </tbody>
     </table>
   </div>
 
-  <h2>Июнь 2026</h2>
+  <h2>Июнь 2026 <span class="tag">лист из ссылки</span></h2>
   <div class="card">
     <table>
       <thead>
         <tr><th>Показатель</th><th class="num">Таблица</th><th class="num">Сводка</th><th class="num">Δ</th></tr>
       </thead>
       <tbody>
+        <tr><td class="name">Юля (правило переноса) <span class="tag ok">совпало</span></td><td class="num">55 000,00</td><td class="num">55 000,00</td><td class="num delta-ok">0,00</td></tr>
+        <tr><td class="name">Юля фактически перенесена в УК</td><td class="num">55 000,00</td><td class="num">0,00</td><td class="num delta-bad">−55 000,00</td></tr>
         <tr><td class="name">Аллсан выручка</td><td class="num">4 954 325,00</td><td class="num">4 954 325,00</td><td class="num delta-ok">0,00</td></tr>
         <tr><td class="name">Аллсан себестоимость</td><td class="num">2 549 344,06</td><td class="num">2 626 326,14</td><td class="num delta-bad">+76 982,08</td></tr>
         <tr><td class="name">Аллсан расходы</td><td class="num">1 100 623,42</td><td class="num">1 110 988,43</td><td class="num delta-bad">+10 365,01</td></tr>
@@ -136,22 +159,30 @@
         <tr><td class="name">Аллсан комиссия</td><td class="num">28 826,00</td><td class="num">29 516,00</td><td class="num delta-bad">+690,00</td></tr>
         <tr><td class="name">Аллсан аренда серверов</td><td class="num">5 325,00</td><td class="num">0,00</td><td class="num delta-bad">−5 325,00</td></tr>
         <tr><td class="name">Аллсан R&amp;D (в сводке «Прочие»)</td><td class="num">нет строки</td><td class="num">15 000,00</td><td class="num delta-bad">+15 000,00</td></tr>
-        <tr class="eco"><td class="name">Экотайди выручка <span class="tag">нет 1С</span></td><td class="num">9 430 863,66</td><td class="num">0,00</td><td class="num delta-bad">−9 430 863,66</td></tr>
+        <tr class="eco"><td class="name">Экотайди выручка <span class="tag">нет 1С ПИ</span></td><td class="num">9 430 863,66</td><td class="num">0,00</td><td class="num delta-bad">−9 430 863,66</td></tr>
         <tr class="eco"><td class="name">Экотайди себестоимость</td><td class="num">1 962 380,16</td><td class="num">0,00</td><td class="num delta-bad">−1 962 380,16</td></tr>
         <tr class="eco"><td class="name">Экотайди расходы</td><td class="num">5 292 909,78</td><td class="num">0,00</td><td class="num delta-bad">−5 292 909,78</td></tr>
         <tr class="eco total"><td class="name">Экотайди итого</td><td class="num">2 175 573,72</td><td class="num">0,00</td><td class="num delta-bad">−2 175 573,72</td></tr>
+        <tr class="eco"><td class="name">Экотайди ЗП (Коммер) после Юли</td><td class="num">200 000,00</td><td class="num">0,00</td><td class="num delta-bad">−200 000,00</td></tr>
       </tbody>
     </table>
-    <p class="note">Расходы июня: 15 000 (R&amp;D) + 690 (комиссия) − 5 325 (аренда серверов только в таблице) = <strong>+10 365</strong> — это Δ расходов. Себестоимость сводки включает всю «Себестоимость прочая» из ДИР (в т.ч. бонус ОП 47 720); таблица часть прочей себестоимости, похоже, не берёт.</p>
+    <p class="note">Расходы июня: 15 000 (R&amp;D) + 690 (комиссия) − 5 325 (аренда серверов только в таблице) = <strong>+10 365</strong>. Себестоимость сводки включает всю «Себестоимость прочая» из ДИР; таблица часть прочей себестоимости, похоже, не берёт.</p>
   </div>
 
-  <h2>Сводка по смыслу</h2>
+  <h2>Вкладка по умолчанию (июль–сентябрь 2026)</h2>
   <div class="card">
-    <ul>
-      <li>Май по Аллсан бьётся с таблицей (60 ₽ выручки).</li>
-      <li>Апрель и июнь расходятся составом себестоимости, офиса, R&amp;D и аренды серверов.</li>
-      <li>УК каждый месяц короче таблицы на 55 000, пока нет ДИР Первого интегратора.</li>
-    </ul>
+    <p class="note">Этих месяцев в приложенном файле нет — только живой расчёт сводки. Экотайди снова 0. Сверка итога сводки с ДИР Аллсан: Δ = 0.</p>
+    <table>
+      <thead>
+        <tr><th>Месяц</th><th class="num">Аллсан выручка</th><th class="num">Аллсан итого</th><th class="num">УК расходы</th><th class="num">Юля перенесена</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>июль 2026</td><td class="num">5 109 090,00</td><td class="num">1 260 725,59</td><td class="num">467 000,00</td><td class="num">0,00</td></tr>
+        <tr><td>август 2026</td><td class="num">4 686 300,00</td><td class="num">1 004 539,51</td><td class="num">467 000,00</td><td class="num">0,00</td></tr>
+        <tr><td>сентябрь 2026</td><td class="num">1 228 575,89</td><td class="num">946 197,44</td><td class="num">0,00</td><td class="num">0,00</td></tr>
+      </tbody>
+    </table>
+    <p class="note">В сентябре в 1С Аллсан ещё нет коммерческой зарплаты, аренды офиса и налогов — переносы в УК = 0 (месяц не закрыт).</p>
   </div>
 </main>
 </body>
