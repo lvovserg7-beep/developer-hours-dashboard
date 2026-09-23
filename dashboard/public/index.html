@@ -6759,18 +6759,22 @@
         if (data.period?.from && data.period?.to) setCachePeriod(data.period.from, data.period.to);
         if (hint) {
           const bits = [];
-          if (data.reloaded) bits.push("Кэш очищен и данные перечитаны за " + (data.period?.from || from) + " … " + (data.period?.to || to) + ".");
-          else if (data.period?.from && data.period?.to) {
-            bits.push("Удалён кэш за " + data.period.from + " … " + data.period.to + ".");
-          }
-          if (data.rows) bits.push("Строк: " + data.rows + ".");
-          else if (data.removed != null) bits.push("Файлов/записей: " + data.removed + ".");
-          if (data.skipped?.length) bits.push("Пропущено: " + data.skipped.join(", ") + ".");
-          if (data.full) bits.push("Снимок часов очищен целиком.");
-          const seo = data.loaded?.seo;
-          if (seo) {
-            bits.push("SEO: GSC " + (seo.gsc || 0) + ", Яндекс " + (seo.yandex || 0) + ", позиции " + (seo.positions || 0) + ", Wordstat " + (seo.wordstat || 0) + ".");
-            if (seo.warnings?.length) bits.push(seo.warnings.join(" · "));
+          if (data.reloaded) {
+            bits.push("Кэш очищен и данные перечитаны за " + (data.period?.from || from) + " … " + (data.period?.to || to) + ".");
+            if (data.skipped?.length) bits.push("Не трогали: " + data.skipped.join(", ") + ".");
+            const seo = data.loaded?.seo;
+            if (seo) {
+              bits.push("SEO: GSC " + (seo.gsc || 0) + ", Яндекс " + (seo.yandex || 0) + ", позиции " + (seo.positions || 0) + ", Wordstat " + (seo.wordstat || 0) + ".");
+              if (seo.warnings?.length) bits.push(seo.warnings.join(" · "));
+            }
+          } else {
+            if (data.period?.from && data.period?.to) {
+              bits.push("Удалён кэш за " + data.period.from + " … " + data.period.to + ".");
+            }
+            if (data.rows) bits.push("Строк: " + data.rows + ".");
+            else if (data.removed) bits.push("Файлов/записей: " + data.removed + ".");
+            if (data.skipped?.length) bits.push("Пропущено: " + data.skipped.join(", ") + ".");
+            if (data.full) bits.push("Снимок часов очищен целиком.");
           }
           if (bits.length) hint.textContent = bits.join(" ");
         }
