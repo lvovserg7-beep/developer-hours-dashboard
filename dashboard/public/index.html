@@ -1780,13 +1780,14 @@
     <div id="tab-cache" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Кэш досок</h2>
-        <p class="lead tab-intro">Только для администраторов. Очистка удаляет кэш только за выбранный период («с» … «по»). Классификацию SEO-запросов не трогаем. Часы/Активность — снимок без дат: кнопка у доски чистит целиком; «Очистить все» их не трогает.</p>
+        <p class="lead tab-intro">Только для администраторов. Очистка удаляет кэш только за выбранный период («с» … «по»). «Перечитать данные за период» делает то же самое и сразу загружает данные за эти даты. Классификацию SEO-запросов не трогаем. Часы/Активность — снимок без дат: кнопка у доски чистит целиком; «Очистить все» и «Перечитать» их не трогают.</p>
         <div class="cache-toolbar">
           <div class="cache-period">
             <label for="cache-from">Период с<input id="cache-from" type="date"></label>
             <label for="cache-to">по<input id="cache-to" type="date"></label>
           </div>
           <button type="button" id="cache-clear-all">Очистить все за период</button>
+          <button type="button" id="cache-reload-period">Перечитать данные за период</button>
         </div>
         <p class="cache-period-hint" id="cache-period-hint"></p>
         <div id="cache-err" class="err" hidden></div>
@@ -6643,8 +6644,8 @@
       const hint = document.getElementById("cache-period-hint");
       if (hint) {
         hint.textContent = from && to
-          ? "Удаляется кэш, относящийся к периоду " + from + " … " + to + " (границы включительно)."
-          : "Задайте период очистки.";
+          ? "Кэш за период " + from + " … " + to + " (границы включительно): очистка или перечитывание с загрузкой данных."
+          : "Задайте период.";
       }
     }
 
@@ -6715,14 +6716,31 @@
       }
     }
 
+    function setCacheBusy(busy) {
+      const ids = ["cache-clear-all", "cache-reload-period", "cache-from", "cache-to"];
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el) el.disabled = !!busy;
+      }
+      document.querySelectorAll("#cache-list button[data-cache-board]").forEach((btn) => {
+        btn.disabled = !!busy || btn.getAttribute("data-was-disabled") === "1";
+      });
+    }
+
     async function clearCacheBoard(board, opts = {}) {
       if (!USER.admin) return;
       cacheErr("");
       const { from, to } = getCachePeriod();
       const periodAware = opts.periodAware !== false;
+      const reload = opts.reload === true;
       if (periodAware && (!from || !to)) {
-        cacheErr("Укажите период очистки (с и по)");
+        cacheErr("Укажите период (с и по)");
         return;
+      }
+      setCacheBusy(true);
+      const hint = document.getElementById("cache-period-hint");
+      if (reload && hint && from && to) {
+        hint.textContent = "Очищаем кэш и загружаем данные за " + from + " … " + to + "…";
       }
       try {
         const body = { board };
@@ -6730,28 +6748,37 @@
           body.from = from;
           body.to = to;
         }
+        if (reload) body.reload = true;
         const data = await api("/api/admin/cache", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
+          signal: AbortSignal.timeout(reload ? 300000 : 60000),
         });
         rememberCacheCleared(board);
         if (data.period?.from && data.period?.to) setCachePeriod(data.period.from, data.period.to);
-        const hint = document.getElementById("cache-period-hint");
         if (hint) {
           const bits = [];
-          if (data.period?.from && data.period?.to) {
-            bits.push("Удаляется кэш за " + data.period.from + " … " + data.period.to + ".");
+          if (data.reloaded) bits.push("Кэш очищен и данные перечитаны за " + (data.period?.from || from) + " … " + (data.period?.to || to) + ".");
+          else if (data.period?.from && data.period?.to) {
+            bits.push("Удалён кэш за " + data.period.from + " … " + data.period.to + ".");
           }
           if (data.rows) bits.push("Строк: " + data.rows + ".");
           else if (data.removed != null) bits.push("Файлов/записей: " + data.removed + ".");
           if (data.skipped?.length) bits.push("Пропущено: " + data.skipped.join(", ") + ".");
           if (data.full) bits.push("Снимок часов очищен целиком.");
+          const seo = data.loaded?.seo;
+          if (seo) {
+            bits.push("SEO: GSC " + (seo.gsc || 0) + ", Яндекс " + (seo.yandex || 0) + ", позиции " + (seo.positions || 0) + ", Wordstat " + (seo.wordstat || 0) + ".");
+            if (seo.warnings?.length) bits.push(seo.warnings.join(" · "));
+          }
           if (bits.length) hint.textContent = bits.join(" ");
         }
         renderCacheBoards(data.boards || []);
       } catch (e) {
         cacheErr(e.message || String(e));
+      } finally {
+        setCacheBusy(false);
       }
     }
 
@@ -7164,11 +7191,20 @@
     document.getElementById("cache-clear-all")?.addEventListener("click", () => {
       const { from, to } = getCachePeriod();
       if (!from || !to) {
-        cacheErr("Укажите период очистки (с и по)");
+        cacheErr("Укажите период (с и по)");
         return;
       }
       if (!confirm("Очистить кэш всех периодных досок за " + from + " … " + to + "?")) return;
       clearCacheBoard("all", { periodAware: true });
+    });
+    document.getElementById("cache-reload-period")?.addEventListener("click", () => {
+      const { from, to } = getCachePeriod();
+      if (!from || !to) {
+        cacheErr("Укажите период (с и по)");
+        return;
+      }
+      if (!confirm("Очистить кэш и заново загрузить данные всех периодных досок за " + from + " … " + to + "?")) return;
+      clearCacheBoard("all", { periodAware: true, reload: true });
     });
     document.getElementById("cache-from")?.addEventListener("change", () => loadCacheBoard());
     document.getElementById("cache-to")?.addEventListener("change", () => loadCacheBoard());

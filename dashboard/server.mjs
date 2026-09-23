@@ -50,6 +50,7 @@ import {
   defaultCacheClearPeriod,
   trailingCachePeriod,
 } from "./lib/board-cache.mjs";
+import { reloadBoardCache } from "./lib/reload-board-cache.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 
@@ -737,7 +738,22 @@ const server = createServer(async (req, res) => {
         const body = await readJson(req);
         const board = String(body.board || "").trim();
         if (!board) return json(res, 400, { error: "Не указана доска" });
+        const reload = body.reload === true || body.action === "reload";
         try {
+          if (reload) {
+            const result = await reloadBoardCache(
+              board,
+              { from: body.from, to: body.to },
+              {
+                refreshHours: () => refresh(true, { wait: true }),
+              }
+            );
+            return json(res, 200, {
+              ...result,
+              period: result.period || defaultCacheClearPeriod(),
+              defaults: defaultCacheClearPeriod(),
+            });
+          }
           const result = clearBoardCache(board, { from: body.from, to: body.to });
           const listPeriod = result.period || resolveCachePeriod(body.from, body.to);
           return json(res, 200, {

@@ -343,12 +343,22 @@ async function syncYandexHost(hostId, yesterday, opts = {}) {
 
 let syncInflight = null;
 let trailingInflight = null;
+let seoRefreshTail = Promise.resolve();
 
 function trailingWindow(yesterday, days = DAILY_TRAILING_RESYNC_DAYS) {
   const to = yesterday || seoYesterday();
   const n = Math.max(1, Math.floor(Number(days) || DAILY_TRAILING_RESYNC_DAYS));
   const from = ymd(addDays(parseYmd(to), -(n - 1)));
   return { from, to };
+}
+
+function enqueueSeoRefresh(fn) {
+  const run = seoRefreshTail.then(fn, fn);
+  seoRefreshTail = run.then(
+    () => undefined,
+    () => undefined
+  );
+  return run;
 }
 
 function applySeoQueryClasses() {
@@ -360,37 +370,57 @@ function applySeoQueryClasses() {
 }
 
 /**
+ * Перечитать SEO-кэш за конкретный период: суточные CSV, позиции топ-ключей и Wordstat.
+ * @param {{ from: string, to: string, force?: boolean, allWordstat?: boolean }} opts
+ */
+export async function refreshSeoCacheForPeriod(opts = {}) {
+  const from = String(opts.from || "").slice(0, 10);
+  const to = String(opts.to || "").slice(0, 10);
+  if (!from || !to) throw new Error("Укажите период (с и по)");
+  if (from > to) throw new Error("Дата «с» не может быть позже «по»");
+  return enqueueSeoRefresh(() => refreshSeoCacheForPeriodNow({ ...opts, from, to }));
+}
+
+async function refreshSeoCacheForPeriodNow(opts) {
+  const { from, to } = opts;
+  const seo = await syncSeoCsv({
+    yesterday: to,
+    force: Boolean(opts.force),
+    rangeFrom: from,
+    rangeTo: to,
+  });
+  let classes = { cls: { total: 0, added: 0 }, brand: { updated: 0, added: 0, total: 0 }, boxes: { updated: 0, added: 0, total: 0 } };
+  try {
+    classes = applySeoQueryClasses();
+  } catch (err) {
+    const msg = `классификация: ${err.message || err}`;
+    seo.warnings = [...(seo.warnings || []), msg];
+    console.warn("SEO product classes:", err.message || err);
+  }
+  const pos = await ensureSeoQueryPositions({ from, to, force: true });
+  const picked = pickTopQueriesByProduct({ from, to });
+  const wordstatList = opts.allWordstat
+    ? [...new Set(readQueryRows().map((r) => r.query))]
+    : picked.flat.map((q) => q.query);
+  const wordstat = await ensureWordstatFrequencies(wordstatList, { force: true });
+  return { from, to, seo, pos, wordstat, classes };
+}
+
+/**
  * Перечитать и перезаписать кэш за скользящее окно (по умолчанию 7 дней):
  * суточные CSV сайта, позиции топ-ключей и частоты Wordstat.
  * @param {{ yesterday?: string, days?: number, force?: boolean, allWordstat?: boolean }} [opts]
  */
 export async function refreshSeoTrailingCache(opts = {}) {
   if (trailingInflight) return trailingInflight;
-  trailingInflight = (async () => {
-    const days = Math.max(1, Math.floor(Number(opts.days) || DAILY_TRAILING_RESYNC_DAYS));
-    const { from, to } = trailingWindow(opts.yesterday, days);
-    const seo = await syncSeoCsv({
-      yesterday: to,
-      force: Boolean(opts.force),
-      rangeFrom: from,
-      rangeTo: to,
-    });
-    let classes = { cls: { total: 0, added: 0 }, brand: { updated: 0, added: 0, total: 0 }, boxes: { updated: 0, added: 0, total: 0 } };
-    try {
-      classes = applySeoQueryClasses();
-    } catch (err) {
-      const msg = `классификация: ${err.message || err}`;
-      seo.warnings = [...(seo.warnings || []), msg];
-      console.warn("SEO product classes:", err.message || err);
-    }
-    const pos = await ensureSeoQueryPositions({ from, to, force: true });
-    const picked = pickTopQueriesByProduct({ from, to });
-    const wordstatList = opts.allWordstat
-      ? [...new Set(readQueryRows().map((r) => r.query))]
-      : picked.flat.map((q) => q.query);
-    const wordstat = await ensureWordstatFrequencies(wordstatList, { force: true });
-    return { from, to, seo, pos, wordstat, classes };
-  })().finally(() => {
+  const days = Math.max(1, Math.floor(Number(opts.days) || DAILY_TRAILING_RESYNC_DAYS));
+  const { from, to } = trailingWindow(opts.yesterday, days);
+  trailingInflight = refreshSeoCacheForPeriod({
+    from,
+    to,
+    force: Boolean(opts.force),
+    allWordstat: opts.allWordstat,
+  }).finally(() => {
     trailingInflight = null;
   });
   return trailingInflight;
