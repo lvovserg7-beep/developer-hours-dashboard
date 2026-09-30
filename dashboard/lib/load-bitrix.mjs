@@ -72,7 +72,11 @@ async function loadUserNames(ids) {
   const map = new Map();
   if (!needed.size) return map;
 
-  const active = await bitrixAll("user.get", { filter: { ACTIVE: true } }, { maxPages: 20 });
+  const active = await bitrixAll(
+    "user.get",
+    { FILTER: { ACTIVE: true }, ADMIN_MODE: true },
+    { maxPages: 20 }
+  );
   for (const u of active) {
     if (!u?.ID) continue;
     const id = String(u.ID);
@@ -82,7 +86,7 @@ async function loadUserNames(ids) {
   const missing = [...needed].filter((id) => !map.has(id));
   for (const id of missing) {
     try {
-      const data = await bitrixCall("user.get", { ID: id });
+      const data = await bitrixCall("user.get", { ID: id, ADMIN_MODE: true });
       const list = Array.isArray(data.result) ? data.result : data.result ? [data.result] : [];
       if (list[0]) map.set(id, userDisplayName(list[0]));
     } catch {
@@ -144,6 +148,40 @@ function isLeadConverted(statusId, stages) {
 function bump(map, key, amount = 1) {
   const k = String(key || "0");
   map.set(k, (map.get(k) || 0) + amount);
+}
+
+/** Id сотрудника Битрикс; пустой GUID / 0 — нет ответственного. */
+export function nonemptyUserId(value) {
+  const s = String(value ?? "").trim();
+  return s && s !== "0" ? s : "";
+}
+
+/**
+ * Менеджер звонка телефонии: PORTAL_USER_ID, иначе ответственный дела CRM.
+ * У новых сотрудников линия часто пишет звонок с пустым PORTAL_USER_ID.
+ */
+export function managerIdFromVoxRow(row, activityById = new Map()) {
+  const direct = nonemptyUserId(row?.PORTAL_USER_ID);
+  if (direct) return direct;
+  const actId = nonemptyUserId(row?.CRM_ACTIVITY_ID);
+  if (actId) {
+    const act = activityById.get(actId) || activityById.get(String(actId));
+    const fromAct = nonemptyUserId(act?.RESPONSIBLE_ID);
+    if (fromAct) return fromAct;
+  }
+  return "0";
+}
+
+/**
+ * Дело CRM «звонок», которого нет в статистике телефонии (ручной звонок, внешняя АТС).
+ * TYPE_ID=2 — звонок; незавершённые планы не считаем.
+ */
+export function shouldCountExtraCallActivity(activity, voxActivityIds = new Set()) {
+  if (String(activity?.TYPE_ID) !== "2") return false;
+  if (String(activity?.COMPLETED || "Y").toUpperCase() === "N") return false;
+  const id = nonemptyUserId(activity?.ID);
+  if (id && voxActivityIds.has(id)) return false;
+  return true;
 }
 
 function money(v) {
@@ -237,7 +275,7 @@ export async function loadBitrixAnalytics(opts = {}) {
   ]);
   const noArchive = (filter) => bitrixDealFilterWithoutArchive(filter, archiveCategories);
 
-  const [calls, dealsCreated, leadsCreated, leadsClosed, dealsClosed, dealsOpen] = await Promise.all([
+  const [calls, callActivities, dealsCreated, leadsCreated, leadsClosed, dealsClosed, dealsOpen] = await Promise.all([
     bitrixAll(
       "voximplant.statistic.get",
       {
@@ -250,6 +288,19 @@ export async function loadBitrixAnalytics(opts = {}) {
       },
       { maxPages: 100 }
     ),
+    bitrixAll(
+      "crm.activity.list",
+      {
+        filter: {
+          TYPE_ID: 2,
+          ">=START_TIME": range.fromIso,
+          "<=START_TIME": range.toIso,
+        },
+        select: ["ID", "RESPONSIBLE_ID", "START_TIME", "TYPE_ID", "PROVIDER_ID", "COMPLETED"],
+        order: { START_TIME: "ASC" },
+      },
+      { maxPages: 100 }
+    ).catch(() => []),
     bitrixAll(
       "crm.deal.list",
       {
@@ -337,7 +388,30 @@ export async function loadBitrixAnalytics(opts = {}) {
   const openSumBy = new Map();
   const wonSumBy = new Map();
 
-  for (const row of calls) bump(callsBy, row.PORTAL_USER_ID);
+  const activityById = new Map();
+  for (const act of callActivities) {
+    if (act?.ID) activityById.set(String(act.ID), act);
+  }
+  const voxActivityIds = new Set();
+  let voxWithoutUser = 0;
+  let attributedFromCrm = 0;
+  for (const row of calls) {
+    if (!inBitrixRange(row.CALL_START_DATE, range.from, range.to)) continue;
+    const actId = nonemptyUserId(row.CRM_ACTIVITY_ID);
+    if (actId) voxActivityIds.add(actId);
+    const hadUser = Boolean(nonemptyUserId(row.PORTAL_USER_ID));
+    if (!hadUser) voxWithoutUser += 1;
+    const managerId = managerIdFromVoxRow(row, activityById);
+    if (!hadUser && managerId !== "0") attributedFromCrm += 1;
+    bump(callsBy, managerId);
+  }
+  let extraCallActivities = 0;
+  for (const act of callActivities) {
+    if (!inBitrixRange(act.START_TIME, range.from, range.to)) continue;
+    if (!shouldCountExtraCallActivity(act, voxActivityIds)) continue;
+    extraCallActivities += 1;
+    bump(callsBy, nonemptyUserId(act.RESPONSIBLE_ID) || "0");
+  }
   for (const row of dealsCreatedLive) bump(dealsBy, row.ASSIGNED_BY_ID);
   for (const row of leadsCreated) bump(leadsBy, row.ASSIGNED_BY_ID);
   for (const row of leadsClosed) {
@@ -362,6 +436,18 @@ export async function loadBitrixAnalytics(opts = {}) {
   const warnings = [];
   if (dealsOpenLive.length >= 400 * 50) {
     warnings.push("Сделки в работе: достигнут лимит выгрузки REST (~20 000). Сумма может быть неполной.");
+  }
+  if (voxWithoutUser) {
+    warnings.push(
+      `Звонки телефонии без сотрудника в PORTAL_USER_ID: ${voxWithoutUser}` +
+        (attributedFromCrm ? `, из них ${attributedFromCrm} отнесены по ответственному дела CRM` : "") +
+        "."
+    );
+  }
+  if (extraCallActivities) {
+    warnings.push(
+      `Добавлены звонки из дел CRM, которых не было в статистике телефонии: ${extraCallActivities}.`
+    );
   }
 
   const nameById = await loadUserNames([
@@ -421,7 +507,10 @@ export async function loadBitrixAnalytics(opts = {}) {
       wonDealsSumByManager: moneyRows(wonSumBy, nameById, "Выиграно"),
     },
     note:
-      "Звонки — статистика телефонии за период. Сделки и лиды — по дате создания. " +
+      "Звонки — статистика телефонии за период (по сотруднику линии). " +
+      "Если у звонка пустой сотрудник в телефонии — берём ответственного дела CRM; " +
+      "завершённые дела-звонки, которых нет в статистике, тоже входят. " +
+      "Сделки и лиды — по дате создания. " +
       "Выигранные лиды — статус «качественный» / конвертация в сделку по дате закрытия. " +
       "Выигранные и проигранные сделки — только закрытые в выбранном периоде (по дате перехода в финал). " +
       "Сделки в работе (шт и ₽) — текущий снимок открытой воронки, не фильтр периода.",

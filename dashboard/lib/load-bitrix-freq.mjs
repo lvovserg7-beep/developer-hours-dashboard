@@ -45,7 +45,11 @@ async function loadUserNames(ids) {
   const map = new Map();
   if (!needed.size) return map;
 
-  const active = await bitrixAll("user.get", { filter: { ACTIVE: true } }, { maxPages: 20 });
+  const active = await bitrixAll(
+    "user.get",
+    { FILTER: { ACTIVE: true }, ADMIN_MODE: true },
+    { maxPages: 20 }
+  );
   for (const u of active) {
     if (!u?.ID) continue;
     const id = String(u.ID);
@@ -55,7 +59,7 @@ async function loadUserNames(ids) {
   const missing = [...needed].filter((id) => !map.has(id));
   for (const id of missing) {
     try {
-      const data = await bitrixCall("user.get", { ID: id });
+      const data = await bitrixCall("user.get", { ID: id, ADMIN_MODE: true });
       const list = Array.isArray(data.result) ? data.result : data.result ? [data.result] : [];
       if (list[0]) map.set(id, userDisplayName(list[0]));
     } catch {
