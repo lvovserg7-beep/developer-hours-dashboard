@@ -25,6 +25,7 @@ const SECTION_ORDER = [
       "Себестоимость от продаж",
       "Себестоимость от продаж разработки",
       "Себестоимость коробки",
+      "Себестоимость Прочая выручка",
       "Себестоимость от продаж ОП",
     ],
   },
@@ -74,6 +75,7 @@ const FACT_ALIASES = {
   rnd: ["rnd", "r&d", "r and d"],
   "налоги зп": ["налоги зп", "налоги зп(стар)"],
   "себестоимость от продаж разработки": ["себестоимость от продаж разработки"],
+  "себестоимость прочая выручка": ["себестоимость прочая выручка"],
   "себестоимость от продаж оп": ["себестоимость от продаж оп"],
 };
 
@@ -163,6 +165,7 @@ function planVectors(plan, columns) {
 
 function collectFactMap(pnl) {
   const map = new Map();
+  const splits = [];
   const add = (baseName, values) => {
     const key = normKey(baseName);
     if (!map.has(key)) map.set(key, zeros(values.length));
@@ -174,12 +177,12 @@ function collectFactMap(pnl) {
     if (section.title === "Справочно") continue;
     for (const row of section.rows || []) {
       if (row.kind && row.kind !== "line") continue;
-      let name = String(row.name || "");
+      const original = String(row.name || "").trim();
+      let name = original;
       if (/^выручка\s+/i.test(name) || /^себестоимость\s+/i.test(name)) {
         name = stripOpKo(name);
       }
       // PnL stores expenses as positive amounts; budget plan uses negative for costs.
-      // Detect expense-like sections and flip sign to match plan convention.
       let values = row.values || [];
       const isExpenseSection = /расход|себестоимость прочая|прочий расход/i.test(section.title || "");
       const isCogsSection = /^себестоимость$/i.test(section.title || "");
@@ -187,27 +190,36 @@ function collectFactMap(pnl) {
         values = values.map((v) => -Math.abs(num(v)));
       }
       add(name, values);
+      if (isCogsSection && original && original !== name && values.some((v) => v)) {
+        splits.push({ parent: name, name: original, values: values.map(roundMoney) });
+      }
     }
   }
-  return map;
+  return { map, splits };
+}
+
+function factLookupKeys(planName) {
+  const key = normKey(planName);
+  const names = [planName, ...(FACT_ALIASES[key] || [])];
+  const seen = new Set();
+  const keys = [];
+  for (const name of names) {
+    const next = normKey(name);
+    if (!next || seen.has(next)) continue;
+    seen.add(next);
+    keys.push(next);
+  }
+  return keys;
 }
 
 function factForPlanName(factMap, planName, len) {
-  const key = normKey(planName);
-  const aliases = FACT_ALIASES[key] || [key];
   const out = zeros(len);
   let found = false;
-  for (const alias of aliases) {
-    const hit = factMap.get(normKey(alias));
+  for (const key of factLookupKeys(planName)) {
+    const hit = factMap.get(key);
     if (!hit) continue;
     found = true;
     for (let i = 0; i < len; i++) out[i] += hit[i] || 0;
-  }
-  // also try exact key if aliases didn't include it
-  if (!found && factMap.has(key)) {
-    const hit = factMap.get(key);
-    for (let i = 0; i < len; i++) out[i] += hit[i] || 0;
-    found = true;
   }
   return { values: out.map(roundMoney), found };
 }
@@ -286,7 +298,7 @@ export async function loadBudget(fromText, toText, groupBy = "month") {
   }
   if (pnl.warnings?.length) warnings.push(...pnl.warnings);
 
-  const factMap = collectFactMap(pnl);
+  const { map: factMap, splits: factSplits } = collectFactMap(pnl);
   const unmatchedPlan = [];
   const sections = [];
   let profitPlan = zeros(n);
@@ -301,13 +313,17 @@ export async function loadBudget(fromText, toText, groupBy = "month") {
       const plan = planMap.get(normKey(name)) || { name, values: zeros(n), total: 0 };
       const fact = factForPlanName(factMap, name, n);
       if (!fact.found && plan.total) unmatchedPlan.push(name);
-      // For COGS/expenses in PnL we already flipped to negative. Revenue stays positive.
-      // But wait - for cogs section, PnL cogs lines were flipped to negative. Good.
-      // Revenue section: fact values are positive from PnL. Good.
       const row = rowTriple(name, plan.values, fact.values);
       rows.push(row);
       planParts.push(plan.values);
       factParts.push(fact.values);
+      if (section.kind === "cogs") {
+        for (const split of factSplits) {
+          if (normKey(split.parent) !== normKey(name)) continue;
+          if (section.names.some((other) => normKey(other) === normKey(split.name))) continue;
+          rows.push(rowTriple(split.name, zeros(n), split.values));
+        }
+      }
     }
     if (!rows.some((r) => r.planTotal || r.factTotal)) continue;
 

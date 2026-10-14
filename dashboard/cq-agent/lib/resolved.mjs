@@ -64,14 +64,33 @@ export function normalizeResolved(list) {
   return out;
 }
 
+function similarText(a, b) {
+  const x = compact(a);
+  const y = compact(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const n = 32;
+  if (x.length >= n && y.length >= n && (x.includes(y.slice(0, n)) || y.includes(x.slice(0, n)))) {
+    return true;
+  }
+  return false;
+}
+
 export function isResolvedItem(section, item, resolved) {
   const id = String(item?.id || "").trim();
   const fp = fingerprint(section, item);
-  return (resolved || []).some(
-    (r) =>
-      r.section === section &&
-      ((id && r.id && r.id === id) || (fp && r.fingerprint && r.fingerprint === fp))
+  const client = compact(
+    item?.client || (Array.isArray(item?.clients) ? item.clients[0] : "") || ""
   );
+  const text = compact(itemText(item));
+  return (resolved || []).some((r) => {
+    if (r.section !== section) return false;
+    if (id && r.id && r.id === id) return true;
+    if (fp && r.fingerprint && r.fingerprint === fp) return true;
+    const closedText = compact(r.title || itemText(r.item) || "");
+    if (client && compact(r.client) === client && similarText(text, closedText)) return true;
+    return false;
+  });
 }
 
 export function filterBoard(board, resolved) {

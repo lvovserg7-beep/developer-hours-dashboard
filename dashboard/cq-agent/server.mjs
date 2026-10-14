@@ -7,6 +7,7 @@ import { postBoard, runTick } from "./lib/run-tick.mjs";
 import {
   filterBoard,
   flattenBoard,
+  isResolvedItem,
   markResolved,
   readLastBoard,
   reopenResolved,
@@ -195,14 +196,10 @@ const server = createServer(async (req, res) => {
       const resolved = resolvedList(s);
       const board = readLastBoard();
       const all = flattenBoard(board);
-      const open = all.filter(
-        (row) => !resolved.some((r) => r.fingerprint === row.fingerprint || (row.id && r.id === row.id && r.section === row.section))
-      );
+      const open = all.filter((row) => !isResolvedItem(row.section, row.item || row, resolved));
       const items = all.map((row) => ({
         ...row,
-        resolved: resolved.some(
-          (r) => r.fingerprint === row.fingerprint || (row.id && r.id === row.id && r.section === row.section)
-        ),
+        resolved: isResolvedItem(row.section, row.item || row, resolved),
       }));
       return json(res, 200, {
         generatedAt: board?.generatedAt || board?.period || null,
@@ -233,7 +230,11 @@ const server = createServer(async (req, res) => {
           console.warn("cq-agent post after resolve failed:", err.message || err);
         }
       }
-      return json(res, 200, { resolved, posted, open: flattenBoard(board).filter((row) => !resolved.some((r) => r.fingerprint === row.fingerprint || (row.id && r.id === row.id && r.section === row.section))) });
+      return json(res, 200, {
+        resolved,
+        posted,
+        open: flattenBoard(board).filter((row) => !isResolvedItem(row.section, row.item || row, resolved)),
+      });
     }
     if (req.method === "GET") return serveStatic(req, res);
     return json(res, 405, { error: "Метод не поддерживается" });

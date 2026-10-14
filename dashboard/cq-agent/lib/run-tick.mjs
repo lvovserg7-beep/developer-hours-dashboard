@@ -91,9 +91,10 @@ export async function runTick(opts = {}) {
     const { board } = await runCursorAgent(settings, DIGEST_PATH);
     board.tvSections = tvSectionsFromQuestions(settings.questions);
     writeLastBoard(board);
-    const filtered = filterBoard(board, resolvedList(settings));
-    filtered.tvSections = board.tvSections;
-    await postBoard(settings, filtered);
+    const live = loadSettings();
+    const filtered = filterBoard(board, resolvedList(live));
+    filtered.tvSections = tvSectionsFromQuestions(live.questions);
+    await postBoard(live, filtered);
     tick.ok = true;
   } catch (err) {
     tick.error = String(err.message || err);
