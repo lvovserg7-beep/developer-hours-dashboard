@@ -163,6 +163,17 @@ function planVectors(plan, columns) {
   return map;
 }
 
+function isExpenseLikeTitle(title) {
+  return /расход|себестоимость прочая|прочий расход/i.test(title || "");
+}
+
+function signedPnlValues(sectionTitle, values) {
+  const isExpense = isExpenseLikeTitle(sectionTitle) || /^себестоимость$/i.test(sectionTitle || "");
+  const nums = (values || []).map((v) => num(v));
+  if (!isExpense) return nums;
+  return nums.map((v) => (v ? -Math.abs(v) : 0));
+}
+
 function collectFactMap(pnl) {
   const map = new Map();
   const splits = [];
@@ -183,19 +194,38 @@ function collectFactMap(pnl) {
         name = stripOpKo(name);
       }
       // PnL stores expenses as positive amounts; budget plan uses negative for costs.
-      let values = row.values || [];
-      const isExpenseSection = /расход|себестоимость прочая|прочий расход/i.test(section.title || "");
-      const isCogsSection = /^себестоимость$/i.test(section.title || "");
-      if (isExpenseSection || isCogsSection) {
-        values = values.map((v) => -Math.abs(num(v)));
-      }
+      const values = signedPnlValues(section.title, row.values);
       add(name, values);
+      const isCogsSection = /^себестоимость$/i.test(section.title || "");
       if (isCogsSection && original && original !== name && values.some((v) => v)) {
         splits.push({ parent: name, name: original, values: values.map(roundMoney) });
       }
     }
   }
   return { map, splits };
+}
+
+function leftoverFactSections(pnl, plannedTitles, plannedNameKeys, n) {
+  const extras = [];
+  for (const section of pnl.sections || []) {
+    const title = String(section.title || "").trim();
+    if (!title || title === "Справочно" || plannedTitles.has(title)) continue;
+    const isExpense = isExpenseLikeTitle(title) || /^себестоимость$/i.test(title);
+    const items = [];
+    for (const row of section.rows || []) {
+      if (row.kind && row.kind !== "line") continue;
+      const name = String(row.name || "").trim();
+      if (!name || plannedNameKeys.has(normKey(name))) continue;
+      let values = signedPnlValues(title, row.values);
+      if (values.length > n) values = values.slice(0, n);
+      while (values.length < n) values.push(0);
+      if (!values.some((v) => v)) continue;
+      items.push({ name, values: values.map(roundMoney) });
+    }
+    if (!items.length) continue;
+    extras.push({ title, kind: isExpense ? "expense" : "income", items });
+  }
+  return extras;
 }
 
 function factLookupKeys(planName) {
@@ -305,6 +335,33 @@ export async function loadBudget(fromText, toText, groupBy = "month") {
   let profitFact = zeros(n);
   let revenueRow = null;
 
+  const pushSection = (title, kind, rows, planParts, factParts) => {
+    if (!rows.some((r) => r.planTotal || r.factTotal)) return;
+    const planSum = sumVec(planParts, n);
+    const factSum = sumVec(factParts, n);
+    const totalRow = rowTriple(
+      kind === "revenue" ? "Итого выручка:" : `Итого ${title}:`,
+      planSum,
+      factSum,
+      "total"
+    );
+    rows.push(totalRow);
+
+    if (kind === "revenue") {
+      revenueRow = totalRow;
+      profitPlan = planSum.slice();
+      profitFact = factSum.slice();
+    } else {
+      profitPlan = addVec(profitPlan, planSum);
+      profitFact = addVec(profitFact, factSum);
+      const profit = rowTriple("Итого прибыль:", profitPlan, profitFact, "total");
+      rows.push(profit);
+      if (revenueRow) rows.push(pctRow("Рентабельность:", profit, revenueRow));
+    }
+
+    sections.push({ title, kind, rows });
+  };
+
   for (const section of SECTION_ORDER) {
     const rows = [];
     const planParts = [];
@@ -325,32 +382,22 @@ export async function loadBudget(fromText, toText, groupBy = "month") {
         }
       }
     }
-    if (!rows.some((r) => r.planTotal || r.factTotal)) continue;
+    pushSection(section.title, section.kind, rows, planParts, factParts);
+  }
 
-    const planSum = sumVec(planParts, n);
-    const factSum = sumVec(factParts, n);
-    const totalRow = rowTriple(
-      section.kind === "revenue" ? "Итого выручка:" : `Итого ${section.title}:`,
-      planSum,
-      factSum,
-      "total"
-    );
-    rows.push(totalRow);
-
-    if (section.kind === "revenue") {
-      revenueRow = totalRow;
-      profitPlan = planSum.slice();
-      profitFact = factSum.slice();
-    } else {
-      // costs are negative in plan; subtracting negative increases profit. Use add of cost vectors.
-      profitPlan = addVec(profitPlan, planSum);
-      profitFact = addVec(profitFact, factSum);
-      const profit = rowTriple("Итого прибыль:", profitPlan, profitFact, "total");
-      rows.push(profit);
-      if (revenueRow) rows.push(pctRow("Рентабельность:", profit, revenueRow));
+  const plannedTitles = new Set(SECTION_ORDER.map((section) => section.title));
+  const plannedNameKeys = new Set(SECTION_ORDER.flatMap((section) => section.names.map(normKey)));
+  for (const extra of leftoverFactSections(pnl, plannedTitles, plannedNameKeys, n)) {
+    const rows = [];
+    const planParts = [];
+    const factParts = [];
+    for (const item of extra.items) {
+      const plan = planMap.get(normKey(item.name)) || { values: zeros(n), total: 0 };
+      rows.push(rowTriple(item.name, plan.values, item.values));
+      planParts.push(plan.values);
+      factParts.push(item.values);
     }
-
-    sections.push({ title: section.title, kind: section.kind, rows });
+    pushSection(extra.title, extra.kind, rows, planParts, factParts);
   }
 
   if (unmatchedPlan.length) {
