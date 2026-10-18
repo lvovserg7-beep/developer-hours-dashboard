@@ -188,6 +188,7 @@
     body.wide-report:not(.is-full) #tab-ozonfbs .panel,
     body.wide-report:not(.is-full) #tab-ozonfbo .panel,
     body.wide-report:not(.is-full) #tab-ozonfbofilters .panel,
+    body.wide-report:not(.is-full) #tab-ozonstocks .panel,
     body.wide-report:not(.is-full) #tab-units .panel,
     body.wide-report:not(.is-full) #tab-wb .panel,
     body.wide-report:not(.is-full) #tab-wbfbs .panel,
@@ -208,6 +209,8 @@
     body.wide-report:not(.is-full) #tab-ozonfbo .report-stage-inner,
     body.wide-report:not(.is-full) #tab-ozonfbofilters .report-stage,
     body.wide-report:not(.is-full) #tab-ozonfbofilters .report-stage-inner,
+    body.wide-report:not(.is-full) #tab-ozonstocks .report-stage,
+    body.wide-report:not(.is-full) #tab-ozonstocks .report-stage-inner,
     body.wide-report:not(.is-full) #tab-units .report-stage,
     body.wide-report:not(.is-full) #tab-units .report-stage-inner,
     body.wide-report:not(.is-full) #tab-wb .report-stage,
@@ -229,6 +232,7 @@
     body.wide-report:not(.is-full) #tab-ozonfbs .pnl-scroll,
     body.wide-report:not(.is-full) #tab-ozonfbo .pnl-scroll,
     body.wide-report:not(.is-full) #tab-ozonfbofilters .pnl-scroll,
+    body.wide-report:not(.is-full) #tab-ozonstocks .pnl-scroll,
     body.wide-report:not(.is-full) #tab-units .pnl-scroll,
     body.wide-report:not(.is-full) #tab-wb .pnl-scroll,
     body.wide-report:not(.is-full) #tab-wbfbs .pnl-scroll,
@@ -245,6 +249,7 @@
     body.wide-report:not(.is-full) #tab-ozonfbs table.ozon,
     body.wide-report:not(.is-full) #tab-ozonfbo table.ozon,
     body.wide-report:not(.is-full) #tab-ozonfbofilters table.ozon,
+    body.wide-report:not(.is-full) #tab-ozonstocks table.ozon,
     body.wide-report:not(.is-full) #tab-units table.pnl,
     body.wide-report:not(.is-full) #tab-wb table.ozon,
     body.wide-report:not(.is-full) #tab-wbfbs table.ozon,
@@ -261,6 +266,7 @@
     body.wide-report:not(.is-full) #tab-ozonfbs table.ozon td.name,
     body.wide-report:not(.is-full) #tab-ozonfbo table.ozon td.name,
     body.wide-report:not(.is-full) #tab-ozonfbofilters table.ozon td.name,
+    body.wide-report:not(.is-full) #tab-ozonstocks table.ozon td.name,
     body.wide-report:not(.is-full) #tab-units table.pnl td.name,
     body.wide-report:not(.is-full) #tab-wb table.ozon td.name,
     body.wide-report:not(.is-full) #tab-wbfbs table.ozon td.name,
@@ -282,6 +288,8 @@
     body.wide-report:not(.is-full) #tab-ozonfbo table.ozon td.num,
     body.wide-report:not(.is-full) #tab-ozonfbofilters table.ozon th.num,
     body.wide-report:not(.is-full) #tab-ozonfbofilters table.ozon td.num,
+    body.wide-report:not(.is-full) #tab-ozonstocks table.ozon th.num,
+    body.wide-report:not(.is-full) #tab-ozonstocks table.ozon td.num,
     body.wide-report:not(.is-full) #tab-units table.pnl th.num,
     body.wide-report:not(.is-full) #tab-units table.pnl td.num,
     body.wide-report:not(.is-full) #tab-wb table.ozon th.num,
@@ -1703,6 +1711,7 @@
         <button type="button" class="tab" data-tab="ozonfbs" role="tab" aria-selected="false">Отгрузки ФБС ozon</button>
         <button type="button" class="tab" data-tab="ozonfbo" role="tab" aria-selected="false">Отгрузки ФБО Озон</button>
         <button type="button" class="tab" data-tab="ozonfbofilters" role="tab" aria-selected="false">Поставки ФБО с фильтрами</button>
+        <button type="button" class="tab" data-tab="ozonstocks" role="tab" aria-selected="false">Остатки по складам Озон</button>
         <button type="button" class="tab" data-tab="wb" role="tab" aria-selected="false">WB рентабельность</button>
         <button type="button" class="tab" data-tab="wbfbs" role="tab" aria-selected="false">Поставки ФБС WB</button>
         <button type="button" class="tab" data-tab="debtors" role="tab" aria-selected="false">Задолженность клиентов</button>
@@ -1828,6 +1837,7 @@
             <label><input type="checkbox" id="new-ozonfbs"> Отгрузки ФБС ozon</label>
             <label><input type="checkbox" id="new-ozonfbo"> Отгрузки ФБО Озон</label>
             <label><input type="checkbox" id="new-ozonfbofilters"> Поставки ФБО с фильтрами</label>
+            <label><input type="checkbox" id="new-ozonstocks"> Остатки по складам Озон</label>
             <label><input type="checkbox" id="new-wb"> WB рентабельность</label>
             <label><input type="checkbox" id="new-wbfbs"> Поставки ФБС WB</label>
             <label><input type="checkbox" id="new-debtors"> Задолженность клиентов</label>
@@ -2221,6 +2231,32 @@
         </form>
         <div id="ozonfbofilters-err" class="err" hidden></div>
         <div id="ozonfbofilters-report"></div>
+      </section>
+    </div>
+    <div id="tab-ozonstocks" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Остатки по складам Озон</h2>
+        <p class="lead tab-intro">Снимок остатков FBO по каждому складу Ozon сохраняется ежедневно в 22:00 МСК и не удаляется. Фильтры — день и склад. Если снимка за день нет — «Нет данных за день». Кнопка «Оперативный остаток» запрашивает данные в Seller API на сейчас, без записи.</p>
+        <form class="pnl-toolbar" id="ozonstocks-form">
+          <div class="filter-dates">
+            <label for="ozonstocks-day">День</label>
+            <div class="dates">
+              <div>
+                <input id="ozonstocks-day" type="date" required>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label for="ozonstocks-warehouse">Склад</label>
+            <select id="ozonstocks-warehouse">
+              <option value="">Все склады</option>
+            </select>
+          </div>
+          <button type="submit" id="ozonstocks-run">Сформировать</button>
+          <button type="button" id="ozonstocks-live">Оперативный остаток</button>
+        </form>
+        <div id="ozonstocks-err" class="err" hidden></div>
+        <div id="ozonstocks-report"></div>
       </section>
     </div>
     <div id="tab-wb" class="tab-panel" hidden>
@@ -4773,6 +4809,175 @@
       }
     }
 
+    let ozonstocksLoaded = false;
+    let ozonstocksInflight = false;
+    let ozonstocksMode = "day";
+
+    function initOzonStocksDay() {
+      const day = document.getElementById("ozonstocks-day");
+      if (!day || day.value) return;
+      const now = new Date();
+      const p = (n) => String(n).padStart(2, "0");
+      day.value = now.getFullYear() + "-" + p(now.getMonth() + 1) + "-" + p(now.getDate());
+    }
+
+    function ozonstocksErr(text) {
+      const el = document.getElementById("ozonstocks-err");
+      if (!el) return;
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function fillOzonStocksWarehouses(list, selected) {
+      const sel = document.getElementById("ozonstocks-warehouse");
+      if (!sel) return;
+      const prev = selected != null ? String(selected) : sel.value || "";
+      const names = Array.isArray(list) ? list : [];
+      sel.innerHTML = `<option value="">Все склады</option>` + names.map((name) =>
+        `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`
+      ).join("");
+      if (prev && names.includes(prev)) sel.value = prev;
+      else sel.value = "";
+    }
+
+    function formatOzonStockNum(n) {
+      return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(Number(n) || 0);
+    }
+
+    function renderOzonStocks(report) {
+      const box = document.getElementById("ozonstocks-report");
+      if (!box) return;
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      if (report.warehouses?.length) fillOzonStocksWarehouses(report.warehouses, report.warehouse || "");
+      if (report.missing) {
+        box.innerHTML = `<p class="pnl-warn">Нет данных за день</p>`
+          + (report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "")
+          + (report.availableDates?.length
+            ? `<p class="pnl-note">Есть снимки: ${escapeHtml(report.availableDates.slice(-10).join(", "))}${report.availableDates.length > 10 ? "…" : ""}</p>`
+            : `<p class="pnl-note">Снимков ещё нет — дождитесь 22:00 МСК или нажмите «Оперативный остаток».</p>`);
+        return;
+      }
+      const totals = report.totals || {};
+      const byWh = report.byWarehouse || [];
+      const rows = report.rows || [];
+      const showWh = !report.warehouse;
+      const captured = report.capturedAt
+        ? new Date(report.capturedAt).toLocaleString("ru-RU")
+        : "—";
+      const modeLabel = report.source === "live" ? "Оперативный остаток" : `Снимок за ${escapeHtml(report.date || "")}`;
+      const summary = byWh.length
+        ? `<div class="pnl-scroll"><table class="ozon">
+            <thead><tr><th>Склад</th><th class="num">Строк</th><th class="num">Свободно</th><th class="num">Резерв</th><th class="num">В пути</th><th class="num">Всего</th></tr></thead>
+            <tbody>${byWh.map((w) => `<tr>
+              <td class="name">${escapeHtml(w.warehouse)}</td>
+              <td class="num">${formatOzonStockNum(w.rows)}</td>
+              <td class="num">${formatOzonStockNum(w.free)}</td>
+              <td class="num">${formatOzonStockNum(w.reserved)}</td>
+              <td class="num">${formatOzonStockNum(w.promised)}</td>
+              <td class="num">${formatOzonStockNum(w.total)}</td>
+            </tr>`).join("")}
+            <tr class="total"><td class="name">Итого</td>
+              <td class="num">${formatOzonStockNum(totals.rows)}</td>
+              <td class="num">${formatOzonStockNum(totals.free)}</td>
+              <td class="num">${formatOzonStockNum(totals.reserved)}</td>
+              <td class="num">${formatOzonStockNum(totals.promised)}</td>
+              <td class="num">${formatOzonStockNum(totals.total)}</td>
+            </tr></tbody></table></div>`
+        : "";
+      const detail = `<div class="pnl-scroll"><table class="ozon">
+        <thead><tr>
+          ${showWh ? "<th>Склад</th>" : ""}
+          <th>Артикул</th><th>SKU</th><th>Товар</th>
+          <th class="num">Свободно</th><th class="num">Резерв</th><th class="num">В пути</th><th class="num">Всего</th>
+        </tr></thead>
+        <tbody>${rows.map((r) => `<tr>
+          ${showWh ? `<td class="name">${escapeHtml(r.warehouse || "")}</td>` : ""}
+          <td>${escapeHtml(r.offerId || "")}</td>
+          <td>${escapeHtml(r.sku || "")}</td>
+          <td class="name">${escapeHtml(r.name || "")}</td>
+          <td class="num">${formatOzonStockNum(r.free)}</td>
+          <td class="num">${formatOzonStockNum(r.reserved)}</td>
+          <td class="num">${formatOzonStockNum(r.promised)}</td>
+          <td class="num">${formatOzonStockNum(r.total)}</td>
+        </tr>`).join("") || `<tr><td colspan="${showWh ? 8 : 7}">Нет строк</td></tr>`}</tbody>
+      </table></div>`;
+      box.innerHTML = `<p class="pnl-note">${modeLabel} · снято ${escapeHtml(captured)}</p>`
+        + (report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "")
+        + (byWh.length > 1 ? `<div class="pnl-section"><h2>По складам</h2>${summary}</div>` : "")
+        + `<div class="pnl-section"><h2>Позиции</h2>${detail}</div>`;
+    }
+
+    async function loadOzonStocksReport(force = false) {
+      if (USER.tabs?.ozonstocks === false || ozonstocksInflight) return;
+      initOzonStocksDay();
+      const day = document.getElementById("ozonstocks-day")?.value;
+      const warehouse = document.getElementById("ozonstocks-warehouse")?.value || "";
+      if (!day) {
+        ozonstocksErr("Укажите день");
+        return;
+      }
+      if (ozonstocksLoaded && ozonstocksMode === "day" && !force) return;
+      ozonstocksInflight = true;
+      ozonstocksMode = "day";
+      const btn = document.getElementById("ozonstocks-run");
+      const liveBtn = document.getElementById("ozonstocks-live");
+      if (btn) btn.disabled = true;
+      if (liveBtn) liveBtn.disabled = true;
+      ozonstocksErr("");
+      document.getElementById("ozonstocks-report").innerHTML = `<p class="pnl-note">Загружаем снимок остатков…</p>`;
+      try {
+        const q = new URLSearchParams({ date: day });
+        if (warehouse) q.set("warehouse", warehouse);
+        const report = await api(`/api/ozonstocks?${q}`, { method: "GET" });
+        ozonstocksLoaded = true;
+        renderOzonStocks(report);
+      } catch (e) {
+        ozonstocksLoaded = false;
+        renderOzonStocks(null);
+        ozonstocksErr(e.message || String(e));
+      } finally {
+        ozonstocksInflight = false;
+        if (btn) btn.disabled = false;
+        if (liveBtn) liveBtn.disabled = false;
+      }
+    }
+
+    async function loadOzonStocksLive() {
+      if (USER.tabs?.ozonstocks === false || ozonstocksInflight) return;
+      const warehouse = document.getElementById("ozonstocks-warehouse")?.value || "";
+      ozonstocksInflight = true;
+      ozonstocksMode = "live";
+      const btn = document.getElementById("ozonstocks-run");
+      const liveBtn = document.getElementById("ozonstocks-live");
+      if (btn) btn.disabled = true;
+      if (liveBtn) liveBtn.disabled = true;
+      ozonstocksErr("");
+      document.getElementById("ozonstocks-report").innerHTML = `<p class="pnl-note">Запрашиваем оперативный остаток в Ozon…</p>`;
+      try {
+        const q = new URLSearchParams();
+        if (warehouse) q.set("warehouse", warehouse);
+        const report = await api(`/api/ozonstocks/live?${q}`, { method: "GET" });
+        ozonstocksLoaded = true;
+        renderOzonStocks(report);
+      } catch (e) {
+        ozonstocksLoaded = false;
+        renderOzonStocks(null);
+        ozonstocksErr(e.message || String(e));
+      } finally {
+        ozonstocksInflight = false;
+        if (btn) btn.disabled = false;
+        if (liveBtn) liveBtn.disabled = false;
+      }
+    }
+
     let wbLoaded = false;
     let wbInflight = false;
 
@@ -6156,7 +6361,7 @@
       }
     }
 
-    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
+    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "ozonstocks", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
     const TAB_LABELS = {
       hours: "Часы",
       activity: "Активность",
@@ -6171,6 +6376,7 @@
       ozonfbs: "Отгрузки ФБС ozon",
       ozonfbo: "Отгрузки ФБО Озон",
       ozonfbofilters: "Поставки ФБО с фильтрами",
+      ozonstocks: "Остатки по складам Озон",
       wb: "WB",
       wbfbs: "Поставки ФБС WB",
       debtors: "Задолженность",
@@ -6417,6 +6623,9 @@
         await loadOzonFboReport();
         return;
       }
+      if (name === "ozonstocks") {
+        ozonstocksLoaded = false;
+      }
       if (name === "ozonfbofilters") {
         ozonfbofiltersLoaded = false;
         await loadOzonFboFiltersReport();
@@ -6559,6 +6768,7 @@
       document.getElementById("tab-ozonfbs").hidden = name !== "ozonfbs";
       document.getElementById("tab-ozonfbo").hidden = name !== "ozonfbo";
       document.getElementById("tab-ozonfbofilters").hidden = name !== "ozonfbofilters";
+      document.getElementById("tab-ozonstocks").hidden = name !== "ozonstocks";
       document.getElementById("tab-wb").hidden = name !== "wb";
       document.getElementById("tab-wbfbs").hidden = name !== "wbfbs";
       document.getElementById("tab-debtors").hidden = name !== "debtors";
@@ -6581,13 +6791,16 @@
       if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
       document.body.classList.toggle(
         "wide-report",
-        name === "plan" || name === "budget" || name === "ozondrr" || name === "ozonfbs" || name === "ozonfbo" || name === "ozonfbofilters" || name === "units" || name === "wb" || name === "wbfbs" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "clientquality" || name === "clientqualitytv" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
+        name === "plan" || name === "budget" || name === "ozondrr" || name === "ozonfbs" || name === "ozonfbo" || name === "ozonfbofilters" || name === "ozonstocks" || name === "units" || name === "wb" || name === "wbfbs" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "clientquality" || name === "clientqualitytv" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
       );
       document.body.classList.remove("wide-plan");
       if (name === "settings") loadSettingsTabOrder();
       if (name === "ozonfbs") loadOzonFbsActs();
       if (name === "ozonfbo") loadOzonFboReport();
       if (name === "ozonfbofilters") loadOzonFboFiltersReport();
+      if (name === "ozonstocks") {
+        initOzonStocksDay();
+      }
       if (name === "wbfbs") loadWbFbsSupplies();
       if (name === "clientquality") loadClientQualityReport();
       if (name === "clientqualitytv") loadClientQualityTvReport();
@@ -6831,6 +7044,7 @@
         ["ozonfbs", "Отгрузки ФБС ozon"],
         ["ozonfbo", "Отгрузки ФБО Озон"],
         ["ozonfbofilters", "Поставки ФБО с фильтрами"],
+        ["ozonstocks", "Остатки по складам Озон"],
         ["wb", "WB"],
         ["wbfbs", "Поставки ФБС WB"],
         ["debtors", "Задолженность"],
@@ -7287,6 +7501,7 @@
               ozonfbs: document.getElementById("new-ozonfbs").checked,
               ozonfbo: document.getElementById("new-ozonfbo").checked,
               ozonfbofilters: document.getElementById("new-ozonfbofilters").checked,
+              ozonstocks: document.getElementById("new-ozonstocks").checked,
               wb: document.getElementById("new-wb").checked,
               wbfbs: document.getElementById("new-wbfbs").checked,
               debtors: document.getElementById("new-debtors").checked,
@@ -8850,6 +9065,14 @@ ${body}
         rerenderOzonFboFilters();
       });
     }
+    document.getElementById("ozonstocks-form")?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      ozonstocksLoaded = false;
+      loadOzonStocksReport(true);
+    });
+    document.getElementById("ozonstocks-live")?.addEventListener("click", () => {
+      loadOzonStocksLive();
+    });
     document.getElementById("wb-form").addEventListener("submit", (e) => {
       e.preventDefault();
       wbLoaded = false;

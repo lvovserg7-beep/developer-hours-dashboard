@@ -47,6 +47,11 @@ const SPECS = {
     periodAware: true,
     note: "Файлы data/ozon-cost-{с}_{по}_*.json. Удаляются файлы, чей период пересекается с выбранным.",
   },
+  ozonstocks: {
+    kind: "none",
+    periodAware: false,
+    note: "Снимки остатков data/ozon-stocks/YYYY-MM-DD.json. Не чистятся никогда — только накопление.",
+  },
   seo: {
     kind: "seo-daily",
     files: [SEO_DAILY_CSV],
@@ -196,7 +201,9 @@ function describeBoard(id, period) {
       files: [],
       bytes: 0,
       memory: false,
-      note: "Эта доска каждый раз запрашивает данные заново, отдельного кэша нет.",
+      note:
+        spec?.note ||
+        "Эта доска каждый раз запрашивает данные заново, отдельного кэша нет.",
     };
   }
   const files = filesForSpec(spec, period);

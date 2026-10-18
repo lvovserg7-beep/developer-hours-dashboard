@@ -8,7 +8,7 @@ const USERS_FILE = join(root, "users.json");
 const USERS_TMP = join(root, "users.json.tmp");
 const COOKIE = "dash_session";
 const SESSION_MS = 14 * 24 * 60 * 60 * 1000;
-const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
+const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "ozonstocks", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
 
 const TAB_LABELS = {
   hours: "Часы",
@@ -24,6 +24,7 @@ const TAB_LABELS = {
   ozonfbs: "Отгрузки ФБС ozon",
   ozonfbo: "Отгрузки ФБО Озон",
   ozonfbofilters: "Поставки ФБО с фильтрами",
+  ozonstocks: "Остатки по складам Озон",
   wb: "WB рентабельность",
   wbfbs: "Поставки ФБС WB",
   debtors: "Задолженность клиентов",
@@ -198,6 +199,7 @@ export function ensureAuthReady() {
           ozonfbs: true,
           ozonfbo: true,
           ozonfbofilters: true,
+          ozonstocks: true,
           wb: true,
           wbfbs: true,
           debtors: true,
@@ -234,6 +236,10 @@ export function ensureAuthReady() {
     }
     if (user.tabs.ozonfbofilters == null) {
       user.tabs.ozonfbofilters = !!(user.tabs.ozonfbo || user.tabs.ozonfbs || user.tabs.ozon);
+      changed = true;
+    }
+    if (user.tabs.ozonstocks == null) {
+      user.tabs.ozonstocks = !!(user.tabs.ozonfbo || user.tabs.ozonfbs || user.tabs.ozondrr || user.tabs.ozon);
       changed = true;
     }
     if (user.tabs.wbfbs == null) {
@@ -447,6 +453,7 @@ export function filterDashboardData(data, user) {
   if (!tabs.bitrixfreq) out.bitrixfreq = null;
   if (!tabs.ozon) out.ozon = null;
   if (!tabs.ozondrr) out.ozondrr = null;
+  if (!tabs.ozonstocks) out.ozonstocks = null;
   if (!tabs.wb) out.wb = null;
   if (!tabs.debtors) out.debtors = null;
   if (!tabs.mbalance) out.mbalance = null;

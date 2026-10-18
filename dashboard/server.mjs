@@ -14,6 +14,13 @@ import { loadBitrixFrequency } from "./lib/load-bitrix-freq.mjs";
 import { loadOzonDrr, defaultOzonDrrRange } from "./lib/load-ozon-drr.mjs";
 import { loadOzonFbsDashboard } from "./lib/load-ozon-fbs-acts.mjs";
 import { loadOzonFboSupplies, defaultOzonFboRange, defaultOzonFboFilterRange } from "./lib/load-ozon-fbo.mjs";
+import {
+  loadOzonStocksReport,
+  loadOzonStocksLive,
+  saveOzonStocksSnapshot,
+  shouldTakeScheduledSnapshot,
+  moscowDateKey,
+} from "./lib/load-ozon-stocks.mjs";
 import { loadWbProfit, defaultWbRange } from "./lib/load-wb.mjs";
 import { loadWbFbsSuppliesReport, getWbFbsSupplyQr, deliverWbFbsSupplyAndQr } from "./lib/load-wb-fbs-supplies.mjs";
 import { loadDebtors } from "./lib/load-debtors.mjs";
@@ -470,6 +477,45 @@ function startSeoRefreshLoop() {
   const hours = Math.round(SEO_REFRESH_MS / 3600000);
   const days = trailingCacheDays();
   console.log(`SEO trailing refresh every ${hours}h (last ${days} days overwrite)`);
+}
+
+let ozonStocksSnapInflight = null;
+
+async function runOzonStocksScheduledSnapshot(reason = "schedule") {
+  const check = shouldTakeScheduledSnapshot();
+  if (!check.needed) return null;
+  if (ozonStocksSnapInflight) return ozonStocksSnapInflight;
+  ozonStocksSnapInflight = (async () => {
+    try {
+      const result = await saveOzonStocksSnapshot({ source: "schedule", overwrite: false, dateText: check.date });
+      if (result.skipped) {
+        console.log(`Ozon stocks snapshot ${check.date}: already exists (${reason})`);
+      } else {
+        console.log(
+          `Ozon stocks snapshot ${result.date}: rows ${result.totals?.rows || 0}, warehouses ${result.warehouses || 0} (${reason}/${check.reason})`
+        );
+      }
+      return result;
+    } catch (err) {
+      console.warn(`Ozon stocks snapshot failed (${reason}):`, err.message || err);
+      return null;
+    } finally {
+      ozonStocksSnapInflight = null;
+    }
+  })();
+  return ozonStocksSnapInflight;
+}
+
+function startOzonStocksSnapshotLoop() {
+  const tick = () => {
+    runOzonStocksScheduledSnapshot("timer").catch((err) =>
+      console.warn("Ozon stocks schedule:", err.message || err)
+    );
+  };
+  // Первая проверка через минуту после старта (догон, если уже после 22:00 МСК).
+  setTimeout(tick, 60_000);
+  setInterval(tick, 60_000);
+  console.log(`Ozon warehouse stocks: daily snapshot at 22:00 MSK (today ${moscowDateKey()}), never purged`);
 }
 
 function publishToIis() {
@@ -989,6 +1035,39 @@ const server = createServer(async (req, res) => {
       }
     }
 
+    if (path === "/api/ozonstocks") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "ozonstocks")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Остатки по складам Озон»." });
+      }
+      const day = String(url.searchParams.get("date") || url.searchParams.get("day") || moscowDateKey());
+      const warehouse = String(url.searchParams.get("warehouse") || "");
+      try {
+        const data = loadOzonStocksReport(day, warehouse);
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /день|формат|поврежд/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
+    if (path === "/api/ozonstocks/live") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "ozonstocks")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Остатки по складам Озон»." });
+      }
+      const warehouse = String(url.searchParams.get("warehouse") || "");
+      try {
+        const data = await loadOzonStocksLive(warehouse);
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, /настроен/i.test(msg) ? 400 : 502, { error: msg });
+      }
+    }
+
     if (path === "/api/wb") {
       if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
       if (!userHasTab(user, "wb")) {
@@ -1293,6 +1372,7 @@ server.listen(PORT, "0.0.0.0", () => {
   }
   startHoursRefreshLoop();
   startSeoRefreshLoop();
+  startOzonStocksSnapshotLoop();
   // Откладываем trailing, чтобы порт уже отвечал, даже если SEO ещё идёт.
   setTimeout(() => {
     runAllTrailingCacheRefresh("startup").catch((err) =>
