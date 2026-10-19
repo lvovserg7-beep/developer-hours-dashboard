@@ -967,8 +967,9 @@
       min-width: 0;
       max-width: none;
     }
-    .filter-dates {
-      display: flex;
+    .filter-dates[hidden] {
+      display: none !important;
+    }
       flex-wrap: nowrap;
       align-items: center;
       gap: 10px;
@@ -2236,7 +2237,7 @@
     <div id="tab-ozonstocks" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Остатки по складам Озон</h2>
-        <p class="lead tab-intro">Снимок остатков FBO по каждому складу Ozon сохраняется ежедневно в 22:00 МСК и не удаляется. Фильтры — день и склад. Если снимка за день нет — «Нет данных за день». Кнопка «Оперативный остаток» запрашивает данные в Seller API на сейчас, без записи.</p>
+        <p class="lead tab-intro">Снимок остатков FBO по каждому складу Ozon сохраняется ежедневно в 22:00 МСК и не удаляется. Фильтры — день, кластер и склад. Если снимка за день нет — «Нет данных за день». Кнопка «Оперативный остаток» запрашивает данные в Seller API на сейчас, без записи.</p>
         <form class="pnl-toolbar" id="ozonstocks-form">
           <div class="filter-dates">
             <label for="ozonstocks-day">День</label>
@@ -2245,6 +2246,12 @@
                 <input id="ozonstocks-day" type="date" required>
               </div>
             </div>
+          </div>
+          <div>
+            <label for="ozonstocks-cluster">Кластер</label>
+            <select id="ozonstocks-cluster">
+              <option value="">Все кластеры</option>
+            </select>
           </div>
           <div>
             <label for="ozonstocks-warehouse">Склад</label>
@@ -3895,17 +3902,18 @@
           return;
         }
       }
+      if (!document.getElementById("bitrix-from").value || !document.getElementById("bitrix-to").value) {
+        applyBitrixPresetDates(bitrixPreset);
+      }
       bitrixInflight = true;
       const btn = document.getElementById("bitrix-run");
       if (btn) btn.disabled = true;
       bitrixErr("");
       document.getElementById("bitrix-meta").textContent = "Считаем отчёт из Bitrix24…";
       try {
-        let url = "/api/bitrix?preset=" + encodeURIComponent(bitrixPreset);
-        if (bitrixPreset === "custom") {
-          url += "&from=" + encodeURIComponent(document.getElementById("bitrix-from").value)
-            + "&to=" + encodeURIComponent(document.getElementById("bitrix-to").value);
-        }
+        let url = "/api/bitrix?preset=" + encodeURIComponent(bitrixPreset)
+          + "&from=" + encodeURIComponent(document.getElementById("bitrix-from").value)
+          + "&to=" + encodeURIComponent(document.getElementById("bitrix-to").value);
         const report = await api(url, { method: "GET" });
         bitrixLoaded = true;
         renderBitrix(report);
@@ -4833,16 +4841,45 @@
       el.textContent = text;
     }
 
-    function fillOzonStocksWarehouses(list, selected) {
-      const sel = document.getElementById("ozonstocks-warehouse");
+    function fillOzonStocksSelect(id, values, selected, emptyLabel) {
+      const sel = document.getElementById(id);
       if (!sel) return;
       const prev = selected != null ? String(selected) : sel.value || "";
-      const names = Array.isArray(list) ? list : [];
-      sel.innerHTML = `<option value="">Все склады</option>` + names.map((name) =>
+      const names = Array.isArray(values) ? values : [];
+      sel.innerHTML = `<option value="">${escapeHtml(emptyLabel)}</option>` + names.map((name) =>
         `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`
       ).join("");
       if (prev && names.includes(prev)) sel.value = prev;
       else sel.value = "";
+    }
+
+    function fillOzonStocksFilters(report) {
+      const warehouses = Array.isArray(report.warehouses) ? report.warehouses : [];
+      const clusterNames = Array.isArray(report.clusters) && report.clusters.length
+        ? report.clusters
+        : [...new Set(warehouses.map((w) => (typeof w === "string" ? "" : w.cluster)).filter(Boolean))];
+      fillOzonStocksSelect("ozonstocks-cluster", clusterNames, report.cluster || "", "Все кластеры");
+      const cluster = document.getElementById("ozonstocks-cluster")?.value || "";
+      const warehouseNames = warehouses
+        .map((w) => (typeof w === "string" ? { name: w, cluster: "" } : w))
+        .filter((w) => w.name && (!cluster || w.cluster === cluster))
+        .map((w) => w.name);
+      fillOzonStocksSelect("ozonstocks-warehouse", warehouseNames, report.warehouse || "", "Все склады");
+    }
+
+    function ozonStockQtyTable(headers, bodyRows, totals) {
+      return `<div class="pnl-scroll"><table class="ozon">
+        <thead><tr>${headers}</tr></thead>
+        <tbody>${bodyRows}
+          <tr class="total"><td class="name">Итого, шт</td>${totals}</tr>
+        </tbody></table></div>`;
+    }
+
+    function ozonStockQtyCells(row) {
+      return `<td class="num">${formatOzonStockNum(row.free)}</td>`
+        + `<td class="num">${formatOzonStockNum(row.reserved)}</td>`
+        + `<td class="num">${formatOzonStockNum(row.promised)}</td>`
+        + `<td class="num">${formatOzonStockNum(row.total)}</td>`;
     }
 
     function formatOzonStockNum(n) {
@@ -4856,7 +4893,7 @@
         box.innerHTML = "";
         return;
       }
-      if (report.warehouses?.length) fillOzonStocksWarehouses(report.warehouses, report.warehouse || "");
+      if (report.warehouses?.length || report.clusters?.length) fillOzonStocksFilters(report);
       if (report.missing) {
         box.innerHTML = `<p class="pnl-warn">Нет данных за день</p>`
           + (report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "")
@@ -4866,6 +4903,7 @@
         return;
       }
       const totals = report.totals || {};
+      const byCluster = report.byCluster || [];
       const byWh = report.byWarehouse || [];
       const rows = report.rows || [];
       const showWh = !report.warehouse;
@@ -4873,45 +4911,54 @@
         ? new Date(report.capturedAt).toLocaleString("ru-RU")
         : "—";
       const modeLabel = report.source === "live" ? "Оперативный остаток" : `Снимок за ${escapeHtml(report.date || "")}`;
+      const qtyHead = `<th class="num">Свободно</th><th class="num">Резерв</th><th class="num">В пути</th><th class="num">Всего, шт</th>`;
+      const totalsBlock = `<div class="pnl-section"><h2>Итого по количествам</h2>
+        <div class="pnl-scroll"><table class="ozon">
+          <thead><tr>${qtyHead}</tr></thead>
+          <tbody><tr class="total">${ozonStockQtyCells(totals)}</tr></tbody>
+        </table></div>
+        <p class="pnl-note">Строк: ${formatOzonStockNum(totals.rows)}</p>
+      </div>`;
+      const clusterBlock = byCluster.length
+        ? `<div class="pnl-section"><h2>По кластерам</h2>${ozonStockQtyTable(
+          `<th>Кластер</th><th class="num">Складов</th>${qtyHead}`,
+          byCluster.map((c) => `<tr><td class="name">${escapeHtml(c.cluster)}</td><td class="num">${formatOzonStockNum(c.warehouses)}</td>${ozonStockQtyCells(c)}</tr>`).join(""),
+          `<td class="num">${formatOzonStockNum(byCluster.reduce((n, c) => n + (c.warehouses || 0), 0))}</td>${ozonStockQtyCells(totals)}`
+        )}</div>`
+        : "";
       const summary = byWh.length
-        ? `<div class="pnl-scroll"><table class="ozon">
-            <thead><tr><th>Склад</th><th class="num">Строк</th><th class="num">Свободно</th><th class="num">Резерв</th><th class="num">В пути</th><th class="num">Всего</th></tr></thead>
-            <tbody>${byWh.map((w) => `<tr>
+        ? `<div class="pnl-section"><h2>По складам</h2>${ozonStockQtyTable(
+          `<th>Склад</th><th>Кластер</th><th class="num">Строк</th>${qtyHead}`,
+          byWh.map((w) => `<tr>
               <td class="name">${escapeHtml(w.warehouse)}</td>
+              <td>${escapeHtml(w.cluster || "")}</td>
               <td class="num">${formatOzonStockNum(w.rows)}</td>
-              <td class="num">${formatOzonStockNum(w.free)}</td>
-              <td class="num">${formatOzonStockNum(w.reserved)}</td>
-              <td class="num">${formatOzonStockNum(w.promised)}</td>
-              <td class="num">${formatOzonStockNum(w.total)}</td>
-            </tr>`).join("")}
-            <tr class="total"><td class="name">Итого</td>
-              <td class="num">${formatOzonStockNum(totals.rows)}</td>
-              <td class="num">${formatOzonStockNum(totals.free)}</td>
-              <td class="num">${formatOzonStockNum(totals.reserved)}</td>
-              <td class="num">${formatOzonStockNum(totals.promised)}</td>
-              <td class="num">${formatOzonStockNum(totals.total)}</td>
-            </tr></tbody></table></div>`
+              ${ozonStockQtyCells(w)}
+            </tr>`).join(""),
+          `<td></td><td class="num">${formatOzonStockNum(totals.rows)}</td>${ozonStockQtyCells(totals)}`
+        )}</div>`
         : "";
       const detail = `<div class="pnl-scroll"><table class="ozon">
         <thead><tr>
-          ${showWh ? "<th>Склад</th>" : ""}
+          ${showWh ? "<th>Склад</th><th>Кластер</th>" : ""}
           <th>Артикул</th><th>SKU</th><th>Товар</th>
-          <th class="num">Свободно</th><th class="num">Резерв</th><th class="num">В пути</th><th class="num">Всего</th>
+          ${qtyHead}
         </tr></thead>
         <tbody>${rows.map((r) => `<tr>
-          ${showWh ? `<td class="name">${escapeHtml(r.warehouse || "")}</td>` : ""}
+          ${showWh ? `<td class="name">${escapeHtml(r.warehouse || "")}</td><td>${escapeHtml(r.cluster || "")}</td>` : ""}
           <td>${escapeHtml(r.offerId || "")}</td>
           <td>${escapeHtml(r.sku || "")}</td>
           <td class="name">${escapeHtml(r.name || "")}</td>
-          <td class="num">${formatOzonStockNum(r.free)}</td>
-          <td class="num">${formatOzonStockNum(r.reserved)}</td>
-          <td class="num">${formatOzonStockNum(r.promised)}</td>
-          <td class="num">${formatOzonStockNum(r.total)}</td>
-        </tr>`).join("") || `<tr><td colspan="${showWh ? 8 : 7}">Нет строк</td></tr>`}</tbody>
+          ${ozonStockQtyCells(r)}
+        </tr>`).join("") || `<tr><td colspan="${showWh ? 9 : 7}">Нет строк</td></tr>`}
+        <tr class="total"><td class="name" colspan="${showWh ? 5 : 3}">Итого, шт</td>${ozonStockQtyCells(totals)}</tr>
+        </tbody>
       </table></div>`;
       box.innerHTML = `<p class="pnl-note">${modeLabel} · снято ${escapeHtml(captured)}</p>`
         + (report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "")
-        + (byWh.length > 1 ? `<div class="pnl-section"><h2>По складам</h2>${summary}</div>` : "")
+        + totalsBlock
+        + clusterBlock
+        + summary
         + `<div class="pnl-section"><h2>Позиции</h2>${detail}</div>`;
     }
 
@@ -4920,6 +4967,7 @@
       initOzonStocksDay();
       const day = document.getElementById("ozonstocks-day")?.value;
       const warehouse = document.getElementById("ozonstocks-warehouse")?.value || "";
+      const cluster = document.getElementById("ozonstocks-cluster")?.value || "";
       if (!day) {
         ozonstocksErr("Укажите день");
         return;
@@ -4935,6 +4983,7 @@
       document.getElementById("ozonstocks-report").innerHTML = `<p class="pnl-note">Загружаем снимок остатков…</p>`;
       try {
         const q = new URLSearchParams({ date: day });
+        if (cluster) q.set("cluster", cluster);
         if (warehouse) q.set("warehouse", warehouse);
         const report = await api(`/api/ozonstocks?${q}`, { method: "GET" });
         ozonstocksLoaded = true;
@@ -4953,6 +5002,7 @@
     async function loadOzonStocksLive() {
       if (USER.tabs?.ozonstocks === false || ozonstocksInflight) return;
       const warehouse = document.getElementById("ozonstocks-warehouse")?.value || "";
+      const cluster = document.getElementById("ozonstocks-cluster")?.value || "";
       ozonstocksInflight = true;
       ozonstocksMode = "live";
       const btn = document.getElementById("ozonstocks-run");
@@ -4963,6 +5013,7 @@
       document.getElementById("ozonstocks-report").innerHTML = `<p class="pnl-note">Запрашиваем оперативный остаток в Ozon…</p>`;
       try {
         const q = new URLSearchParams();
+        if (cluster) q.set("cluster", cluster);
         if (warehouse) q.set("warehouse", warehouse);
         const report = await api(`/api/ozonstocks/live?${q}`, { method: "GET" });
         ozonstocksLoaded = true;
@@ -9012,6 +9063,11 @@ ${body}
         loadBitrixReport();
       }
     });
+    for (const id of ["bitrix-from", "bitrix-to"]) {
+      document.getElementById(id)?.addEventListener("change", () => {
+        setBitrixPreset("custom");
+      });
+    }
     document.getElementById("bitrixfreq-form").addEventListener("submit", (e) => {
       e.preventDefault();
       bitrixfreqLoaded = false;
@@ -9069,6 +9125,10 @@ ${body}
       e.preventDefault();
       ozonstocksLoaded = false;
       loadOzonStocksReport(true);
+    });
+    document.getElementById("ozonstocks-cluster")?.addEventListener("change", () => {
+      const warehouse = document.getElementById("ozonstocks-warehouse");
+      if (warehouse) warehouse.value = "";
     });
     document.getElementById("ozonstocks-live")?.addEventListener("click", () => {
       loadOzonStocksLive();

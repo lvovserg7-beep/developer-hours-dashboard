@@ -24,6 +24,18 @@ function parseYmd(value) {
 /** @param {"today"|"yesterday"|"week"|"month"|"custom"} preset */
 export function resolveBitrixRange(preset, fromRaw, toRaw) {
   const today = startOfLocalDay(new Date());
+  const parsedFrom = parseYmd(fromRaw);
+  const parsedTo = parseYmd(toRaw);
+  if (parsedFrom && parsedTo) {
+    if (parsedFrom > parsedTo) throw new Error("Дата «с» не может быть позже «по»");
+    return {
+      preset: preset || "custom",
+      from: ymd(parsedFrom),
+      to: ymd(parsedTo),
+      fromIso: `${ymd(parsedFrom)}T00:00:00`,
+      toIso: `${ymd(parsedTo)}T23:59:59`,
+    };
+  }
   let from;
   let to;
   let resolved = preset || "week";
@@ -38,10 +50,7 @@ export function resolveBitrixRange(preset, fromRaw, toRaw) {
     to = today;
     from = new Date(today.getTime() - 29 * DAY_MS);
   } else if (resolved === "custom") {
-    from = parseYmd(fromRaw);
-    to = parseYmd(toRaw);
-    if (!from || !to) throw new Error("Укажите период с и по");
-    if (from > to) throw new Error("Дата «с» не может быть позже «по»");
+    throw new Error("Укажите период с и по");
   } else {
     resolved = "week";
     to = today;

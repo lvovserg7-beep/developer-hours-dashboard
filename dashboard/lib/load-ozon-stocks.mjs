@@ -7,6 +7,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DATA_DIR = join(root, "data", "ozon-stocks");
 const PAGE_LIMIT = 1000;
 const MAX_PAGES = 50;
+const CLUSTER_TTL_MS = 12 * 60 * 60 * 1000;
+const NO_CLUSTER = "Без кластера";
+
+let clusterCache = { at: 0, byWarehouse: new Map() };
 
 function num(value) {
   const n = Number(value);
@@ -159,18 +163,34 @@ function readSnapshotFile(dateText) {
   }
 }
 
-function filterSnapshot(snap, warehouse) {
-  const wh = String(warehouse || "").trim();
-  let rows = Array.isArray(snap.rows) ? snap.rows : [];
-  if (wh) rows = rows.filter((r) => r.warehouse === wh);
-  rows = [...rows].sort((a, b) => {
-    const byWh = String(a.warehouse || "").localeCompare(String(b.warehouse || ""), "ru");
-    if (byWh) return byWh;
-    const byOffer = String(a.offerId || "").localeCompare(String(b.offerId || ""), "ru");
-    if (byOffer) return byOffer;
-    return String(a.name || "").localeCompare(String(b.name || ""), "ru");
-  });
-  const totals = rows.reduce(
+/** Склад → название кластера Ozon. Справочник общий, кэшируется на 12 часов. */
+export async function ozonWarehouseClusters() {
+  if (clusterCache.byWarehouse.size && Date.now() - clusterCache.at < CLUSTER_TTL_MS) {
+    return clusterCache.byWarehouse;
+  }
+  if (!ozonSellerConfigured()) return clusterCache.byWarehouse;
+  const data = await ozonSellerPost("/v1/cluster/list", { cluster_type: "CLUSTER_TYPE_OZON" });
+  const map = new Map();
+  for (const cluster of data.clusters || []) {
+    const name = String(cluster.name || "").trim();
+    if (!name) continue;
+    for (const logistic of cluster.logistic_clusters || []) {
+      for (const warehouse of logistic.warehouses || []) {
+        const warehouseName = String(warehouse.name || "").trim();
+        if (warehouseName && !map.has(warehouseName)) map.set(warehouseName, name);
+      }
+    }
+  }
+  clusterCache = { at: Date.now(), byWarehouse: map };
+  return map;
+}
+
+function clusterOf(clusterMap, warehouse) {
+  return clusterMap.get(String(warehouse || "").trim()) || NO_CLUSTER;
+}
+
+function sumQty(rows) {
+  return rows.reduce(
     (acc, row) => {
       acc.free += num(row.free);
       acc.reserved += num(row.reserved);
@@ -180,29 +200,81 @@ function filterSnapshot(snap, warehouse) {
     },
     { free: 0, reserved: 0, promised: 0, total: 0, rows: rows.length }
   );
+}
+
+function filterSnapshot(snap, warehouse, cluster, clusterMap) {
+  const wh = String(warehouse || "").trim();
+  const clusterName = String(cluster || "").trim();
+  const sourceRows = Array.isArray(snap.rows) ? snap.rows : [];
+  const tagged = sourceRows.map((row) => ({
+    ...row,
+    cluster: clusterOf(clusterMap, row.warehouse),
+  }));
+  const warehouseMeta = [...new Set(tagged.map((r) => r.warehouse).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "ru"))
+    .map((name) => ({ name, cluster: clusterOf(clusterMap, name) }));
+  const clusters = [...new Set(warehouseMeta.map((w) => w.cluster))].sort((a, b) => a.localeCompare(b, "ru"));
+  let rows = tagged;
+  if (clusterName) rows = rows.filter((r) => r.cluster === clusterName);
+  if (wh) rows = rows.filter((r) => r.warehouse === wh);
+  rows = [...rows].sort((a, b) => {
+    const byWh = String(a.warehouse || "").localeCompare(String(b.warehouse || ""), "ru");
+    if (byWh) return byWh;
+    const byOffer = String(a.offerId || "").localeCompare(String(b.offerId || ""), "ru");
+    if (byOffer) return byOffer;
+    return String(a.name || "").localeCompare(String(b.name || ""), "ru");
+  });
+  const totals = sumQty(rows);
   const byWarehouseMap = new Map();
+  const byClusterMap = new Map();
   for (const row of rows) {
-    const key = row.warehouse || "Без склада";
-    if (!byWarehouseMap.has(key)) {
-      byWarehouseMap.set(key, { warehouse: key, free: 0, reserved: 0, promised: 0, total: 0, rows: 0 });
+    const warehouseKey = row.warehouse || "Без склада";
+    if (!byWarehouseMap.has(warehouseKey)) {
+      byWarehouseMap.set(warehouseKey, {
+        warehouse: warehouseKey,
+        cluster: row.cluster,
+        free: 0,
+        reserved: 0,
+        promised: 0,
+        total: 0,
+        rows: 0,
+      });
     }
-    const agg = byWarehouseMap.get(key);
-    agg.free += num(row.free);
-    agg.reserved += num(row.reserved);
-    agg.promised += num(row.promised);
-    agg.total += num(row.total);
-    agg.rows += 1;
+    const warehouseAgg = byWarehouseMap.get(warehouseKey);
+    warehouseAgg.free += num(row.free);
+    warehouseAgg.reserved += num(row.reserved);
+    warehouseAgg.promised += num(row.promised);
+    warehouseAgg.total += num(row.total);
+    warehouseAgg.rows += 1;
+
+    const clusterKey = row.cluster || NO_CLUSTER;
+    if (!byClusterMap.has(clusterKey)) {
+      byClusterMap.set(clusterKey, { cluster: clusterKey, free: 0, reserved: 0, promised: 0, total: 0, rows: 0, warehouses: 0 });
+    }
+    const clusterAgg = byClusterMap.get(clusterKey);
+    clusterAgg.free += num(row.free);
+    clusterAgg.reserved += num(row.reserved);
+    clusterAgg.promised += num(row.promised);
+    clusterAgg.total += num(row.total);
+    clusterAgg.rows += 1;
+  }
+  for (const agg of byClusterMap.values()) {
+    agg.warehouses = [...byWarehouseMap.values()].filter((w) => w.cluster === agg.cluster).length;
   }
   const byWarehouse = [...byWarehouseMap.values()].sort((a, b) => a.warehouse.localeCompare(b.warehouse, "ru"));
+  const byCluster = [...byClusterMap.values()].sort((a, b) => a.cluster.localeCompare(b.cluster, "ru"));
   return {
     date: snap.date,
     capturedAt: snap.capturedAt,
     source: snap.source,
     warehouse: wh || null,
-    warehouses: snap.warehouses || [],
+    cluster: clusterName || null,
+    warehouses: warehouseMeta,
+    clusters,
     availableDates: listOzonStockSnapshotDates(),
     missing: false,
     totals,
+    byCluster,
     byWarehouse,
     rows,
     note:
@@ -213,7 +285,7 @@ function filterSnapshot(snap, warehouse) {
 }
 
 /** Отчёт по сохранённому снимку на дату. */
-export function loadOzonStocksReport(dateText, warehouse = "") {
+export async function loadOzonStocksReport(dateText, warehouse = "", cluster = "") {
   const date = String(dateText || "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     throw new Error("Укажите день в формате YYYY-MM-DD");
@@ -223,23 +295,38 @@ export function loadOzonStocksReport(dateText, warehouse = "") {
     return {
       date,
       warehouse: String(warehouse || "").trim() || null,
+      cluster: String(cluster || "").trim() || null,
       warehouses: [],
+      clusters: [],
       availableDates: listOzonStockSnapshotDates(),
       missing: true,
       message: "Нет данных за день",
       totals: { free: 0, reserved: 0, promised: 0, total: 0, rows: 0 },
+      byCluster: [],
       byWarehouse: [],
       rows: [],
       note: "Снимки остатков пишутся ежедневно в 22:00 МСК. За выбранный день файла ещё нет.",
     };
   }
-  return filterSnapshot(snap, warehouse);
+  let clusterMap = new Map();
+  try {
+    clusterMap = await ozonWarehouseClusters();
+  } catch (err) {
+    console.warn("Ozon clusters:", err.message || err);
+  }
+  return filterSnapshot(snap, warehouse, cluster, clusterMap);
 }
 
 /** Оперативный остаток без записи на диск. */
-export async function loadOzonStocksLive(warehouse = "") {
+export async function loadOzonStocksLive(warehouse = "", cluster = "") {
   const live = await fetchOzonWarehouseStocks();
-  return filterSnapshot(live, warehouse);
+  let clusterMap = new Map();
+  try {
+    clusterMap = await ozonWarehouseClusters();
+  } catch (err) {
+    console.warn("Ozon clusters:", err.message || err);
+  }
+  return filterSnapshot(live, warehouse, cluster, clusterMap);
 }
 
 /**

@@ -1042,8 +1042,9 @@ const server = createServer(async (req, res) => {
       }
       const day = String(url.searchParams.get("date") || url.searchParams.get("day") || moscowDateKey());
       const warehouse = String(url.searchParams.get("warehouse") || "");
+      const cluster = String(url.searchParams.get("cluster") || "");
       try {
-        const data = loadOzonStocksReport(day, warehouse);
+        const data = await loadOzonStocksReport(day, warehouse, cluster);
         return json(res, 200, data);
       } catch (err) {
         const msg = String(err.message || err);
@@ -1058,8 +1059,9 @@ const server = createServer(async (req, res) => {
         return json(res, 403, { error: "Нет доступа к вкладке «Остатки по складам Озон»." });
       }
       const warehouse = String(url.searchParams.get("warehouse") || "");
+      const cluster = String(url.searchParams.get("cluster") || "");
       try {
-        const data = await loadOzonStocksLive(warehouse);
+        const data = await loadOzonStocksLive(warehouse, cluster);
         return json(res, 200, data);
       } catch (err) {
         const msg = String(err.message || err);
