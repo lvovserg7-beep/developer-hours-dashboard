@@ -115,14 +115,15 @@ function shipmentDeadlineLabel(iso) {
 
 function mapProduct(raw) {
   const qty = Number(raw.quantity) || 0;
-  const price = Number(raw.price);
+  const priceRaw = raw.price;
+  const price = Number(typeof priceRaw === "object" && priceRaw ? priceRaw.amount : priceRaw);
   return {
     offerId: raw.offer_id || "",
     name: raw.name || "",
     sku: raw.sku || null,
     quantity: qty,
     price: Number.isFinite(price) ? price : 0,
-    currency: raw.currency_code || "RUB",
+    currency: (typeof priceRaw === "object" && priceRaw?.currency) || raw.currency_code || "RUB",
   };
 }
 
@@ -154,24 +155,30 @@ function mapPosting(raw) {
   };
 }
 
-async function fetchPostingsByStatus(status, sinceIso, toIso) {
+async function fetchUnfulfilledPostings(cutoffFrom, cutoffTo) {
   const list = [];
-  let offset = 0;
-  for (let page = 0; page < 20; page += 1) {
-    const data = await ozonSellerPost("/v3/posting/fbs/list", {
+  let cursor = "";
+  for (let page = 0; page < 30; page += 1) {
+    const body = {
       limit: POSTING_LIMIT,
-      offset,
       dir: "ASC",
       filter: {
-        since: sinceIso,
-        to: toIso,
-        status,
+        cutoff_from: cutoffFrom,
+        cutoff_to: cutoffTo,
       },
-    });
-    const chunk = Array.isArray(data.result?.postings) ? data.result.postings : [];
+    };
+    if (cursor) body.cursor = cursor;
+    const data = await ozonSellerPost("/v4/posting/fbs/unfulfilled/list", body);
+    const chunk = Array.isArray(data.postings)
+      ? data.postings
+      : Array.isArray(data.result?.postings)
+        ? data.result.postings
+        : [];
     list.push(...chunk);
-    if (!data.result?.has_next || chunk.length === 0) break;
-    offset += chunk.length;
+    if (!data.has_next && !data.result?.has_next) break;
+    const next = data.cursor || data.result?.cursor || "";
+    if (!next || next === cursor) break;
+    cursor = next;
   }
   return list;
 }
@@ -184,18 +191,19 @@ export async function loadOzonFbsAwaitingPostings() {
   }
   const to = new Date();
   const from = addDays(startOfLocalDay(to), -(POSTING_LOOKBACK_DAYS - 1));
-  const sinceIso = new Date(from.getFullYear(), from.getMonth(), from.getDate()).toISOString();
-  const toIso = to.toISOString();
+  const cutoffFrom = new Date(from.getFullYear(), from.getMonth(), from.getDate()).toISOString();
+  const cutoffTo = addDays(to, 21).toISOString();
+  const awaiting = new Set(AWAITING_STATUSES);
   const seen = new Set();
   const raw = [];
-  for (const status of AWAITING_STATUSES) {
-    const chunk = await fetchPostingsByStatus(status, sinceIso, toIso);
-    for (const posting of chunk) {
-      const id = posting?.posting_number;
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
-      raw.push(posting);
-    }
+  const chunk = await fetchUnfulfilledPostings(cutoffFrom, cutoffTo);
+  for (const posting of chunk) {
+    const status = String(posting?.status || "").trim().toLowerCase();
+    if (!awaiting.has(status)) continue;
+    const id = posting?.posting_number;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    raw.push(posting);
   }
   const postings = raw.map(mapPosting).sort((a, b) => {
     const da = a.inProcessAt || "";
@@ -306,10 +314,8 @@ export async function loadOzonFbsOpenActs({ days } = {}) {
 }
 
 export async function loadOzonFbsDashboard({ days } = {}) {
-  const [actsReport, awaiting] = await Promise.all([
-    loadOzonFbsOpenActs({ days }),
-    loadOzonFbsAwaitingPostings(),
-  ]);
+  const actsReport = await loadOzonFbsOpenActs({ days });
+  const awaiting = await loadOzonFbsAwaitingPostings();
   return {
     ...actsReport,
     postings: awaiting.postings,
