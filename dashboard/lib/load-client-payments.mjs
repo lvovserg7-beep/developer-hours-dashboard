@@ -1,4 +1,4 @@
-import { odataConfig, odataAllPages } from "./odata.mjs";
+import { odataConfig, odataAllPages, odataGet } from "./odata.mjs";
 
 const EMPTY_GUID = "00000000-0000-0000-0000-000000000000";
 
@@ -74,6 +74,33 @@ function isAllsanOrg(name) {
 }
 
 /**
+ * Дата последнего проведённого банковского документа по организациям Аллсан.
+ * Не зависит от фильтра периода: по ней видно, до какого дня выписка уже в базе.
+ */
+async function latestBankLoadDate(orgKeys, database) {
+  const orgFilter = [...orgKeys].map((id) => `Организация_Key eq guid'${id}'`).join(" or ");
+  const filter = encodeURIComponent(`Posted eq true and DeletionMark eq false and (${orgFilter})`);
+  const entities = [
+    "Document_ПоступлениеБезналичныхДенежныхСредств",
+    "Document_СписаниеБезналичныхДенежныхСредств",
+  ];
+  let best = "";
+  for (const entity of entities) {
+    try {
+      const data = await odataGet(
+        `${entity}?$format=json&$filter=${filter}&$orderby=Date desc&$top=1&$select=Date`,
+        database
+      );
+      const date = String(data.value?.[0]?.Date || "").slice(0, 10);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date) && date > best) best = date;
+    } catch {
+      /* второй вид документа может отсутствовать */
+    }
+  }
+  return best;
+}
+
+/**
  * Реестр оплат клиентов (Аллсан) за период.
  * Документы: ПоступлениеБезналичныхДенежныхСредств + ПриходныйКассовыйОрдер,
  * хозоперация «ПоступлениеОплатыОтКлиента» (+ оплата картой).
@@ -111,7 +138,13 @@ export async function loadClientPayments(opts = {}) {
   const orgKeys = new Set(alsnOrgs.map((o) => o.Ref_Key));
   const orgNameByKey = new Map(alsnOrgs.map((o) => [o.Ref_Key, o.Description]));
 
+  if (opts.onlyBankDate) {
+    const bankLoadDate = await latestBankLoadDate(orgKeys, database);
+    return { bankLoadDate, organizations: alsnOrgs.map((o) => o.Description) };
+  }
+
   const periodFilter = `Date ge datetime'${fromIso}' and Date le datetime'${toIso}' and Posted eq true and DeletionMark eq false`;
+  const bankLoadDatePromise = latestBankLoadDate(orgKeys, database);
 
   let bankDocs = [];
   let cashDocs = [];
@@ -244,11 +277,17 @@ export async function loadClientPayments(opts = {}) {
     warnings.push("За период нет проведённых оплат от клиентов по организациям Аллсан");
   }
 
+  const bankLoadDate = await bankLoadDatePromise;
+  if (!bankLoadDate) {
+    warnings.push("Не удалось определить дату последнего банковского документа");
+  }
+
   return {
     generatedAt: new Date().toISOString(),
     database,
     dateFrom,
     dateTo,
+    bankLoadDate,
     clientFilter,
     organizations: alsnOrgs.map((o) => o.Description),
     note:

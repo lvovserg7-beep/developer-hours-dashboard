@@ -1185,6 +1185,7 @@ const server = createServer(async (req, res) => {
           year: year ? Number(year) : undefined,
           month: month ? Number(month) : undefined,
           client: client || undefined,
+          onlyBankDate: url.searchParams.get("bankDate") === "1",
           database: "trade",
         });
         return json(res, 200, data);

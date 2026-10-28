@@ -369,6 +369,28 @@
       font-weight: var(--weight-strong);
       margin: 0 0 6px;
     }
+    .clientpay-bank-date {
+      margin: 4px 0 14px;
+      color: #c41212;
+    }
+    .clientpay-bank-date-label {
+      display: block;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .clientpay-bank-date-value {
+      display: block;
+      margin-top: 2px;
+      font-size: 36px;
+      font-weight: 700;
+      line-height: 1.1;
+      color: #c41212;
+    }
+    html[data-theme="dark"] .clientpay-bank-date,
+    html[data-theme="dark"] .clientpay-bank-date-value {
+      color: #ff4d4d;
+    }
     p.lead.tab-intro {
       margin: 0 0 14px;
       max-width: 78ch;
@@ -2348,6 +2370,7 @@
     <div id="tab-clientpay" class="tab-panel" hidden>
       <section class="panel">
         <h2 class="tab-intro">Реестр оплат клиентов</h2>
+        <p id="clientpay-bank-date" class="clientpay-bank-date" hidden></p>
         <p class="lead tab-intro">Проведённые оплаты от клиентов по организациям Аллсан (база trade): безнал и касса. Фильтр по месяцу и по клиенту.</p>
         <form class="pnl-toolbar" id="clientpay-form">
           <div class="filter-dates">
@@ -5408,12 +5431,43 @@
       list.innerHTML = (clients || []).map((c) => `<option value="${escapeHtml(c)}"></option>`).join("");
     }
 
+    function formatBankLoadDate(value) {
+      const raw = String(value || "").slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return "нет данных";
+      return `${raw.slice(8, 10)}.${raw.slice(5, 7)}.${raw.slice(0, 4)}`;
+    }
+
+    function renderClientPayBankDate(report) {
+      const el = document.getElementById("clientpay-bank-date");
+      if (!el) return;
+      if (!report) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.innerHTML =
+        `<span class="clientpay-bank-date-label">Дата загрузки из банка</span>` +
+        `<span class="clientpay-bank-date-value">${escapeHtml(formatBankLoadDate(report.bankLoadDate))}</span>`;
+    }
+
+    async function loadClientPayBankDate() {
+      if (USER.tabs?.clientpay === false) return;
+      try {
+        const report = await api("/api/clientpay?bankDate=1", { method: "GET" });
+        renderClientPayBankDate(report);
+      } catch (e) {
+        renderClientPayBankDate({ bankLoadDate: "" });
+      }
+    }
+
     function renderClientPay(report) {
       const box = document.getElementById("clientpay-report");
       if (!report) {
         box.innerHTML = "";
         return;
       }
+      renderClientPayBankDate(report);
       fillClientPayDatalist(report.clients);
       const head = `
         <tr>
@@ -6853,6 +6907,7 @@
         initOzonStocksDay();
       }
       if (name === "wbfbs") loadWbFbsSupplies();
+      if (name === "clientpay") loadClientPayBankDate();
       if (name === "clientquality") loadClientQualityReport();
       if (name === "clientqualitytv") loadClientQualityTvReport();
       if (name === "cache") loadCacheBoard();
