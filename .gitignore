@@ -8,3 +8,4 @@ dashboard/published/
 dashboard/odata.env
 .DS_Store
 Thumbs.db
+tools/vanessa-automation/

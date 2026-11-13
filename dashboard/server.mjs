@@ -30,6 +30,7 @@ import {
   loadPurchaseForecast,
   loadPurchaseForecastSettings,
   savePurchaseForecastSettings,
+  searchNomenclature,
 } from "./lib/load-purchase-forecast.mjs";
 import { loadClientQuality, loadClientQualityTv, ingestClientQualityEvents } from "./lib/load-client-quality.mjs";
 import { loadSeoReport, loadSeoProductsReport, loadSeoPositionsReport, refreshSeoTrailingCache, attachYandexSqi } from "./lib/load-seo.mjs";
@@ -1150,13 +1151,29 @@ const server = createServer(async (req, res) => {
       }
     }
 
+    if (path === "/api/purchaseforecast/nomenclature") {
+      if (req.method !== "GET") return json(res, 405, { error: "Метод не поддерживается" });
+      if (!userHasTab(user, "purchaseforecast")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Прогноз закупок»." });
+      }
+      try {
+        const q = String(url.searchParams.get("q") || "").trim();
+        const data = await searchNomenclature(q);
+        return json(res, 200, data);
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, 502, { error: msg });
+      }
+    }
+
     if (path === "/api/purchaseforecast") {
       if (!userHasTab(user, "purchaseforecast")) {
         return json(res, 403, { error: "Нет доступа к вкладке «Прогноз закупок»." });
       }
       if (req.method === "GET") {
         try {
-          const settings = loadPurchaseForecastSettings();
+          const settings = loadPurchaseForecastSettings(user.id);
           return json(res, 200, { settings });
         } catch (err) {
           const msg = String(err.message || err);
@@ -1168,6 +1185,7 @@ const server = createServer(async (req, res) => {
         try {
           const body = await readJson(req);
           const data = await loadPurchaseForecast({
+            userId: user.id,
             horizon: body?.horizon,
             items: body?.items,
             orders: body?.orders,
@@ -1183,7 +1201,7 @@ const server = createServer(async (req, res) => {
       if (req.method === "PUT") {
         try {
           const body = await readJson(req);
-          const settings = savePurchaseForecastSettings(body || {});
+          const settings = savePurchaseForecastSettings(user.id, body || {});
           return json(res, 200, { settings });
         } catch (err) {
           const msg = String(err.message || err);

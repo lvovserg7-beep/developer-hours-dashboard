@@ -5,20 +5,10 @@ import { odataAllPages } from "./odata.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DATA_DIR = join(root, "data");
-const SETTINGS_FILE = join(DATA_DIR, "purchase-forecast.json");
+const USERS_DIR = join(DATA_DIR, "purchase-forecast");
+const LEGACY_SETTINGS_FILE = join(DATA_DIR, "purchase-forecast.json");
 const DATABASE = "ecotidy";
 const EMPTY_GUID = "00000000-0000-0000-0000-000000000000";
-
-/** Стартовый список как на скрине обработки в 1С (ecotidy). */
-const DEFAULT_ITEMS = [
-  { article: "salf_monik_golub_20sht", dailyRate: 3 },
-  { article: "naborgips", dailyRate: 2 },
-  { article: "aromo_mist_LifeEmirates", dailyRate: 5 },
-  { article: "aromo_mist_Chance", dailyRate: 4 },
-  { article: "avtoparf_afgano8", dailyRate: 1 },
-  { article: "him_barabanstiral_180", dailyRate: 7 },
-  { article: "mentol_banya_50", dailyRate: 6 },
-];
 
 function num(v) {
   const n = Number(String(v ?? "").replace(/\s+/g, "").replace(",", "."));
@@ -39,60 +29,103 @@ function normalizeArticle(value) {
 
 function ensureDataDir() {
   if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+  if (!existsSync(USERS_DIR)) mkdirSync(USERS_DIR, { recursive: true });
 }
 
-export function defaultPurchaseForecastSettings() {
-  return {
-    horizon: 10,
-    items: DEFAULT_ITEMS.map((row) => ({ ...row })),
-    orders: {},
-  };
+function sanitizeUserId(userId) {
+  const id = String(userId || "").trim();
+  if (!id) throw new Error("Не указан пользователь для настроек прогноза закупок");
+  const safe = id.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120);
+  if (!safe) throw new Error("Некорректный идентификатор пользователя");
+  return safe;
 }
 
-export function loadPurchaseForecastSettings() {
-  const fallback = defaultPurchaseForecastSettings();
-  if (!existsSync(SETTINGS_FILE)) return fallback;
-  try {
-    const raw = JSON.parse(readFileSync(SETTINGS_FILE, "utf8"));
-    const horizon = Math.max(0, num(raw.horizon ?? fallback.horizon));
-    const items = Array.isArray(raw.items)
-      ? raw.items
-          .map((row) => ({
-            article: normalizeArticle(row.article || row.Артикул),
-            dailyRate: num(row.dailyRate ?? row.СуточныйРасход),
-            name: String(row.name || row.Номенклатура || "").trim() || undefined,
-          }))
-          .filter((row) => row.article)
-      : fallback.items;
-    const orders = raw.orders && typeof raw.orders === "object" ? raw.orders : {};
-    return { horizon, items, orders };
-  } catch {
-    return fallback;
-  }
+function settingsPathForUser(userId) {
+  return join(USERS_DIR, `${sanitizeUserId(userId)}.json`);
 }
 
-export function savePurchaseForecastSettings(next) {
-  ensureDataDir();
-  const horizon = Math.max(0, num(next?.horizon ?? 10));
-  const items = Array.isArray(next?.items)
-    ? next.items
+function normalizeSettings(raw, fallback) {
+  const horizon = Math.max(0, num(raw?.horizon ?? fallback.horizon));
+  const items = Array.isArray(raw?.items)
+    ? raw.items
         .map((row) => ({
           article: normalizeArticle(row.article || row.Артикул),
           dailyRate: num(row.dailyRate ?? row.СуточныйРасход),
           name: String(row.name || row.Номенклатура || "").trim() || undefined,
         }))
         .filter((row) => row.article)
-    : [];
+    : fallback.items;
   const orders = {};
-  if (next?.orders && typeof next.orders === "object") {
-    for (const [key, value] of Object.entries(next.orders)) {
+  if (raw?.orders && typeof raw.orders === "object") {
+    for (const [key, value] of Object.entries(raw.orders)) {
       const article = normalizeArticle(key);
       if (!article) continue;
       orders[article] = num(value);
     }
   }
-  const payload = { horizon, items, orders, updatedAt: new Date().toISOString() };
-  writeFileSync(SETTINGS_FILE, JSON.stringify(payload, null, 2), "utf8");
+  return { horizon, items, orders };
+}
+
+export function defaultPurchaseForecastSettings() {
+  return {
+    horizon: 10,
+    items: [],
+    orders: {},
+  };
+}
+
+/**
+ * Настройки прогноза закупок — отдельно на каждого пользователя ЦУК.
+ * @param {string} userId
+ */
+export function loadPurchaseForecastSettings(userId) {
+  const fallback = defaultPurchaseForecastSettings();
+  const path = settingsPathForUser(userId);
+  if (existsSync(path)) {
+    try {
+      return normalizeSettings(JSON.parse(readFileSync(path, "utf8")), fallback);
+    } catch {
+      return fallback;
+    }
+  }
+  // Старый общий файл — только первому пользователю, у кого ещё нет своего.
+  if (existsSync(LEGACY_SETTINGS_FILE)) {
+    try {
+      const legacyRaw = JSON.parse(readFileSync(LEGACY_SETTINGS_FILE, "utf8"));
+      if (Array.isArray(legacyRaw?.items)) {
+        const migrated = normalizeSettings(legacyRaw, fallback);
+        savePurchaseForecastSettings(userId, migrated);
+        try {
+          writeFileSync(`${LEGACY_SETTINGS_FILE}.bak`, JSON.stringify(legacyRaw, null, 2), "utf8");
+          writeFileSync(
+            LEGACY_SETTINGS_FILE,
+            JSON.stringify({ migratedToUserId: sanitizeUserId(userId), at: new Date().toISOString() }, null, 2),
+            "utf8"
+          );
+        } catch {
+          /* ignore backup errors */
+        }
+        return migrated;
+      }
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
+/**
+ * @param {string} userId
+ * @param {{ horizon?: number, items?: Array, orders?: Record<string, number> }} next
+ */
+export function savePurchaseForecastSettings(userId, next) {
+  ensureDataDir();
+  const payload = {
+    ...normalizeSettings(next, defaultPurchaseForecastSettings()),
+    userId: sanitizeUserId(userId),
+    updatedAt: new Date().toISOString(),
+  };
+  writeFileSync(settingsPathForUser(userId), JSON.stringify(payload, null, 2), "utf8");
   return payload;
 }
 
@@ -171,16 +204,17 @@ async function loadMainKitLines(ownerKeys) {
 
 /**
  * Повторяет логику Alsn_ТекстыЗапросовУТ: Макет + Макет2.
- * @param {{ horizon?: number, items?: Array<{article:string,dailyRate:number}>, orders?: Record<string, number>, persist?: boolean }} [opts]
+ * @param {{ userId: string, horizon?: number, items?: Array<{article:string,dailyRate:number}>, orders?: Record<string, number>, persist?: boolean }} opts
  */
 export async function loadPurchaseForecast(opts = {}) {
-  const saved = loadPurchaseForecastSettings();
+  const userId = opts.userId;
+  const saved = loadPurchaseForecastSettings(userId);
   const horizon = Math.max(0, num(opts.horizon ?? saved.horizon ?? 10));
   const itemsInput = Array.isArray(opts.items) ? opts.items : saved.items;
   const ordersInput = opts.orders && typeof opts.orders === "object" ? opts.orders : saved.orders || {};
 
   if (opts.persist) {
-    savePurchaseForecastSettings({ horizon, items: itemsInput, orders: ordersInput });
+    savePurchaseForecastSettings(userId, { horizon, items: itemsInput, orders: ordersInput });
   }
 
   const normalizedItems = itemsInput
@@ -307,4 +341,35 @@ export async function lookupNomenclatureByArticle(article) {
     { database: DATABASE, maxPages: 1 }
   );
   return rows[0] || null;
+}
+
+/**
+ * Поиск номенклатуры в ecotidy по подстроке названия или артикула.
+ * @param {string} query
+ * @param {{ limit?: number }} [opts]
+ */
+export async function searchNomenclature(query, opts = {}) {
+  const q = String(query || "").trim();
+  if (q.length < 2) {
+    return { query: q, rows: [], note: "Введите минимум 2 символа" };
+  }
+  const escaped = q.replace(/'/g, "''");
+  const limit = Math.min(80, Math.max(5, Number(opts.limit) || 40));
+  const filter =
+    `DeletionMark eq false and IsFolder eq false and (` +
+    `substringof('${escaped}',Description) or substringof('${escaped}',Артикул)` +
+    `)`;
+  const rows = await odataAllPages(
+    `Catalog_Номенклатура?$format=json&$filter=${filter}&$select=Ref_Key,Description,Артикул,Code&$orderby=Description&$top=${limit}`,
+    { database: DATABASE, maxPages: 1 }
+  );
+  return {
+    query: q,
+    rows: rows.map((row) => ({
+      ref: row.Ref_Key,
+      name: row.Description || "",
+      article: normalizeArticle(row.Артикул),
+      code: row.Code || "",
+    })),
+  };
 }

@@ -223,14 +223,138 @@
     }
     .pf-card .pf-actions button,
     .pf-card .pf-actions label.pf-file {
+      appearance: none;
       font: inherit;
-      padding: 4px 10px;
-      border: 1px solid var(--line);
-      background: #f7f6f2;
+      font-size: var(--fs-sm);
+      font-weight: var(--weight);
+      padding: 7px 14px;
+      color: #fff;
+      background: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
       cursor: pointer;
+      white-space: nowrap;
+    }
+    .pf-card .pf-actions button:hover,
+    .pf-card .pf-actions label.pf-file:hover {
+      filter: brightness(0.96);
     }
     .pf-card .pf-actions label.pf-file input {
       display: none;
+    }
+    #pf-nomen-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      background: rgba(0, 0, 0, 0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    #pf-nomen-modal.is-open { display: flex; }
+    .pf-nomen-dialog {
+      width: min(720px, 96vw);
+      max-height: min(80vh, 720px);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+    }
+    .pf-nomen-dialog h3 {
+      margin: 0 0 10px;
+      font-size: 17px;
+      font-weight: 650;
+    }
+    .pf-nomen-dialog .pf-nomen-search {
+      width: 100%;
+      font: inherit;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--ink);
+      margin-bottom: 10px;
+    }
+    .pf-nomen-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .pf-nomen-toolbar label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      color: var(--ink);
+    }
+    .pf-nomen-list {
+      overflow: auto;
+      flex: 1;
+      min-height: 180px;
+      border: 1px solid var(--line);
+    }
+    .pf-nomen-list label.pf-nomen-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      width: 100%;
+      text-align: left;
+      font: inherit;
+      padding: 8px 10px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      color: var(--ink);
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+    .pf-nomen-list label.pf-nomen-row:hover { background: var(--accent-soft); }
+    .pf-nomen-list label.pf-nomen-row.is-disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .pf-nomen-list label.pf-nomen-row input {
+      margin-top: 3px;
+      flex: 0 0 auto;
+    }
+    .pf-nomen-list label.pf-nomen-row .pf-nomen-row-text { min-width: 0; flex: 1; }
+    .pf-nomen-list .meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .pf-nomen-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .pf-nomen-actions button {
+      appearance: none;
+      font: inherit;
+      font-size: var(--fs-sm);
+      font-weight: var(--weight);
+      padding: 7px 14px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+    }
+    .pf-nomen-actions button.pf-nomen-primary {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .pf-nomen-actions button.pf-nomen-primary:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      filter: none;
     }
     .pf-scroll {
       max-height: 360px;
@@ -2509,6 +2633,21 @@
           </div>
         </div>
         <div id="purchaseforecast-report"></div>
+        <div id="pf-nomen-modal" aria-hidden="true">
+          <div class="pf-nomen-dialog" role="dialog" aria-modal="true" aria-labelledby="pf-nomen-title">
+            <h3 id="pf-nomen-title">Выбор номенклатуры</h3>
+            <input id="pf-nomen-search" class="pf-nomen-search" type="search" placeholder="Начните вводить название или артикул…" autocomplete="off">
+            <div class="pf-nomen-toolbar">
+              <label><input type="checkbox" id="pf-nomen-check-all"> Выбрать все доступные</label>
+              <span id="pf-nomen-hint">Введите минимум 2 символа</span>
+            </div>
+            <div id="pf-nomen-list" class="pf-nomen-list"></div>
+            <div class="pf-nomen-actions">
+              <button type="button" id="pf-nomen-close">Закрыть</button>
+              <button type="button" class="pf-nomen-primary" id="pf-nomen-add-selected" disabled>Добавить выбранные</button>
+            </div>
+          </div>
+        </div>
       </section>
     </div>
     <div id="tab-clientquality" class="tab-panel" hidden>
@@ -5650,10 +5789,11 @@
 
     let purchaseforecastLoaded = false;
     let purchaseforecastInflight = false;
-    let purchaseforecastInitDone = false;
+    let purchaseforecastLoadingSettings = false;
     let purchaseforecastItems = [];
     let purchaseforecastOrders = {};
     let purchaseforecastLastReport = null;
+    let purchaseforecastSaveTimer = null;
 
     function purchaseforecastErr(text) {
       const el = document.getElementById("purchaseforecast-err");
@@ -5691,16 +5831,130 @@
       const body = document.getElementById("purchaseforecast-items-body");
       if (!body) return;
       if (!purchaseforecastItems.length) {
-        body.innerHTML = `<tr><td colspan="4">Список пуст — добавьте строки или загрузите Excel</td></tr>`;
+        body.innerHTML = `<tr><td colspan="4">Список пуст — нажмите «Добавить» или загрузите Excel</td></tr>`;
         return;
       }
       body.innerHTML = purchaseforecastItems.map((row, idx) => `
         <tr>
-          <td><input data-pf-item="article" data-idx="${idx}" value="${escapeHtml(row.article || "")}" placeholder="артикул"></td>
-          <td><input data-pf-item="name" data-idx="${idx}" value="${escapeHtml(row.name || "")}" placeholder="название (необязательно)"></td>
+          <td class="name">${escapeHtml(row.article || "—")}</td>
+          <td class="name">${escapeHtml(row.name || "")}</td>
           <td class="num"><input data-pf-item="dailyRate" data-idx="${idx}" type="number" step="0.01" value="${escapeHtml(String(row.dailyRate ?? 0))}"></td>
           <td><button type="button" data-pf-remove="${idx}">Удалить</button></td>
         </tr>`).join("");
+    }
+
+    let pfNomenSearchTimer = null;
+    let pfNomenSearchSeq = 0;
+
+    function openPurchaseForecastNomenPicker() {
+      const modal = document.getElementById("pf-nomen-modal");
+      const search = document.getElementById("pf-nomen-search");
+      const list = document.getElementById("pf-nomen-list");
+      const hint = document.getElementById("pf-nomen-hint");
+      const checkAll = document.getElementById("pf-nomen-check-all");
+      if (!modal) return;
+      if (list) list.innerHTML = "";
+      if (hint) hint.textContent = "Введите минимум 2 символа";
+      if (search) search.value = "";
+      if (checkAll) {
+        checkAll.checked = false;
+        checkAll.indeterminate = false;
+      }
+      updatePurchaseForecastNomenAddButton();
+      modal.classList.add("is-open");
+      modal.setAttribute("aria-hidden", "false");
+      setTimeout(() => search?.focus(), 0);
+    }
+
+    function closePurchaseForecastNomenPicker() {
+      const modal = document.getElementById("pf-nomen-modal");
+      if (!modal) return;
+      modal.classList.remove("is-open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+
+    function updatePurchaseForecastNomenAddButton() {
+      const btn = document.getElementById("pf-nomen-add-selected");
+      const checkAll = document.getElementById("pf-nomen-check-all");
+      const boxes = [...document.querySelectorAll("#pf-nomen-list input[data-pf-pick]:not(:disabled)")];
+      const checked = boxes.filter((el) => el.checked);
+      if (btn) {
+        btn.disabled = checked.length === 0;
+        btn.textContent = checked.length ? `Добавить выбранные (${checked.length})` : "Добавить выбранные";
+      }
+      if (checkAll) {
+        checkAll.disabled = boxes.length === 0;
+        checkAll.checked = boxes.length > 0 && checked.length === boxes.length;
+        checkAll.indeterminate = checked.length > 0 && checked.length < boxes.length;
+      }
+    }
+
+    function renderPurchaseForecastNomenList(rows, note) {
+      const list = document.getElementById("pf-nomen-list");
+      const hint = document.getElementById("pf-nomen-hint");
+      if (!list) return;
+      if (hint) hint.textContent = note || (rows.length ? `Найдено: ${rows.length}` : "Ничего не найдено");
+      if (!rows.length) {
+        list.innerHTML = "";
+        updatePurchaseForecastNomenAddButton();
+        return;
+      }
+      list.innerHTML = rows.map((row) => {
+        const hasArticle = Boolean(row.article);
+        const already = hasArticle && purchaseforecastItems.some((item) => item.article === row.article);
+        const disabled = !hasArticle || already;
+        const reason = !hasArticle ? "нет артикула" : already ? "уже в списке" : "";
+        return `<label class="pf-nomen-row${disabled ? " is-disabled" : ""}">
+          <input type="checkbox" data-pf-pick="${escapeHtml(row.article || "")}" data-pf-name="${escapeHtml(row.name || "")}" ${disabled ? "disabled" : ""}>
+          <span class="pf-nomen-row-text">
+            <div>${escapeHtml(row.name || "")}</div>
+            <div class="meta">${escapeHtml(row.article || "без артикула")}${row.code ? " · " + escapeHtml(row.code) : ""}${reason ? " · " + reason : ""}</div>
+          </span>
+        </label>`;
+      }).join("");
+      updatePurchaseForecastNomenAddButton();
+    }
+
+    async function searchPurchaseForecastNomenclature(query) {
+      const q = String(query || "").trim();
+      const seq = ++pfNomenSearchSeq;
+      if (q.length < 2) {
+        renderPurchaseForecastNomenList([], "Введите минимум 2 символа");
+        return;
+      }
+      renderPurchaseForecastNomenList([], "Ищем в 1С…");
+      try {
+        const data = await api("/api/purchaseforecast/nomenclature?q=" + encodeURIComponent(q), { method: "GET" });
+        if (seq !== pfNomenSearchSeq) return;
+        renderPurchaseForecastNomenList(data.rows || [], data.note || "");
+      } catch (e) {
+        if (seq !== pfNomenSearchSeq) return;
+        renderPurchaseForecastNomenList([], e.message || String(e));
+      }
+    }
+
+    function addPurchaseForecastItemsFromPicker(selected) {
+      const rows = Array.isArray(selected) ? selected : [];
+      let added = 0;
+      for (const row of rows) {
+        const key = String(row.article || "").trim();
+        if (!key) continue;
+        if (purchaseforecastItems.some((item) => item.article === key)) continue;
+        purchaseforecastItems.push({
+          article: key,
+          name: String(row.name || "").trim(),
+          dailyRate: 0,
+        });
+        added += 1;
+      }
+      if (!added) {
+        purchaseforecastErr("Нечего добавлять: отметьте позиции с артикулом, которых ещё нет в списке.");
+        return;
+      }
+      purchaseforecastErr("");
+      renderPurchaseForecastItems();
+      closePurchaseForecastNomenPicker();
+      schedulePurchaseForecastSave();
     }
 
     function renderPurchaseForecastOrders(components) {
@@ -5804,9 +6058,42 @@
       afterReportPaint();
     }
 
+    function collectPurchaseForecastSettingsPayload() {
+      const horizon = Number(document.getElementById("purchaseforecast-horizon")?.value || 10);
+      const items = purchaseforecastItems
+        .map((row) => ({
+          article: String(row.article || "").trim(),
+          name: String(row.name || "").trim(),
+          dailyRate: Number(row.dailyRate) || 0,
+        }))
+        .filter((row) => row.article);
+      const orders = collectPurchaseForecastOrdersFromDom();
+      return { horizon, items, orders };
+    }
+
+    async function savePurchaseForecastSettingsNow() {
+      if (USER.tabs?.purchaseforecast === false || purchaseforecastLoadingSettings) return;
+      try {
+        await api("/api/purchaseforecast", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(collectPurchaseForecastSettingsPayload()),
+        });
+      } catch (e) {
+        purchaseforecastErr(e.message || String(e));
+      }
+    }
+
+    function schedulePurchaseForecastSave() {
+      clearTimeout(purchaseforecastSaveTimer);
+      purchaseforecastSaveTimer = setTimeout(() => {
+        savePurchaseForecastSettingsNow();
+      }, 400);
+    }
+
     async function initPurchaseForecastTab() {
-      if (USER.tabs?.purchaseforecast === false) return;
-      if (purchaseforecastInitDone) return;
+      if (USER.tabs?.purchaseforecast === false || purchaseforecastLoadingSettings) return;
+      purchaseforecastLoadingSettings = true;
       try {
         const data = await api("/api/purchaseforecast", { method: "GET" });
         const settings = data.settings || {};
@@ -5821,9 +6108,12 @@
           : [];
         purchaseforecastOrders = settings.orders && typeof settings.orders === "object" ? { ...settings.orders } : {};
         renderPurchaseForecastItems();
-        purchaseforecastInitDone = true;
+        renderPurchaseForecastOrders([]);
+        purchaseforecastErr("");
       } catch (e) {
         purchaseforecastErr(e.message || String(e));
+      } finally {
+        purchaseforecastLoadingSettings = false;
       }
     }
 
@@ -5929,6 +6219,7 @@
         purchaseforecastItems = next;
         renderPurchaseForecastItems();
         purchaseforecastErr("");
+        schedulePurchaseForecastSave();
       } catch (e) {
         purchaseforecastErr(e.message || String(e));
       }
@@ -9624,9 +9915,43 @@ ${body}
       purchaseforecastLoaded = false;
       loadPurchaseForecastReport();
     });
+    document.getElementById("purchaseforecast-horizon")?.addEventListener("change", () => {
+      schedulePurchaseForecastSave();
+    });
     document.getElementById("purchaseforecast-add")?.addEventListener("click", () => {
-      purchaseforecastItems.push({ article: "", name: "", dailyRate: 0 });
-      renderPurchaseForecastItems();
+      openPurchaseForecastNomenPicker();
+    });
+    document.getElementById("pf-nomen-close")?.addEventListener("click", () => closePurchaseForecastNomenPicker());
+    document.getElementById("pf-nomen-modal")?.addEventListener("click", (e) => {
+      if (e.target === e.currentTarget) closePurchaseForecastNomenPicker();
+    });
+    document.getElementById("pf-nomen-search")?.addEventListener("input", (e) => {
+      const value = e.target.value;
+      clearTimeout(pfNomenSearchTimer);
+      pfNomenSearchTimer = setTimeout(() => searchPurchaseForecastNomenclature(value), 280);
+    });
+    document.getElementById("pf-nomen-list")?.addEventListener("change", (e) => {
+      if (!e.target.matches("input[data-pf-pick]")) return;
+      updatePurchaseForecastNomenAddButton();
+    });
+    document.getElementById("pf-nomen-check-all")?.addEventListener("change", (e) => {
+      const on = Boolean(e.target.checked);
+      for (const box of document.querySelectorAll("#pf-nomen-list input[data-pf-pick]:not(:disabled)")) {
+        box.checked = on;
+      }
+      updatePurchaseForecastNomenAddButton();
+    });
+    document.getElementById("pf-nomen-add-selected")?.addEventListener("click", () => {
+      const selected = [...document.querySelectorAll("#pf-nomen-list input[data-pf-pick]:checked:not(:disabled)")].map((el) => ({
+        article: el.getAttribute("data-pf-pick") || "",
+        name: el.getAttribute("data-pf-name") || "",
+      }));
+      addPurchaseForecastItemsFromPicker(selected);
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      const modal = document.getElementById("pf-nomen-modal");
+      if (modal?.classList.contains("is-open")) closePurchaseForecastNomenPicker();
     });
     document.getElementById("purchaseforecast-export")?.addEventListener("click", exportPurchaseForecastItemsExcel);
     document.getElementById("purchaseforecast-import")?.addEventListener("change", (e) => {
@@ -9641,15 +9966,22 @@ ${body}
       if (!Number.isFinite(idx)) return;
       purchaseforecastItems.splice(idx, 1);
       renderPurchaseForecastItems();
+      schedulePurchaseForecastSave();
     });
     document.getElementById("purchaseforecast-items-body")?.addEventListener("change", (e) => {
       const input = e.target.closest("input[data-pf-item]");
       if (!input) return;
       const idx = Number(input.getAttribute("data-idx"));
       const field = input.getAttribute("data-pf-item");
-      if (!purchaseforecastItems[idx]) return;
-      if (field === "dailyRate") purchaseforecastItems[idx].dailyRate = Number(String(input.value).replace(",", ".")) || 0;
-      else purchaseforecastItems[idx][field] = String(input.value || "").trim();
+      if (!purchaseforecastItems[idx] || field !== "dailyRate") return;
+      purchaseforecastItems[idx].dailyRate = Number(String(input.value).replace(",", ".")) || 0;
+      schedulePurchaseForecastSave();
+    });
+    document.getElementById("purchaseforecast-orders-body")?.addEventListener("change", (e) => {
+      const input = e.target.closest("input[data-pf-order]");
+      if (!input) return;
+      collectPurchaseForecastOrdersFromDom();
+      schedulePurchaseForecastSave();
     });
     document.getElementById("clientquality-form").addEventListener("submit", (e) => {
       e.preventDefault();
