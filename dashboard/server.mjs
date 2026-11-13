@@ -26,6 +26,11 @@ import { loadWbFbsSuppliesReport, getWbFbsSupplyQr, deliverWbFbsSupplyAndQr } fr
 import { loadDebtors } from "./lib/load-debtors.mjs";
 import { loadMBalance } from "./lib/load-mbalance.mjs";
 import { loadClientPayments } from "./lib/load-client-payments.mjs";
+import {
+  loadPurchaseForecast,
+  loadPurchaseForecastSettings,
+  savePurchaseForecastSettings,
+} from "./lib/load-purchase-forecast.mjs";
 import { loadClientQuality, loadClientQualityTv, ingestClientQualityEvents } from "./lib/load-client-quality.mjs";
 import { loadSeoReport, loadSeoProductsReport, loadSeoPositionsReport, refreshSeoTrailingCache, attachYandexSqi } from "./lib/load-seo.mjs";
 import {
@@ -1143,6 +1148,50 @@ const server = createServer(async (req, res) => {
         console.error(err);
         return json(res, 502, { error: msg });
       }
+    }
+
+    if (path === "/api/purchaseforecast") {
+      if (!userHasTab(user, "purchaseforecast")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Прогноз закупок»." });
+      }
+      if (req.method === "GET") {
+        try {
+          const settings = loadPurchaseForecastSettings();
+          return json(res, 200, { settings });
+        } catch (err) {
+          const msg = String(err.message || err);
+          console.error(err);
+          return json(res, 502, { error: msg });
+        }
+      }
+      if (req.method === "POST") {
+        try {
+          const body = await readJson(req);
+          const data = await loadPurchaseForecast({
+            horizon: body?.horizon,
+            items: body?.items,
+            orders: body?.orders,
+            persist: body?.persist !== false,
+          });
+          return json(res, 200, data);
+        } catch (err) {
+          const msg = String(err.message || err);
+          console.error(err);
+          return json(res, 502, { error: msg });
+        }
+      }
+      if (req.method === "PUT") {
+        try {
+          const body = await readJson(req);
+          const settings = savePurchaseForecastSettings(body || {});
+          return json(res, 200, { settings });
+        } catch (err) {
+          const msg = String(err.message || err);
+          console.error(err);
+          return json(res, 400, { error: msg });
+        }
+      }
+      return json(res, 405, { error: "Метод не поддерживается" });
     }
 
     if (path === "/api/mbalance") {

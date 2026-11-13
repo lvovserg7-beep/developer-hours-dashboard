@@ -194,8 +194,65 @@
     body.wide-report:not(.is-full) #tab-wbfbs .panel,
     body.wide-report:not(.is-full) #tab-debtors .panel,
     body.wide-report:not(.is-full) #tab-mbalance .panel,
-    body.wide-report:not(.is-full) #tab-clientpay .panel {
+    body.wide-report:not(.is-full) #tab-clientpay .panel,
+    body.wide-report:not(.is-full) #tab-purchaseforecast .panel {
       width: 100%;
+    }
+    .pf-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 12px 0 18px;
+    }
+    .pf-card {
+      border: 1px solid var(--line);
+      background: var(--card, #fff);
+      padding: 10px 12px 12px;
+      min-width: 0;
+    }
+    .pf-card h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      font-weight: 650;
+    }
+    .pf-card .pf-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .pf-card .pf-actions button,
+    .pf-card .pf-actions label.pf-file {
+      font: inherit;
+      padding: 4px 10px;
+      border: 1px solid var(--line);
+      background: #f7f6f2;
+      cursor: pointer;
+    }
+    .pf-card .pf-actions label.pf-file input {
+      display: none;
+    }
+    .pf-scroll {
+      max-height: 360px;
+      overflow: auto;
+    }
+    .pf-scroll table.pnl td input {
+      width: 100%;
+      max-width: 140px;
+      font: inherit;
+      padding: 2px 6px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .pf-scroll table.pnl td.num input {
+      text-align: right;
+    }
+    table.pnl td.pf-pos { color: var(--bad); font-weight: 600; }
+    table.pnl td.pf-neg { color: #2f6b45; font-weight: 600; }
+    table.pnl td.pf-days-bad { color: var(--bad); font-weight: 600; }
+    table.pnl td.pf-days-ok { color: #2f6b45; }
+    @media (max-width: 1100px) {
+      .pf-split { grid-template-columns: 1fr; }
     }
     body.wide-report:not(.is-full) #tab-plan .report-stage,
     body.wide-report:not(.is-full) #tab-plan .report-stage-inner,
@@ -1740,6 +1797,7 @@
         <button type="button" class="tab" data-tab="debtors" role="tab" aria-selected="false">Задолженность клиентов</button>
         <button type="button" class="tab" data-tab="mbalance" role="tab" aria-selected="false">Управленческий баланс</button>
         <button type="button" class="tab" data-tab="clientpay" role="tab" aria-selected="false">Реестр оплат клиентов</button>
+        <button type="button" class="tab" data-tab="purchaseforecast" role="tab" aria-selected="false">Прогноз закупок</button>
         <button type="button" class="tab" data-tab="clientquality" role="tab" aria-selected="false">Качество работы с клиентами</button>
         <button type="button" class="tab" data-tab="clientqualitytv" role="tab" aria-selected="false">Качество работы с клиентами TV</button>
         <button type="button" class="tab" data-tab="seo" role="tab" aria-selected="false">Поиск SEO</button>
@@ -1866,6 +1924,7 @@
             <label><input type="checkbox" id="new-debtors"> Задолженность клиентов</label>
             <label><input type="checkbox" id="new-mbalance"> Управленческий баланс</label>
             <label><input type="checkbox" id="new-clientpay"> Реестр оплат клиентов</label>
+            <label><input type="checkbox" id="new-purchaseforecast"> Прогноз закупок</label>
             <label><input type="checkbox" id="new-clientquality"> Качество работы с клиентами</label>
             <label><input type="checkbox" id="new-clientqualitytv"> Качество работы с клиентами TV</label>
             <label><input type="checkbox" id="new-seo"> Поиск SEO</label>
@@ -2395,6 +2454,61 @@
         </form>
         <div id="clientpay-err" class="err" hidden></div>
         <div id="clientpay-report"></div>
+      </section>
+    </div>
+    <div id="tab-purchaseforecast" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Прогноз закупок</h2>
+        <p class="lead tab-intro">Обработка 1С для базы ecotidy (Первый интегратор): суточный расход готовых изделий × горизонт, затем разузлование основного варианта комплектации. Excel списка — по артикулам.</p>
+        <form class="pnl-toolbar" id="purchaseforecast-form">
+          <div>
+            <label for="purchaseforecast-horizon">Горизонт планирования</label>
+            <input id="purchaseforecast-horizon" type="number" min="0" step="1" value="10" required>
+          </div>
+          <button type="submit" id="purchaseforecast-run">Сформировать</button>
+        </form>
+        <div id="purchaseforecast-err" class="err" hidden></div>
+        <div class="pf-split">
+          <div class="pf-card">
+            <h3>Номенклатура для расчёта</h3>
+            <div class="pf-actions">
+              <button type="button" id="purchaseforecast-add">Добавить</button>
+              <button type="button" id="purchaseforecast-export">Выгрузить Excel</button>
+              <label class="pf-file">Загрузить Excel<input type="file" id="purchaseforecast-import" accept=".xls,.xlsx,.csv,application/vnd.ms-excel,text/csv"></label>
+            </div>
+            <div class="pf-scroll">
+              <table class="pnl" id="purchaseforecast-items-table">
+                <thead>
+                  <tr>
+                    <th>Артикул</th>
+                    <th>Номенклатура</th>
+                    <th class="num">Суточный расход</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="purchaseforecast-items-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="pf-card">
+            <h3>В заказ</h3>
+            <p class="pnl-note">После «Сформировать» здесь состав комплектующих. Колонку «В заказ» можно править и пересчитать.</p>
+            <div class="pf-scroll">
+              <table class="pnl" id="purchaseforecast-orders-table">
+                <thead>
+                  <tr>
+                    <th>Номенклатура</th>
+                    <th class="num">В заказ</th>
+                  </tr>
+                </thead>
+                <tbody id="purchaseforecast-orders-body">
+                  <tr><td colspan="2">Сначала сформируйте отчёт</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div id="purchaseforecast-report"></div>
       </section>
     </div>
     <div id="tab-clientquality" class="tab-panel" hidden>
@@ -5534,6 +5648,292 @@
       }
     }
 
+    let purchaseforecastLoaded = false;
+    let purchaseforecastInflight = false;
+    let purchaseforecastInitDone = false;
+    let purchaseforecastItems = [];
+    let purchaseforecastOrders = {};
+    let purchaseforecastLastReport = null;
+
+    function purchaseforecastErr(text) {
+      const el = document.getElementById("purchaseforecast-err");
+      if (!el) return;
+      if (!text) {
+        el.hidden = true;
+        el.textContent = "";
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+    }
+
+    function formatPfNum(value, digits = 2) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return "";
+      return new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 0, maximumFractionDigits: digits }).format(n);
+    }
+
+    function pfToneClass(value) {
+      const n = Number(value) || 0;
+      if (n > 0) return "num pf-pos";
+      if (n < 0) return "num pf-neg";
+      return "num";
+    }
+
+    function pfDaysClass(days, need, stock) {
+      const d = Number(days) || 0;
+      if (d <= 1) return "num pf-days-bad";
+      if (Number(need) <= Number(stock)) return "num pf-days-ok";
+      return "num";
+    }
+
+    function renderPurchaseForecastItems() {
+      const body = document.getElementById("purchaseforecast-items-body");
+      if (!body) return;
+      if (!purchaseforecastItems.length) {
+        body.innerHTML = `<tr><td colspan="4">Список пуст — добавьте строки или загрузите Excel</td></tr>`;
+        return;
+      }
+      body.innerHTML = purchaseforecastItems.map((row, idx) => `
+        <tr>
+          <td><input data-pf-item="article" data-idx="${idx}" value="${escapeHtml(row.article || "")}" placeholder="артикул"></td>
+          <td><input data-pf-item="name" data-idx="${idx}" value="${escapeHtml(row.name || "")}" placeholder="название (необязательно)"></td>
+          <td class="num"><input data-pf-item="dailyRate" data-idx="${idx}" type="number" step="0.01" value="${escapeHtml(String(row.dailyRate ?? 0))}"></td>
+          <td><button type="button" data-pf-remove="${idx}">Удалить</button></td>
+        </tr>`).join("");
+    }
+
+    function renderPurchaseForecastOrders(components) {
+      const body = document.getElementById("purchaseforecast-orders-body");
+      if (!body) return;
+      const rows = Array.isArray(components) ? components : [];
+      if (!rows.length) {
+        body.innerHTML = `<tr><td colspan="2">Сначала сформируйте отчёт</td></tr>`;
+        return;
+      }
+      body.innerHTML = rows.map((row) => {
+        const key = row.article || row.ref;
+        const val = purchaseforecastOrders[key] ?? row.inOrder ?? 0;
+        return `<tr>
+          <td class="name">${escapeHtml(row.name || "")}${row.article ? `<div class="meta">${escapeHtml(row.article)}</div>` : ""}</td>
+          <td class="num"><input data-pf-order="${escapeHtml(key)}" type="number" step="0.01" value="${escapeHtml(String(val))}"></td>
+        </tr>`;
+      }).join("");
+    }
+
+    function collectPurchaseForecastOrdersFromDom() {
+      const out = { ...purchaseforecastOrders };
+      for (const input of document.querySelectorAll("#purchaseforecast-orders-body input[data-pf-order]")) {
+        const key = input.getAttribute("data-pf-order");
+        if (!key) continue;
+        out[key] = Number(String(input.value).replace(",", ".")) || 0;
+      }
+      purchaseforecastOrders = out;
+      return out;
+    }
+
+    function renderPurchaseForecast(report) {
+      const box = document.getElementById("purchaseforecast-report");
+      if (!box) return;
+      purchaseforecastLastReport = report;
+      if (!report) {
+        box.innerHTML = "";
+        return;
+      }
+      renderPurchaseForecastOrders(report.components || []);
+      const warn = (report.warnings || []).length
+        ? `<p class="pnl-warn">${report.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
+        : "";
+      const note = report.note ? `<p class="pnl-note">${escapeHtml(report.note)}</p>` : "";
+      const meta = report.meta
+        ? `<p class="pnl-note">Изделий: ${escapeHtml(String(report.meta.productCount || 0))} · комплектующих: ${escapeHtml(String(report.meta.componentCount || 0))} · горизонт ${escapeHtml(String(report.horizon))} · ${escapeHtml(report.organization || "")}</p>`
+        : "";
+      const products = (report.products || []).map((row) => `
+        <tr>
+          <td class="name">${escapeHtml(row.name)}<div class="meta">${escapeHtml(row.article || "")}</div></td>
+          <td class="${pfToneClass(row.dailyRate)}">${formatPfNum(row.dailyRate)}</td>
+          <td class="num">${formatPfNum(row.horizon, 0)}</td>
+          <td class="num">${formatPfNum(row.required)}</td>
+          <td class="num">${formatPfNum(row.stock)}</td>
+          <td class="${pfToneClass(row.qtyForCalc)}">${formatPfNum(row.qtyForCalc)}</td>
+        </tr>`).join("");
+      const components = (report.components || []).map((row) => `
+        <tr>
+          <td class="name">${escapeHtml(row.name)}${row.article ? `<div class="meta">${escapeHtml(row.article)}</div>` : ""}</td>
+          <td class="${pfToneClass(row.need)}">${formatPfNum(row.need, 4)}</td>
+          <td class="num">${formatPfNum(row.stock, 4)}</td>
+          <td class="${pfDaysClass(row.days, row.need, row.stock)}">${formatPfNum(row.days, 0)}</td>
+          <td class="num">${formatPfNum(row.ordered, 4)}</td>
+          <td class="num">${formatPfNum(row.inOrder, 4)}</td>
+          <td class="${pfToneClass(row.toOrder)}">${formatPfNum(row.toOrder, 4)}</td>
+        </tr>`).join("");
+      box.innerHTML = warn + note + meta + `
+        <div class="pnl-section">
+          <h3>Потребность по изделиям</h3>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead>
+              <tr>
+                <th>Номенклатура</th>
+                <th class="num">Дневной расход</th>
+                <th class="num">Горизонт</th>
+                <th class="num">Требуется</th>
+                <th class="num">В наличии</th>
+                <th class="num">Количество для расчёта</th>
+              </tr>
+            </thead>
+            <tbody>${products || `<tr><td colspan="6">Нет данных</td></tr>`}</tbody>
+          </table></div>
+        </div>
+        <div class="pnl-section">
+          <h3>К заказу по комплектующим</h3>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead>
+              <tr>
+                <th>Номенклатура</th>
+                <th class="num">Потребность</th>
+                <th class="num">В наличии</th>
+                <th class="num">В днях</th>
+                <th class="num">Заказано</th>
+                <th class="num">Заказ</th>
+                <th class="num">К заказу</th>
+              </tr>
+            </thead>
+            <tbody>${components || `<tr><td colspan="7">Нет данных</td></tr>`}</tbody>
+          </table></div>
+        </div>`;
+      afterReportPaint();
+    }
+
+    async function initPurchaseForecastTab() {
+      if (USER.tabs?.purchaseforecast === false) return;
+      if (purchaseforecastInitDone) return;
+      try {
+        const data = await api("/api/purchaseforecast", { method: "GET" });
+        const settings = data.settings || {};
+        const horizonEl = document.getElementById("purchaseforecast-horizon");
+        if (horizonEl) horizonEl.value = String(settings.horizon ?? 10);
+        purchaseforecastItems = Array.isArray(settings.items)
+          ? settings.items.map((row) => ({
+              article: String(row.article || "").trim(),
+              name: String(row.name || "").trim(),
+              dailyRate: Number(row.dailyRate) || 0,
+            }))
+          : [];
+        purchaseforecastOrders = settings.orders && typeof settings.orders === "object" ? { ...settings.orders } : {};
+        renderPurchaseForecastItems();
+        purchaseforecastInitDone = true;
+      } catch (e) {
+        purchaseforecastErr(e.message || String(e));
+      }
+    }
+
+    async function loadPurchaseForecastReport() {
+      if (USER.tabs?.purchaseforecast === false || purchaseforecastInflight) return;
+      await initPurchaseForecastTab();
+      purchaseforecastInflight = true;
+      const btn = document.getElementById("purchaseforecast-run");
+      if (btn) btn.disabled = true;
+      purchaseforecastErr("");
+      document.getElementById("purchaseforecast-report").innerHTML = `<p class="pnl-note">Считаем прогноз закупок по ecotidy…</p>`;
+      try {
+        const horizon = Number(document.getElementById("purchaseforecast-horizon")?.value || 10);
+        const items = purchaseforecastItems
+          .map((row) => ({
+            article: String(row.article || "").trim(),
+            name: String(row.name || "").trim(),
+            dailyRate: Number(row.dailyRate) || 0,
+          }))
+          .filter((row) => row.article);
+        const orders = collectPurchaseForecastOrdersFromDom();
+        const report = await api("/api/purchaseforecast", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ horizon, items, orders, persist: true }),
+        });
+        if (Array.isArray(report.items)) {
+          purchaseforecastItems = report.items.map((row) => ({
+            article: row.article,
+            name: row.name || "",
+            dailyRate: row.dailyRate,
+          }));
+          renderPurchaseForecastItems();
+        }
+        for (const row of report.components || []) {
+          const key = row.article || row.ref;
+          purchaseforecastOrders[key] = row.inOrder || 0;
+        }
+        purchaseforecastLoaded = true;
+        renderPurchaseForecast(report);
+      } catch (e) {
+        purchaseforecastLoaded = false;
+        renderPurchaseForecast(null);
+        purchaseforecastErr(e.message || String(e));
+      } finally {
+        purchaseforecastInflight = false;
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function exportPurchaseForecastItemsExcel() {
+      const rows = [
+        ["Артикул", "Номенклатура", "СуточныйРасход"],
+        ...purchaseforecastItems.map((row) => [row.article || "", row.name || "", row.dailyRate || 0]),
+      ];
+      const xml = sheetsToExcelXml("Прогноз закупок", [{ name: "Номенклатура", rows }]);
+      downloadBlob("прогноз-закупок-номенклатура.xls", "application/vnd.ms-excel;charset=utf-8", xml);
+    }
+
+    function parsePurchaseForecastImportText(text) {
+      const raw = String(text || "").replace(/^\uFEFF/, "");
+      if (raw.includes("<Worksheet") || raw.includes("<Table")) {
+        const doc = new DOMParser().parseFromString(raw, "text/xml");
+        const tableRows = [...doc.querySelectorAll("Row")].map((row) =>
+          [...row.querySelectorAll("Cell")].map((cell) => cell.querySelector("Data")?.textContent?.trim() || "")
+        );
+        return tableRows;
+      }
+      return raw.split(/\r?\n/).filter((line) => line.trim()).map((line) => {
+        if (line.includes(";")) return line.split(";").map((c) => c.trim().replace(/^"|"$/g, ""));
+        if (line.includes("\t")) return line.split("\t").map((c) => c.trim());
+        return line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+      });
+    }
+
+    async function importPurchaseForecastItemsExcel(file) {
+      try {
+        const text = await file.text();
+        const matrix = parsePurchaseForecastImportText(text);
+        if (!matrix.length) throw new Error("Файл пустой");
+        const header = matrix[0].map((c) => String(c || "").trim().toLowerCase());
+        let articleIdx = header.findIndex((c) => c === "артикул" || c === "article");
+        let nameIdx = header.findIndex((c) => c === "номенклатура" || c === "название" || c === "name");
+        let rateIdx = header.findIndex((c) => c.includes("суточн") || c === "dailyrate" || c === "расход");
+        let start = 1;
+        if (articleIdx < 0) {
+          articleIdx = 0;
+          nameIdx = 1;
+          rateIdx = 2;
+          start = 0;
+        }
+        const next = [];
+        for (const row of matrix.slice(start)) {
+          const article = String(row[articleIdx] || "").trim();
+          if (!article || /^артикул$/i.test(article)) continue;
+          next.push({
+            article,
+            name: String(row[nameIdx] || "").trim(),
+            dailyRate: Number(String(row[rateIdx] || "0").replace(",", ".")) || 0,
+          });
+        }
+        if (!next.length) throw new Error("В файле нет строк с артикулами");
+        purchaseforecastItems = next;
+        renderPurchaseForecastItems();
+        purchaseforecastErr("");
+      } catch (e) {
+        purchaseforecastErr(e.message || String(e));
+      }
+    }
+
     let clientqualityLoaded = false;
     let clientqualityInflight = false;
 
@@ -6466,7 +6866,7 @@
       }
     }
 
-    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "ozonstocks", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
+    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "ozonstocks", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "purchaseforecast", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
     const TAB_LABELS = {
       hours: "Часы",
       activity: "Активность",
@@ -6487,6 +6887,7 @@
       debtors: "Задолженность",
       mbalance: "Упр. баланс",
       clientpay: "Оплаты клиентов",
+      purchaseforecast: "Прогноз закупок",
       clientquality: "Качество работы с клиентами",
       clientqualitytv: "Качество работы с клиентами TV",
       seo: "Поиск SEO",
@@ -6761,6 +7162,12 @@
         await loadClientPayReport();
         return;
       }
+      if (name === "purchaseforecast") {
+        purchaseforecastLoaded = false;
+        await initPurchaseForecastTab();
+        await loadPurchaseForecastReport();
+        return;
+      }
       if (name === "clientquality") {
         clientqualityLoaded = false;
         await loadClientQualityReport();
@@ -6879,6 +7286,7 @@
       document.getElementById("tab-debtors").hidden = name !== "debtors";
       document.getElementById("tab-mbalance").hidden = name !== "mbalance";
       document.getElementById("tab-clientpay").hidden = name !== "clientpay";
+      document.getElementById("tab-purchaseforecast").hidden = name !== "purchaseforecast";
       document.getElementById("tab-clientquality").hidden = name !== "clientquality";
       document.getElementById("tab-clientqualitytv").hidden = name !== "clientqualitytv";
       document.getElementById("tab-seo").hidden = name !== "seo";
@@ -6896,7 +7304,7 @@
       if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
       document.body.classList.toggle(
         "wide-report",
-        name === "plan" || name === "budget" || name === "ozondrr" || name === "ozonfbs" || name === "ozonfbo" || name === "ozonfbofilters" || name === "ozonstocks" || name === "units" || name === "wb" || name === "wbfbs" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "clientquality" || name === "clientqualitytv" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
+        name === "plan" || name === "budget" || name === "ozondrr" || name === "ozonfbs" || name === "ozonfbo" || name === "ozonfbofilters" || name === "ozonstocks" || name === "units" || name === "wb" || name === "wbfbs" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "purchaseforecast" || name === "clientquality" || name === "clientqualitytv" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
       );
       document.body.classList.remove("wide-plan");
       if (name === "settings") loadSettingsTabOrder();
@@ -6908,6 +7316,7 @@
       }
       if (name === "wbfbs") loadWbFbsSupplies();
       if (name === "clientpay") loadClientPayBankDate();
+      if (name === "purchaseforecast") initPurchaseForecastTab();
       if (name === "clientquality") loadClientQualityReport();
       if (name === "clientqualitytv") loadClientQualityTvReport();
       if (name === "cache") loadCacheBoard();
@@ -7156,6 +7565,7 @@
         ["debtors", "Задолженность"],
         ["mbalance", "Упр. баланс"],
         ["clientpay", "Оплаты клиентов"],
+        ["purchaseforecast", "Прогноз закупок"],
         ["clientquality", "Качество работы с клиентами"],
         ["clientqualitytv", "Качество работы с клиентами TV"],
         ["seo", "Поиск SEO"],
@@ -7613,6 +8023,7 @@
               debtors: document.getElementById("new-debtors").checked,
               mbalance: document.getElementById("new-mbalance").checked,
               clientpay: document.getElementById("new-clientpay").checked,
+              purchaseforecast: document.getElementById("new-purchaseforecast").checked,
               clientquality: document.getElementById("new-clientquality").checked,
               clientqualitytv: document.getElementById("new-clientqualitytv").checked,
               seo: document.getElementById("new-seo").checked,
@@ -9207,6 +9618,38 @@ ${body}
       e.preventDefault();
       clientpayLoaded = false;
       loadClientPayReport();
+    });
+    document.getElementById("purchaseforecast-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      purchaseforecastLoaded = false;
+      loadPurchaseForecastReport();
+    });
+    document.getElementById("purchaseforecast-add")?.addEventListener("click", () => {
+      purchaseforecastItems.push({ article: "", name: "", dailyRate: 0 });
+      renderPurchaseForecastItems();
+    });
+    document.getElementById("purchaseforecast-export")?.addEventListener("click", exportPurchaseForecastItemsExcel);
+    document.getElementById("purchaseforecast-import")?.addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (file) importPurchaseForecastItemsExcel(file);
+    });
+    document.getElementById("purchaseforecast-items-body")?.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-pf-remove]");
+      if (!btn) return;
+      const idx = Number(btn.getAttribute("data-pf-remove"));
+      if (!Number.isFinite(idx)) return;
+      purchaseforecastItems.splice(idx, 1);
+      renderPurchaseForecastItems();
+    });
+    document.getElementById("purchaseforecast-items-body")?.addEventListener("change", (e) => {
+      const input = e.target.closest("input[data-pf-item]");
+      if (!input) return;
+      const idx = Number(input.getAttribute("data-idx"));
+      const field = input.getAttribute("data-pf-item");
+      if (!purchaseforecastItems[idx]) return;
+      if (field === "dailyRate") purchaseforecastItems[idx].dailyRate = Number(String(input.value).replace(",", ".")) || 0;
+      else purchaseforecastItems[idx][field] = String(input.value || "").trim();
     });
     document.getElementById("clientquality-form").addEventListener("submit", (e) => {
       e.preventDefault();

@@ -8,7 +8,7 @@ const USERS_FILE = join(root, "users.json");
 const USERS_TMP = join(root, "users.json.tmp");
 const COOKIE = "dash_session";
 const SESSION_MS = 14 * 24 * 60 * 60 * 1000;
-const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "ozonstocks", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
+const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "ozonstocks", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "purchaseforecast", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
 
 const TAB_LABELS = {
   hours: "Часы",
@@ -30,6 +30,7 @@ const TAB_LABELS = {
   debtors: "Задолженность клиентов",
   mbalance: "Управленческий баланс",
   clientpay: "Реестр оплат клиентов",
+  purchaseforecast: "Прогноз закупок",
   clientquality: "Качество работы с клиентами",
   clientqualitytv: "Качество работы с клиентами TV",
   seo: "Поиск SEO",
@@ -246,6 +247,10 @@ export function ensureAuthReady() {
       user.tabs.wbfbs = !!user.tabs.wb;
       changed = true;
     }
+    if (user.tabs.purchaseforecast == null) {
+      user.tabs.purchaseforecast = !!user.admin;
+      changed = true;
+    }
     if (user.tabs.clientquality == null) {
       // Новая доска: админам сразу, остальным — вручную.
       user.tabs.clientquality = !!user.admin;
@@ -458,6 +463,7 @@ export function filterDashboardData(data, user) {
   if (!tabs.debtors) out.debtors = null;
   if (!tabs.mbalance) out.mbalance = null;
   if (!tabs.clientpay) out.clientpay = null;
+  if (!tabs.purchaseforecast) out.purchaseforecast = null;
   if (!tabs.clientquality) out.clientquality = null;
   if (!tabs.clientqualitytv) out.clientqualitytv = null;
   return out;
