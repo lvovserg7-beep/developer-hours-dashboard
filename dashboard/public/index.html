@@ -1528,6 +1528,57 @@
       border: 1px solid var(--line);
       background: var(--card);
     }
+    .admin-update {
+      border: 1px solid var(--line);
+      background: var(--card);
+      padding: 14px 16px;
+      margin: 0 0 22px;
+    }
+    .admin-update h3 { margin: 0 0 8px; font-size: 16px; font-weight: 700; }
+    .admin-update-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 8px 16px;
+      margin: 0 0 12px;
+      font-size: var(--fs-sm);
+    }
+    .admin-update-grid dt { color: var(--muted); margin: 0; }
+    .admin-update-grid dd { margin: 2px 0 0; font-weight: 600; }
+    .admin-update-actions { display: flex; flex-wrap: wrap; gap: 10px 12px; align-items: center; }
+    .admin-update-actions select {
+      font: inherit;
+      font-size: var(--fs-sm);
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+    }
+    .admin-update-actions button {
+      appearance: none;
+      padding: 8px 14px;
+      font: inherit;
+      font-size: var(--fs-sm);
+      font-weight: var(--weight);
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .admin-update-actions button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .admin-update-actions button:disabled { opacity: 0.45; cursor: default; }
+    .admin-update-note { margin: 10px 0 0; font-size: var(--fs-sm); color: var(--muted); }
+    .admin-update-log {
+      margin: 10px 0 0;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      background: var(--bg, transparent);
+      font: 12px/1.45 Consolas, monospace;
+      white-space: pre-wrap;
+    }
     .admin-checks { display: flex; flex-wrap: wrap; gap: 10px 14px; padding-bottom: 6px; }
     .admin-checks label { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; color: var(--ink); }
     .admin-form button {
@@ -2010,6 +2061,23 @@
     </div>
     <div id="tab-admin" class="tab-panel" hidden>
       <section class="panel">
+        <div class="admin-update" id="admin-update">
+          <h3>Обновление проекта</h3>
+          <p class="meta">Подтягивает с GitHub стабильный тег и перезапускает сервер (вместо команд на Linux). Файлы <code>.env</code> и <code>users.json</code> не меняются. Доступно только администраторам.</p>
+          <dl class="admin-update-grid">
+            <div><dt>Сейчас на сервере</dt><dd id="upd-current">…</dd></div>
+            <div><dt>Последняя стабильная</dt><dd id="upd-latest">…</dd></div>
+            <div><dt>Перезапуск</dt><dd id="upd-restart">…</dd></div>
+          </dl>
+          <div class="admin-update-actions">
+            <button type="button" id="upd-check">Проверить обновления</button>
+            <select id="upd-tag" aria-label="Версия для установки"></select>
+            <button type="button" class="primary" id="upd-run" disabled>Обновить</button>
+          </div>
+          <p class="admin-update-note" id="upd-note"></p>
+          <div id="upd-err" class="err" hidden></div>
+          <pre class="admin-update-log" id="upd-log" hidden></pre>
+        </div>
         <h2 class="tab-intro">Пользователи и права</h2>
         <p class="lead tab-intro">Администратор создаёт учётки, включает доски, задаёт порядок вкладок, тему оформления и права администратора.</p>
         <form class="admin-form" id="user-create">
@@ -7611,7 +7679,10 @@
       if (name === "clientquality") loadClientQualityReport();
       if (name === "clientqualitytv") loadClientQualityTvReport();
       if (name === "cache") loadCacheBoard();
-      if (name === "admin") loadAdminUsers();
+      if (name === "admin") {
+        loadAdminUsers();
+        loadAdminUpdate(false);
+      }
       if (name === "activity" && data?.activity) fillActivityFilters(data.activity);
       // В обычном режиме отчёты только по «Сформировать»; часы/активность — при открытии вкладки.
       if (
@@ -7978,6 +8049,143 @@
       applyUserUi();
       loadSettingsTabOrder();
     }
+
+    let adminUpdateBusy = false;
+    let adminUpdateStatus = null;
+
+    function updErr(text) {
+      const el = document.getElementById("upd-err");
+      if (!el) return;
+      el.hidden = !text;
+      el.textContent = text || "";
+    }
+
+    function updLog(lines) {
+      const el = document.getElementById("upd-log");
+      if (!el) return;
+      const text = Array.isArray(lines) ? lines.join("\n") : String(lines || "");
+      el.hidden = !text;
+      el.textContent = text;
+    }
+
+    function renderAdminUpdate(status) {
+      adminUpdateStatus = status;
+      document.getElementById("upd-current").textContent = status.current || status.appVersion || "—";
+      document.getElementById("upd-latest").textContent = status.latest || "—";
+      const modes = {
+        pm2: "автоматически (pm2)",
+        systemd: "автоматически (systemd)",
+        loop: "автоматически (start.cmd / start.sh)",
+        manual: "вручную (процесс без надзора)",
+      };
+      document.getElementById("upd-restart").textContent = modes[status.restartMode] || status.restartMode || "—";
+      const select = document.getElementById("upd-tag");
+      const tags = status.tags?.length ? status.tags : status.latest ? [status.latest] : [];
+      select.innerHTML = tags
+        .map((t) => {
+          const label = t === status.latest ? `${t} (последняя)` : t === status.current ? `${t} (текущая)` : t;
+          return `<option value="${escapeHtml(t)}">${escapeHtml(label)}</option>`;
+        })
+        .join("");
+      if (status.latest) select.value = status.latest;
+      const runBtn = document.getElementById("upd-run");
+      runBtn.disabled = !status.canUpdate || !select.value || adminUpdateBusy;
+      runBtn.textContent = select.value && select.value !== status.current ? `Обновить до ${select.value}` : "Обновить";
+      const notes = [];
+      if (status.updateAvailable) notes.push(`Доступна новая версия ${status.latest}.`);
+      else if (status.latest && status.current === status.latest) notes.push("Установлена последняя стабильная версия.");
+      if (status.warning) notes.push(status.warning);
+      if (status.restartMode === "manual") {
+        notes.push("После обновления перезапустите процесс вручную (start.cmd / pm2 restart server).");
+      }
+      document.getElementById("upd-note").textContent = notes.join(" ");
+    }
+
+    async function loadAdminUpdate(check) {
+      if (!USER.admin || !document.getElementById("admin-update")) return;
+      try {
+        updErr("");
+        const status = await api("/api/admin/update" + (check ? "?check=1" : ""));
+        renderAdminUpdate(status);
+      } catch (e) {
+        updErr(e.message || String(e));
+      }
+    }
+
+    async function waitForServerAfterUpdate(targetTag) {
+      const note = document.getElementById("upd-note");
+      const started = Date.now();
+      await new Promise((r) => setTimeout(r, 3000));
+      while (Date.now() - started < 90_000) {
+        try {
+          const res = await fetch("/api/admin/update", { credentials: "same-origin", cache: "no-store" });
+          if (res.ok) {
+            const status = await res.json();
+            if (!targetTag || status.current === targetTag) {
+              note.textContent = `Сервер обновлён до ${status.current}. Перезагружаю страницу…`;
+              setTimeout(() => location.reload(), 800);
+              return;
+            }
+          }
+        } catch {
+          /* сервер ещё поднимается */
+        }
+        note.textContent = "Сервер перезапускается…";
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      note.textContent = "Сервер долго не отвечает. Обновите страницу позже или проверьте pm2 status.";
+    }
+
+    async function runAdminUpdate() {
+      if (!USER.admin || adminUpdateBusy) return;
+      const tag = document.getElementById("upd-tag").value;
+      if (!tag) return;
+      const current = adminUpdateStatus?.current || "";
+      if (!confirm(`Обновить проект: ${current || "?"} → ${tag}? Сервер перезапустится, на минуту доски могут быть недоступны.`)) return;
+      adminUpdateBusy = true;
+      const runBtn = document.getElementById("upd-run");
+      const checkBtn = document.getElementById("upd-check");
+      runBtn.disabled = true;
+      checkBtn.disabled = true;
+      updErr("");
+      updLog(["Выполняется обновление…"]);
+      try {
+        const result = await api("/api/admin/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tag }),
+        });
+        updLog(result.log || []);
+        if (!result.changed) {
+          document.getElementById("upd-note").textContent = "Версия не изменилась.";
+        } else if (result.restart && result.restart !== "manual" && result.restart !== "none") {
+          await waitForServerAfterUpdate(result.to);
+          return;
+        } else {
+          document.getElementById("upd-note").textContent =
+            `Код обновлён до ${result.to}. Перезапустите сервер вручную (pm2 restart server).`;
+        }
+        await loadAdminUpdate(false);
+      } catch (e) {
+        updErr(e.message || String(e));
+        updLog("");
+      } finally {
+        adminUpdateBusy = false;
+        runBtn.disabled = false;
+        checkBtn.disabled = false;
+        if (adminUpdateStatus) renderAdminUpdate(adminUpdateStatus);
+      }
+    }
+
+    document.getElementById("upd-check")?.addEventListener("click", () => loadAdminUpdate(true));
+    document.getElementById("upd-run")?.addEventListener("click", runAdminUpdate);
+    document.getElementById("upd-tag")?.addEventListener("change", () => {
+      const select = document.getElementById("upd-tag");
+      const runBtn = document.getElementById("upd-run");
+      const current = adminUpdateStatus?.current || "";
+      runBtn.disabled = !adminUpdateStatus?.canUpdate || !select.value || adminUpdateBusy;
+      runBtn.textContent = select.value && select.value !== current ? `Обновить до ${select.value}` : "Обновить";
+    });
 
     async function loadAdminUsers() {
       if (!USER.admin) return;

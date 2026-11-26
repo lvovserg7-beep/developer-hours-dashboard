@@ -51,7 +51,7 @@ while true; do
   echo "On start: snapshot first, then 1C hours and SEO in background."
   echo "If the process exits, it will restart in 5 seconds. Ctrl+C to stop."
   set +e
-  node server.mjs
+  DASHBOARD_SUPERVISED=1 node server.mjs
   EXITCODE=$?
   set -e
   echo

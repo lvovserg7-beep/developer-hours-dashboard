@@ -64,6 +64,7 @@ import {
   trailingCachePeriod,
 } from "./lib/board-cache.mjs";
 import { reloadBoardCache } from "./lib/reload-board-cache.mjs";
+import { getUpdateStatus, runSelfUpdate, restartProcessSoon } from "./lib/self-update.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 
@@ -816,6 +817,32 @@ const server = createServer(async (req, res) => {
           });
         } catch (err) {
           return json(res, 400, { error: String(err.message || err) });
+        }
+      }
+      return json(res, 405, { error: "Метод не поддерживается" });
+    }
+
+    if (path === "/api/admin/update") {
+      if (!user.admin) return json(res, 403, { error: "Нужны права администратора" });
+      if (req.method === "GET") {
+        try {
+          const status = await getUpdateStatus({ fetch: url.searchParams.get("check") === "1" });
+          return json(res, 200, status);
+        } catch (err) {
+          return json(res, 502, { error: String(err.message || err) });
+        }
+      }
+      if (req.method === "POST") {
+        try {
+          const body = await readJson(req);
+          console.log(`[update] ${user.login || user.id} запросил обновление${body?.tag ? ` до ${body.tag}` : ""}`);
+          const result = await runSelfUpdate({ tag: body?.tag });
+          const restart = result.changed ? restartProcessSoon() : "none";
+          return json(res, 200, { ...result, restart });
+        } catch (err) {
+          const msg = String(err.message || err);
+          console.error("[update]", msg);
+          return json(res, 400, { error: msg });
         }
       }
       return json(res, 405, { error: "Метод не поддерживается" });
