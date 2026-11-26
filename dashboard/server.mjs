@@ -32,6 +32,17 @@ import {
   savePurchaseForecastSettings,
   searchNomenclature,
 } from "./lib/load-purchase-forecast.mjs";
+import {
+  buildWbSupplyReport,
+  getWbSupplyKnownArticles,
+  getWbSupplyMeta,
+  getWbSupplyOptions,
+  getWbSupplyRefreshState,
+  loadWbSupplySettings,
+  refreshWbSupplyCatalogOnly,
+  saveWbSupplySettings,
+  startWbSupplyRefresh,
+} from "./lib/load-wb-supply.mjs";
 import { loadClientQuality, loadClientQualityTv, ingestClientQualityEvents } from "./lib/load-client-quality.mjs";
 import { loadSeoReport, loadSeoProductsReport, loadSeoPositionsReport, refreshSeoTrailingCache, attachYandexSqi } from "./lib/load-seo.mjs";
 import {
@@ -1237,6 +1248,59 @@ const server = createServer(async (req, res) => {
         }
       }
       return json(res, 405, { error: "Метод не поддерживается" });
+    }
+
+    if (path.startsWith("/api/wbsupply")) {
+      if (!userHasTab(user, "wbsupply")) {
+        return json(res, 403, { error: "Нет доступа к вкладке «Расчёт поставки ВБ»." });
+      }
+      try {
+        if (path === "/api/wbsupply" && req.method === "GET") {
+          const meta = getWbSupplyMeta();
+          // Первая загрузка или устаревшие данные — обновляем в фоне.
+          if (meta.configured && (!meta.hasData || meta.stale)) startWbSupplyRefresh();
+          // Справочник 1С со всеми товарными категориями — отдельно от WB, подгружаем сразу.
+          if (meta.hasData && !meta.catalogFull) {
+            await refreshWbSupplyCatalogOnly().catch((e) => console.warn("wbsupply catalog:", e.message || e));
+          }
+          return json(res, 200, {
+            settings: loadWbSupplySettings(user.id),
+            options: getWbSupplyOptions(),
+            meta: getWbSupplyMeta(),
+          });
+        }
+        if (path === "/api/wbsupply" && req.method === "POST") {
+          const body = await readJson(req);
+          const params = body?.params || {};
+          const settings = body?.persist === false ? params : saveWbSupplySettings(user.id, params);
+          const meta = getWbSupplyMeta();
+          if (!meta.hasData) return json(res, 200, { noData: true, settings, meta });
+          const asOf = String(url.searchParams.get("asOf") || "");
+          const today = /^\d{4}-\d{2}-\d{2}$/.test(asOf) ? asOf : undefined;
+          return json(res, 200, { report: buildWbSupplyReport(settings, { today }), settings });
+        }
+        if (path === "/api/wbsupply/refresh" && req.method === "POST") {
+          const body = await readJson(req).catch(() => ({}));
+          const started = startWbSupplyRefresh({ full: body?.full === true });
+          return json(res, 200, { started, state: getWbSupplyRefreshState(), meta: getWbSupplyMeta() });
+        }
+        if (path === "/api/wbsupply/nomenclature" && req.method === "GET") {
+          const data = await searchNomenclature(String(url.searchParams.get("q") || "").trim());
+          const known = getWbSupplyKnownArticles();
+          return json(res, 200, {
+            ...data,
+            rows: (data.rows || []).map((r) => ({ ...r, inWb: Boolean(r.article && known.has(r.article)) })),
+          });
+        }
+        if (path === "/api/wbsupply/state" && req.method === "GET") {
+          return json(res, 200, { meta: getWbSupplyMeta() });
+        }
+        return json(res, 404, { error: "Не найдено" });
+      } catch (err) {
+        const msg = String(err.message || err);
+        console.error(err);
+        return json(res, 502, { error: msg });
+      }
     }
 
     if (path === "/api/mbalance") {

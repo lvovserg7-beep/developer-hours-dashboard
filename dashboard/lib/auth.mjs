@@ -8,7 +8,7 @@ const USERS_FILE = join(root, "users.json");
 const USERS_TMP = join(root, "users.json.tmp");
 const COOKIE = "dash_session";
 const SESSION_MS = 14 * 24 * 60 * 60 * 1000;
-const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "ozonstocks", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "purchaseforecast", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
+const TABS = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "ozonstocks", "wb", "wbfbs", "wbsupply", "debtors", "mbalance", "clientpay", "purchaseforecast", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
 
 const TAB_LABELS = {
   hours: "Часы",
@@ -27,6 +27,7 @@ const TAB_LABELS = {
   ozonstocks: "Остатки по складам Озон",
   wb: "WB рентабельность",
   wbfbs: "Поставки ФБС WB",
+  wbsupply: "Расчёт поставки ВБ",
   debtors: "Задолженность клиентов",
   mbalance: "Управленческий баланс",
   clientpay: "Реестр оплат клиентов",
@@ -203,6 +204,7 @@ export function ensureAuthReady() {
           ozonstocks: true,
           wb: true,
           wbfbs: true,
+          wbsupply: true,
           debtors: true,
           mbalance: true,
           clientpay: true,
@@ -245,6 +247,10 @@ export function ensureAuthReady() {
     }
     if (user.tabs.wbfbs == null) {
       user.tabs.wbfbs = !!user.tabs.wb;
+      changed = true;
+    }
+    if (user.tabs.wbsupply == null) {
+      user.tabs.wbsupply = !!user.admin;
       changed = true;
     }
     if (user.tabs.purchaseforecast == null) {

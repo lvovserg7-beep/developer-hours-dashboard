@@ -195,9 +195,70 @@
     body.wide-report:not(.is-full) #tab-debtors .panel,
     body.wide-report:not(.is-full) #tab-mbalance .panel,
     body.wide-report:not(.is-full) #tab-clientpay .panel,
+    body.wide-report:not(.is-full) #tab-wbsupply .panel,
     body.wide-report:not(.is-full) #tab-purchaseforecast .panel {
       width: 100%;
     }
+    .wsp-toolbar { align-items: flex-end; flex-wrap: wrap; gap: 10px 14px; }
+    .wsp-toolbar input[type="number"] { width: 118px; }
+    .wsp-pick { position: relative; }
+    .wsp-pick > summary {
+      cursor: pointer;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+      padding: 7px 10px;
+      min-width: 190px;
+      max-width: 260px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: var(--fs);
+    }
+    .wsp-pick[open] > summary { border-color: var(--accent); }
+    .wsp-pick-body {
+      position: absolute;
+      z-index: 40;
+      top: 100%;
+      left: 0;
+      margin-top: 4px;
+      width: 380px;
+      max-width: 92vw;
+      max-height: 380px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      background: var(--card);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+      padding: 8px 10px;
+    }
+    .wsp-pick-body label { display: flex; align-items: flex-start; gap: 6px; padding: 3px 0; font-size: var(--fs-sm); cursor: pointer; }
+    .wsp-pick-body label input { margin-top: 2px; }
+    .wsp-pick-search { width: 100%; box-sizing: border-box; margin-bottom: 6px; }
+    .wsp-pick-tools { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .wsp-sku-actions { display: flex; align-items: center; gap: 8px; min-height: 34px; }
+    .wsp-chips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 96px; overflow: auto; margin: 0 0 10px; }
+    .wsp-chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); background: var(--accent-soft); padding: 2px 4px 2px 8px; font-size: var(--fs-sm); }
+    .wsp-chip button { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 4px; }
+    .wsp-chip button:hover { color: var(--bad); }
+    .wsp-adv { margin: 4px 0 10px; border: 1px solid var(--line); background: var(--card); padding: 8px 12px; }
+    .wsp-adv > summary { cursor: pointer; font-weight: var(--weight-strong); }
+    .wsp-adv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 16px; margin-top: 10px; align-items: start; }
+    .wsp-adv-grid label { display: block; font-size: var(--fs-sm); color: var(--muted); margin-bottom: 3px; }
+    .wsp-adv-grid label.wsp-check { color: var(--ink); display: flex; gap: 6px; align-items: flex-start; grid-column: 1 / -1; }
+    .wsp-adv-grid input[type="number"] { width: 110px; }
+    .wsp-adv-tools { margin-top: 8px; }
+    .wsp-h4 { margin: 14px 0 0; font-size: var(--fs); }
+    table.pnl tr.wsp-row { cursor: pointer; }
+    table.pnl tr.wsp-row:hover td { background: var(--accent-soft); }
+    table.pnl td.wsp-pos { color: var(--accent); font-weight: var(--weight-strong); }
+    table.pnl td.wsp-zero { color: var(--muted); }
+    table.pnl td.wsp-out { box-shadow: inset 3px 0 0 var(--bad); }
+    table.pnl td.wsp-total { font-weight: var(--weight-strong); background: var(--th); }
+    table.pnl tr.wsp-skipped td { opacity: 0.55; }
+    .wsp-caret { display: inline-block; width: 1em; color: var(--muted); }
+    tr.wsp-detail > td { background: var(--th); padding: 10px 14px 14px; }
+    .wsp-detail-meta { font-size: var(--fs-sm); color: var(--muted); margin: 0 0 8px; }
+    table.pnl.wsp-inner th, table.pnl.wsp-inner td { font-size: var(--fs-sm); padding: 5px 8px; }
     .pf-split {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -242,7 +303,8 @@
     .pf-card .pf-actions label.pf-file input {
       display: none;
     }
-    #pf-nomen-modal {
+    #pf-nomen-modal,
+    #wsp-nomen-modal {
       position: fixed;
       inset: 0;
       z-index: 90;
@@ -252,7 +314,8 @@
       justify-content: center;
       padding: 16px;
     }
-    #pf-nomen-modal.is-open { display: flex; }
+    #pf-nomen-modal.is-open,
+    #wsp-nomen-modal.is-open { display: flex; }
     .pf-nomen-dialog {
       width: min(720px, 96vw);
       max-height: min(80vh, 720px);
@@ -1972,6 +2035,7 @@
         <button type="button" class="tab" data-tab="debtors" role="tab" aria-selected="false">Задолженность клиентов</button>
         <button type="button" class="tab" data-tab="mbalance" role="tab" aria-selected="false">Управленческий баланс</button>
         <button type="button" class="tab" data-tab="clientpay" role="tab" aria-selected="false">Реестр оплат клиентов</button>
+        <button type="button" class="tab" data-tab="wbsupply" role="tab" aria-selected="false">Расчёт поставки ВБ</button>
         <button type="button" class="tab" data-tab="purchaseforecast" role="tab" aria-selected="false">Прогноз закупок</button>
         <button type="button" class="tab" data-tab="clientquality" role="tab" aria-selected="false">Качество работы с клиентами</button>
         <button type="button" class="tab" data-tab="clientqualitytv" role="tab" aria-selected="false">Качество работы с клиентами TV</button>
@@ -2116,6 +2180,7 @@
             <label><input type="checkbox" id="new-debtors"> Задолженность клиентов</label>
             <label><input type="checkbox" id="new-mbalance"> Управленческий баланс</label>
             <label><input type="checkbox" id="new-clientpay"> Реестр оплат клиентов</label>
+            <label><input type="checkbox" id="new-wbsupply"> Расчёт поставки ВБ</label>
             <label><input type="checkbox" id="new-purchaseforecast"> Прогноз закупок</label>
             <label><input type="checkbox" id="new-clientquality"> Качество работы с клиентами</label>
             <label><input type="checkbox" id="new-clientqualitytv"> Качество работы с клиентами TV</label>
@@ -2646,6 +2711,61 @@
         </form>
         <div id="clientpay-err" class="err" hidden></div>
         <div id="clientpay-report"></div>
+      </section>
+    </div>
+    <div id="tab-wbsupply" class="tab-panel" hidden>
+      <section class="panel">
+        <h2 class="tab-intro">Расчёт поставки ВБ</h2>
+        <form class="pnl-toolbar wsp-toolbar" id="wsp-form" autocomplete="off">
+          <div>
+            <label for="wsp-depth">Глубина просмотра, дн.</label>
+            <input id="wsp-depth" type="number" min="1" max="90" step="1" value="30">
+          </div>
+          <div>
+            <label for="wsp-horizon">Горизонт планирования, дн.</label>
+            <input id="wsp-horizon" type="number" min="0" max="365" step="1" value="30">
+          </div>
+          <div>
+            <label for="wsp-reserve">Страховой запас, %</label>
+            <input id="wsp-reserve" type="number" min="0" max="300" step="5" value="20">
+          </div>
+          <div>
+            <label>Товарные категории</label>
+            <details class="wsp-pick" id="wsp-cat-box">
+              <summary id="wsp-cat-summary">Все категории</summary>
+              <div class="wsp-pick-body" id="wsp-cat-body"></div>
+            </details>
+          </div>
+          <div>
+            <label>Список номенклатуры</label>
+            <div class="wsp-sku-actions">
+              <button type="button" id="wsp-sku-add">Выбрать из 1С…</button>
+              <button type="button" id="wsp-sku-clear" hidden>Очистить</button>
+              <span id="wsp-sku-summary" class="meta">Вся номенклатура</span>
+            </div>
+          </div>
+          <button type="submit" id="wsp-run">Рассчитать</button>
+          <button type="button" id="wsp-refresh">Обновить данные WB</button>
+        </form>
+        <div id="wsp-sku-chips" class="wsp-chips" hidden></div>
+        <div id="wsp-nomen-modal" aria-hidden="true">
+          <div class="pf-nomen-dialog" role="dialog" aria-modal="true" aria-labelledby="wsp-nomen-title">
+            <h3 id="wsp-nomen-title">Выбор номенклатуры из 1С</h3>
+            <input id="wsp-nomen-search" class="pf-nomen-search" type="search" placeholder="Начните вводить название или артикул…" autocomplete="off">
+            <div class="pf-nomen-toolbar">
+              <label><input type="checkbox" id="wsp-nomen-check-all"> Выбрать все доступные</label>
+              <span id="wsp-nomen-hint">Введите минимум 2 символа</span>
+            </div>
+            <div id="wsp-nomen-list" class="pf-nomen-list"></div>
+            <div class="pf-nomen-actions">
+              <button type="button" id="wsp-nomen-close">Закрыть</button>
+              <button type="button" class="pf-nomen-primary" id="wsp-nomen-add-selected" disabled>Добавить выбранные</button>
+            </div>
+          </div>
+        </div>
+        <p id="wsp-status" class="pnl-note"></p>
+        <div id="wsp-err" class="err" hidden></div>
+        <div id="wsp-report"></div>
       </section>
     </div>
     <div id="tab-purchaseforecast" class="tab-panel" hidden>
@@ -6293,6 +6413,711 @@
       }
     }
 
+    // ===== Расчёт поставки ВБ =====
+    const WSP_CLUSTER_DEFAULTS = [
+      ["Центр", 3],
+      ["Северо-Запад", 5],
+      ["Приволжье", 5],
+      ["Урал", 7],
+      ["Юг и Северный Кавказ", 7],
+      ["Сибирь и Дальний Восток", 12],
+    ];
+    let wspOptions = { categories: [], skus: [], clusters: [] };
+    let wspMeta = null;
+    let wspReport = null;
+    let wspCats = new Set();
+    let wspArts = new Set();
+    let wspSkuRules = {};
+    let wspExpanded = new Set();
+    let wspTimer = null;
+    let wspPollTimer = null;
+    let wspInflight = false;
+    let wspQueued = false;
+    let wspReady = false;
+
+    function wspErr(text) {
+      const el = document.getElementById("wsp-err");
+      if (!el) return;
+      el.hidden = !text;
+      el.textContent = text || "";
+    }
+
+    function wspFmt(value, digits = 0) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return "";
+      return new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 0, maximumFractionDigits: digits }).format(n);
+    }
+
+    function wspDay(iso) {
+      const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+      return m ? `${m[3]}.${m[2]}.${m[1]}` : "";
+    }
+
+    function wspStamp(iso) {
+      if (!iso) return "нет";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "нет";
+      return d.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    }
+
+    function wspClusterNames() {
+      const list = (wspOptions.clusters || []).map((c) => c.name);
+      return list.length ? list : WSP_CLUSTER_DEFAULTS.map((c) => c[0]);
+    }
+
+    function wspFillControls(p) {
+      const set = (id, v) => {
+        const el = document.getElementById(id);
+        if (el) el.value = String(v ?? "");
+      };
+      set("wsp-depth", p.depth);
+      set("wsp-horizon", p.horizon);
+      set("wsp-reserve", p.reservePct);
+      wspCats = new Set(p.categories || []);
+      wspArts = new Set(p.articles || []);
+      wspSkuRules = {};
+    }
+
+    function wspCollect() {
+      const num = (id, fallback) => {
+        const v = document.getElementById(id)?.value;
+        return v === "" || v == null ? fallback : Number(v);
+      };
+      return {
+        depth: num("wsp-depth", 30),
+        horizon: num("wsp-horizon", 30),
+        reservePct: num("wsp-reserve", 20),
+        query: "",
+        categories: [...wspCats],
+        articles: [...wspArts],
+        minDemand: 0.1,
+        useInTransit: true,
+        useReturns: false,
+        fullStockThreshold: 3,
+        skuRules: wspSkuRules,
+      };
+    }
+
+    // ---- выбор категорий и номенклатуры ----
+    function wspCategoryTree() {
+      const cats = wspOptions.categories || [];
+      const byKey = new Map(cats.map((c) => [c.key, c]));
+      const children = new Map();
+      const roots = [];
+      for (const c of cats) {
+        if (c.parentKey && byKey.has(c.parentKey)) {
+          if (!children.has(c.parentKey)) children.set(c.parentKey, []);
+          children.get(c.parentKey).push(c);
+        } else {
+          roots.push(c);
+        }
+      }
+      return { roots, children };
+    }
+
+    function wspDescendants(key, children, out = []) {
+      for (const c of children.get(key) || []) {
+        out.push(c.key);
+        wspDescendants(c.key, children, out);
+      }
+      return out;
+    }
+
+    function wspRenderCats() {
+      const body = document.getElementById("wsp-cat-body");
+      if (!body) return;
+      const { roots, children } = wspCategoryTree();
+      if (!roots.length) {
+        body.innerHTML = `<p class="meta">Категории появятся после загрузки справочника 1С.</p>`;
+      } else {
+        const lines = [`<div class="wsp-pick-tools"><span class="meta">Папка выбирает все вложенные</span><button type="button" id="wsp-cat-clear">Сбросить</button></div>`];
+        const walk = (list, depth) => {
+          for (const c of list) {
+            lines.push(
+              `<label style="padding-left:${depth * 16}px"><input type="checkbox" data-wsp-cat="${escapeHtml(c.key)}" ${wspCats.has(c.key) ? "checked" : ""}> <span>${escapeHtml(c.name)} ${c.count ? `<span class="meta">(${wspFmt(c.count)})</span>` : ""}</span></label>`,
+            );
+            walk(children.get(c.key) || [], depth + 1);
+          }
+        };
+        walk(roots, 0);
+        body.innerHTML = lines.join("");
+      }
+      wspCatSummary();
+    }
+
+    function wspCatSummary() {
+      const el = document.getElementById("wsp-cat-summary");
+      if (!el) return;
+      const n = wspCats.size;
+      if (!n) el.textContent = "Все категории";
+      else if (n === 1) {
+        const c = (wspOptions.categories || []).find((x) => wspCats.has(x.key));
+        el.textContent = c ? c.name : "Категории: 1";
+      } else el.textContent = `Категории: ${n}`;
+    }
+
+    const wspNames = {};
+
+    function wspSkuName(article) {
+      if (wspNames[article]) return wspNames[article];
+      const fromReport = wspReport?.skus?.find((s) => s.article === article);
+      if (fromReport?.name) return fromReport.name;
+      return (wspOptions.skus || []).find((s) => s.article === article)?.name || "";
+    }
+
+    function wspRenderSkuChips() {
+      const box = document.getElementById("wsp-sku-chips");
+      const sum = document.getElementById("wsp-sku-summary");
+      const clear = document.getElementById("wsp-sku-clear");
+      const n = wspArts.size;
+      if (sum) sum.textContent = n ? `Выбрано: ${n}` : "Вся номенклатура";
+      if (clear) clear.hidden = !n;
+      if (!box) return;
+      box.hidden = !n;
+      box.innerHTML = [...wspArts]
+        .map(
+          (a) =>
+            `<span class="wsp-chip" title="${escapeHtml(wspSkuName(a))}">${escapeHtml(a)}<button type="button" data-wsp-chip-del="${escapeHtml(a)}" aria-label="Убрать">×</button></span>`,
+        )
+        .join("");
+    }
+
+    // ---- окно выбора номенклатуры из 1С (как в «Прогнозе закупок») ----
+    let wspNomenTimer = null;
+    let wspNomenSeq = 0;
+
+    function wspNomenUpdateButton() {
+      const btn = document.getElementById("wsp-nomen-add-selected");
+      const checkAll = document.getElementById("wsp-nomen-check-all");
+      const boxes = [...document.querySelectorAll("#wsp-nomen-list input[data-wsp-pick]:not(:disabled)")];
+      const checked = boxes.filter((el) => el.checked);
+      if (btn) {
+        btn.disabled = checked.length === 0;
+        btn.textContent = checked.length ? `Добавить выбранные (${checked.length})` : "Добавить выбранные";
+      }
+      if (checkAll) {
+        checkAll.disabled = boxes.length === 0;
+        checkAll.checked = boxes.length > 0 && checked.length === boxes.length;
+        checkAll.indeterminate = checked.length > 0 && checked.length < boxes.length;
+      }
+    }
+
+    function wspNomenOpen() {
+      const modal = document.getElementById("wsp-nomen-modal");
+      if (!modal) return;
+      const search = document.getElementById("wsp-nomen-search");
+      document.getElementById("wsp-nomen-list").innerHTML = "";
+      document.getElementById("wsp-nomen-hint").textContent = "Введите минимум 2 символа";
+      if (search) search.value = "";
+      const all = document.getElementById("wsp-nomen-check-all");
+      all.checked = false;
+      all.indeterminate = false;
+      wspNomenUpdateButton();
+      modal.classList.add("is-open");
+      modal.setAttribute("aria-hidden", "false");
+      setTimeout(() => search?.focus(), 0);
+    }
+
+    function wspNomenClose() {
+      const modal = document.getElementById("wsp-nomen-modal");
+      if (!modal) return;
+      modal.classList.remove("is-open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+
+    function wspNomenRender(rows, note) {
+      const list = document.getElementById("wsp-nomen-list");
+      const hint = document.getElementById("wsp-nomen-hint");
+      if (!list) return;
+      if (hint) hint.textContent = note || (rows.length ? `Найдено: ${rows.length}` : "Ничего не найдено");
+      if (!rows.length) {
+        list.innerHTML = "";
+        wspNomenUpdateButton();
+        return;
+      }
+      list.innerHTML = rows
+        .map((row) => {
+          const hasArticle = Boolean(row.article);
+          const already = hasArticle && wspArts.has(row.article);
+          const disabled = !hasArticle || already;
+          const reason = !hasArticle ? "нет артикула" : already ? "уже в списке" : "";
+          const wb = hasArticle ? (row.inWb ? "есть в данных WB" : "нет в заказах и остатках WB") : "";
+          return `<label class="pf-nomen-row${disabled ? " is-disabled" : ""}">
+            <input type="checkbox" data-wsp-pick="${escapeHtml(row.article || "")}" data-wsp-name="${escapeHtml(row.name || "")}" ${disabled ? "disabled" : ""}>
+            <span class="pf-nomen-row-text">
+              <div>${escapeHtml(row.name || "")}</div>
+              <div class="meta">${escapeHtml(row.article || "без артикула")}${row.code ? " · " + escapeHtml(row.code) : ""}${wb ? " · " + wb : ""}${reason ? " · " + reason : ""}</div>
+            </span>
+          </label>`;
+        })
+        .join("");
+      wspNomenUpdateButton();
+    }
+
+    async function wspNomenSearch(query) {
+      const q = String(query || "").trim();
+      const seq = ++wspNomenSeq;
+      if (q.length < 2) {
+        wspNomenRender([], "Введите минимум 2 символа");
+        return;
+      }
+      wspNomenRender([], "Ищем в 1С…");
+      try {
+        const data = await api("/api/wbsupply/nomenclature?q=" + encodeURIComponent(q), { method: "GET" });
+        if (seq !== wspNomenSeq) return;
+        wspNomenRender(data.rows || [], data.note || "");
+      } catch (e) {
+        if (seq !== wspNomenSeq) return;
+        wspNomenRender([], e.message || String(e));
+      }
+    }
+
+    function wspNomenAddSelected() {
+      const picked = [...document.querySelectorAll("#wsp-nomen-list input[data-wsp-pick]:checked:not(:disabled)")];
+      let added = 0;
+      for (const el of picked) {
+        const a = el.getAttribute("data-wsp-pick") || "";
+        if (!a || wspArts.has(a)) continue;
+        wspArts.add(a);
+        wspNames[a] = el.getAttribute("data-wsp-name") || "";
+        added += 1;
+      }
+      if (!added) {
+        wspErr("Нечего добавлять: отметьте позиции с артикулом, которых ещё нет в списке.");
+        return;
+      }
+      wspErr("");
+      wspRenderSkuChips();
+      wspNomenClose();
+      wspSchedule(0);
+    }
+
+    // ---- состояние данных ----
+    function wspRenderStatus() {
+      const el = document.getElementById("wsp-status");
+      const btn = document.getElementById("wsp-refresh");
+      const m = wspMeta;
+      if (!el) return;
+      if (!m) {
+        el.textContent = "";
+        return;
+      }
+      const running = Boolean(m.state?.running);
+      if (btn) btn.disabled = running;
+      if (!m.configured) {
+        el.textContent = "Wildberries API не настроен: укажите WB_API_TOKEN в dashboard/.env.";
+        return;
+      }
+      if (running) {
+        el.textContent = `Обновляем данные WB: ${m.state.step || "…"}. Заказы WB отдаёт не чаще раза в минуту, первая загрузка занимает несколько минут.`;
+        return;
+      }
+      const parts = [
+        `заказы ${wspStamp(m.ordersAt)}`,
+        `остатки ${wspStamp(m.remainsAt)}`,
+        `поставки ${wspStamp(m.suppliesAt)}`,
+        `карточки ${wspStamp(m.titlesAt)}`,
+        `справочник 1С ${wspStamp(m.catalogAt)}`,
+      ];
+      const blocked = m.ordersBlockedUntil
+        ? ` · Заказы WB: лимит API до ${new Date(m.ordersBlockedUntil).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}, расчёт по данным от ${wspStamp(m.ordersAt)}`
+        : "";
+      const err = m.state?.error ? ` · Ошибка обновления: ${m.state.error}` : "";
+      const warn = (m.state?.warnings || []).length ? ` · ${m.state.warnings.join(" · ")}` : "";
+      el.textContent = `Данные WB: ${parts.join(" · ")}${blocked}${err}${warn}`;
+    }
+
+    function wspStopPoll() {
+      if (wspPollTimer) clearInterval(wspPollTimer);
+      wspPollTimer = null;
+    }
+
+    function wspStartPoll() {
+      if (wspPollTimer) return;
+      wspPollTimer = setInterval(async () => {
+        try {
+          const data = await api("/api/wbsupply/state", { method: "GET" });
+          wspMeta = data.meta;
+          wspRenderStatus();
+          if (!wspMeta?.state?.running) {
+            wspStopPoll();
+            const full = await api("/api/wbsupply", { method: "GET" });
+            wspOptions = full.options || wspOptions;
+            wspMeta = full.meta;
+            wspRenderCats();
+            wspRenderSkuChips();
+            wspRenderStatus();
+            if (wspMeta?.state?.error && !wspMeta.hasData) wspErr(wspMeta.state.error);
+            else await wspCalc();
+          }
+        } catch (e) {
+          wspStopPoll();
+          wspErr(e.message || String(e));
+        }
+      }, 3000);
+    }
+
+    async function wspRefreshData() {
+      wspErr("");
+      try {
+        const data = await api("/api/wbsupply/refresh", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+        wspMeta = data.meta;
+        wspRenderStatus();
+        if (wspMeta?.state?.error && !wspMeta.state.running) wspErr(wspMeta.state.error);
+        else wspStartPoll();
+      } catch (e) {
+        wspErr(e.message || String(e));
+      }
+    }
+
+    // ---- расчёт ----
+    function wspSchedule(ms = 500) {
+      clearTimeout(wspTimer);
+      wspTimer = setTimeout(() => wspCalc(), ms);
+    }
+
+    async function wspCalc() {
+      if (USER.tabs?.wbsupply === false) return;
+      if (wspInflight) {
+        wspQueued = true;
+        return;
+      }
+      wspInflight = true;
+      const btn = document.getElementById("wsp-run");
+      if (btn) btn.disabled = true;
+      wspErr("");
+      try {
+        const data = await api("/api/wbsupply", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ params: wspCollect() }),
+        });
+        wspMeta = data.meta || data.report?.meta || wspMeta;
+        wspRenderStatus();
+        if (data.noData) {
+          wspReport = null;
+          document.getElementById("wsp-report").innerHTML = `<p class="pnl-note">Данных WB ещё нет. ${wspMeta?.state?.running ? "Идёт первая загрузка…" : "Нажмите «Обновить данные WB»."}</p>`;
+        } else {
+          wspReport = data.report;
+          wspRender();
+        }
+      } catch (e) {
+        wspErr(e.message || String(e));
+      } finally {
+        wspInflight = false;
+        if (btn) btn.disabled = false;
+        if (wspQueued) {
+          wspQueued = false;
+          wspSchedule(50);
+        }
+      }
+    }
+
+    async function initWbSupplyTab() {
+      if (USER.tabs?.wbsupply === false) return;
+      try {
+        const data = await api("/api/wbsupply", { method: "GET" });
+        wspOptions = data.options || wspOptions;
+        wspMeta = data.meta;
+        if (!wspReady) {
+          wspFillControls(data.settings || {});
+          wspReady = true;
+        }
+        wspRenderCats();
+        wspRenderSkuChips();
+        wspRenderStatus();
+        if (wspMeta?.state?.running) wspStartPoll();
+        if (wspMeta?.hasData) await wspCalc();
+        else document.getElementById("wsp-report").innerHTML = `<p class="pnl-note">Загружаем данные WB… ${wspMeta?.configured ? "" : "API не настроен."}</p>`;
+      } catch (e) {
+        wspErr(e.message || String(e));
+      }
+    }
+
+    async function refreshWbSupplyForSlide() {
+      await initWbSupplyTab();
+    }
+
+    // ---- отрисовка ----
+    function wspCell(row) {
+      if (!row) return `<td class="num wsp-zero">·</td>`;
+      return `<td class="num ${row.toSupply > 0 ? "wsp-pos" : "wsp-zero"}">${row.toSupply > 0 ? wspFmt(row.toSupply) : "·"}</td>`;
+    }
+
+    function wspDetailBlock(s) {
+      const meta = `<p class="wsp-detail-meta">${s.category ? "Категория: " + escapeHtml(s.category) + " · " : ""}${s.nmId ? "Артикул WB: " + escapeHtml(String(s.nmId)) + " · " : ""}Заказов за период: ${wspFmt(s.orders)} (дней с заказами: ${wspFmt(s.daysWithOrders)}) · Остаток на складах кластеров: ${wspFmt(s.stock)} (всего без СНГ: ${wspFmt(s.stockTotal)}) · В пути до покупателей: ${wspFmt(s.toCustomers)} · Возвраты в пути: ${wspFmt(s.returns)}</p>`;
+      const rows = s.rows
+        .map(
+          (r) => `<tr>
+            <td class="name">${escapeHtml(r.cluster)}</td>
+            <td class="num">${wspFmt(r.fbw)}</td>
+            <td class="num">${wspFmt(r.fbs)}</td>
+            <td class="num">${wspFmt(r.demand, 2)}</td>
+            <td class="num">${wspFmt(r.need, 1)}</td>
+            <td class="num">${wspFmt(r.stock)}</td>
+            <td class="num">${wspFmt(r.inTransit)}</td>
+            <td class="num">${wspFmt(r.returnsShare, 1)}</td>
+            <td class="num">${r.coverage == null ? "" : wspFmt(Math.min(r.coverage, 999), 1)}</td>
+            <td class="num">${r.zeroDate && r.coverage < 365 ? wspDay(r.zeroDate) : ""}</td>
+            <td class="num">${wspFmt(r.deficit, 1)}</td>
+            <td class="num ${r.toSupply > 0 ? "wsp-pos" : "wsp-zero"}">${r.toSupply > 0 ? wspFmt(r.toSupply) : "·"}</td>
+          </tr>`,
+        )
+        .join("");
+      return `${meta}
+        <div class="pnl-scroll"><table class="pnl wsp-inner">
+          <thead><tr>
+            <th>Кластер</th><th class="num">Заказы WB</th><th class="num">Заказы продавца</th><th class="num">Спрос, шт./дн</th>
+            <th class="num">Потребность</th><th class="num">Остаток WB</th><th class="num">В пути</th>
+            <th class="num">Возвраты</th><th class="num">Хватит, дн</th><th class="num">Обнулится</th><th class="num">Дефицит</th>
+            <th class="num">К поставке</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>`;
+    }
+
+    function wspRender() {
+      const box = document.getElementById("wsp-report");
+      const r = wspReport;
+      if (!box) return;
+      if (!r) {
+        box.innerHTML = "";
+        return;
+      }
+      const names = wspClusterNames();
+      const t = r.totals;
+      const warn = (r.warnings || []).length
+        ? `<p class="pnl-warn">${r.warnings.map((w) => escapeHtml(w)).join(" · ")}</p>`
+        : "";
+      const note = `<p class="pnl-note">Спрос за ${wspDay(r.period.from)} — ${wspDay(r.period.to)} (${r.period.depth} дн.) · горизонт ${r.horizon} дн. · страховой запас ${wspFmt(r.reservePct, 1)}% · расчёт на ${wspDay(r.today)}. Клик по строке — расчёт по кластерам и правила позиции.</p>`;
+      const kpi = `
+        <div class="kpi-strip">
+          <div class="bt"><div class="lab">К поставке, шт.</div><div class="val">${wspFmt(t.toSupply)}</div></div>
+          <div class="bt"><div class="lab">Позиций к поставке</div><div class="val">${wspFmt(t.skuToSupply)} из ${wspFmt(t.skuCount)}</div></div>
+          <div class="bt"><div class="lab">Спрос, шт./день</div><div class="val">${wspFmt(t.demand, 1)}</div></div>
+          <div class="bt"><div class="lab">Остаток на WB, шт.</div><div class="val">${wspFmt(t.stock)}</div></div>
+          <div class="bt"><div class="lab">В пути, шт.</div><div class="val">${wspFmt(t.inTransit)}</div></div>
+        </div>`;
+      const head = `<tr>
+          <th>Товар</th>
+          <th class="num">Спрос, шт./дн</th>
+          <th class="num">Остаток WB</th>
+          <th class="num">В пути</th>
+          <th class="num">К поставке</th>
+          ${names.map((n) => `<th class="num">${escapeHtml(n)}</th>`).join("")}
+        </tr>`;
+      const colSpan = 5 + names.length;
+      const body = r.skus
+        .map((s) => {
+          const open = wspExpanded.has(s.article);
+          const byName = new Map(s.rows.map((x) => [x.cluster, x]));
+          const main = `<tr class="wsp-row ${s.include ? "" : "wsp-skipped"}" data-art="${escapeHtml(s.article)}">
+            <td class="name"><span class="wsp-caret">${open ? "▾" : "▸"}</span>${escapeHtml(s.article)}<div class="meta">${escapeHtml(s.name)}</div></td>
+            <td class="num">${wspFmt(s.demand, 2)}</td>
+            <td class="num">${wspFmt(s.stock)}</td>
+            <td class="num">${wspFmt(s.inTransit)}</td>
+            <td class="num wsp-total">${s.toSupply > 0 ? wspFmt(s.toSupply) : "·"}</td>
+            ${names.map((n) => wspCell(byName.get(n))).join("")}
+          </tr>`;
+          const detail = open ? `<tr class="wsp-detail"><td colspan="${colSpan}">${wspDetailBlock(s)}</td></tr>` : "";
+          return main + detail;
+        })
+        .join("");
+      const totalRow = `<tr class="total">
+          <td class="name"><strong>Итого</strong></td>
+          <td class="num">${wspFmt(t.demand, 1)}</td>
+          <td class="num">${wspFmt(t.stock)}</td>
+          <td class="num">${wspFmt(t.inTransit)}</td>
+          <td class="num wsp-total">${wspFmt(t.toSupply)}</td>
+          ${names.map((n) => `<td class="num wsp-total">${wspFmt(r.clusters.find((c) => c.name === n)?.toSupply || 0)}</td>`).join("")}
+        </tr>`;
+      const clusters = r.clusters
+        .map(
+          (c) => `<tr>
+            <td class="name">${escapeHtml(c.name)}</td>
+            <td class="num">${wspFmt(c.demand, 1)}</td>
+            <td class="num">${wspFmt(c.stock)}</td>
+            <td class="num">${wspFmt(c.inTransit)}</td>
+            <td class="num ${c.toSupply > 0 ? "wsp-pos" : "wsp-zero"}">${wspFmt(c.toSupply)}</td>
+            <td class="num">${wspFmt(c.skuToSupply)}</td>
+          </tr>`,
+        )
+        .join("");
+      box.innerHTML = `${warn}${note}${kpi}
+        <div class="pnl-section">
+          <h3>Что отгружать: товар × кластер</h3>
+          <div class="pnl-scroll"><table class="pnl" id="wsp-table">
+            <thead>${head}</thead>
+            <tbody>${body || `<tr><td colspan="${colSpan}">Нет товаров под выбранные фильтры</td></tr>`}${body ? totalRow : ""}</tbody>
+          </table></div>
+        </div>
+        <div class="pnl-section">
+          <h3>По кластерам</h3>
+          <div class="pnl-scroll"><table class="pnl">
+            <thead><tr>
+              <th>Кластер</th><th class="num">Спрос, шт./дн</th><th class="num">Остаток WB</th>
+              <th class="num">В пути</th><th class="num">К поставке</th><th class="num">Позиций к поставке</th>
+            </tr></thead>
+            <tbody>${clusters}</tbody>
+          </table></div>
+        </div>`;
+      afterReportPaint();
+    }
+
+    function wspExportSheets(kind) {
+      const r = wspReport;
+      if (!r) return [];
+      const names = wspClusterNames();
+      const clusterTotal = (n) => r.clusters.find((c) => c.name === n)?.toSupply || 0;
+      const main = [
+        ["Артикул", "Название", "Категория", "Спрос, шт./дн", "Остаток WB", "В пути", "К поставке", ...names],
+        ...r.skus.map((s) => {
+          const by = new Map(s.rows.map((x) => [x.cluster, x]));
+          return [
+            s.article,
+            s.name,
+            s.category || "",
+            Math.round(s.demand * 100) / 100,
+            s.stock,
+            s.inTransit,
+            s.toSupply,
+            ...names.map((n) => by.get(n)?.toSupply || 0),
+          ];
+        }),
+        ["Итого", "", "", Math.round(r.totals.demand * 100) / 100, r.totals.stock, r.totals.inTransit, r.totals.toSupply, ...names.map(clusterTotal)],
+      ];
+      const detail = [
+        ["Артикул", "Название", "Кластер", "Заказы WB", "Заказы продавца", "Спрос, шт./дн", "Потребность", "Остаток WB", "В пути", "Возвраты", "Хватит, дн", "Обнулится", "Дефицит", "К поставке"],
+        ...r.skus.flatMap((s) =>
+          s.rows.map((x) => [
+            s.article,
+            s.name,
+            x.cluster,
+            x.fbw,
+            x.fbs,
+            Math.round(x.demand * 1000) / 1000,
+            Math.round(x.need * 10) / 10,
+            x.stock,
+            x.inTransit,
+            Math.round(x.returnsShare * 10) / 10,
+            x.coverage == null ? "" : Math.round(Math.min(x.coverage, 999) * 10) / 10,
+            x.zeroDate && x.coverage < 365 ? wspDay(x.zeroDate) : "",
+            Math.round(x.deficit * 10) / 10,
+            x.toSupply,
+          ]),
+        ),
+      ];
+      const clusters = [
+        ["Кластер", "Спрос, шт./дн", "Остаток WB", "В пути", "К поставке", "Позиций к поставке"],
+        ...r.clusters.map((c) => [c.name, Math.round(c.demand * 100) / 100, c.stock, c.inTransit, c.toSupply, c.skuToSupply]),
+      ];
+      const params = [
+        ["Параметр", "Значение"],
+        ["Расчёт на дату", wspDay(r.today)],
+        ["Период спроса", `${wspDay(r.period.from)} — ${wspDay(r.period.to)}`],
+        ["Глубина просмотра, дн.", r.period.depth],
+        ["Горизонт планирования, дн.", r.horizon],
+        ["Страховой запас, %", r.reservePct],
+      ];
+      const sheets = [
+        { name: "Что отгружать", rows: main },
+        { name: "Детали", rows: detail },
+        { name: "Кластеры", rows: clusters },
+        { name: "Параметры", rows: params },
+      ];
+      // В PDF подробная таблица на 16 колонок не читается — оставляем сводные листы.
+      return kind === "pdf" ? sheets.filter((s) => s.name !== "Детали") : sheets;
+    }
+
+    function wireWbSupply() {
+      const form = document.getElementById("wsp-form");
+      if (!form) return;
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        wspSchedule(0);
+      });
+      for (const id of ["wsp-depth", "wsp-horizon", "wsp-reserve"]) {
+        document.getElementById(id)?.addEventListener("change", () => wspSchedule(300));
+      }
+      document.getElementById("wsp-refresh")?.addEventListener("click", () => wspRefreshData());
+      document.getElementById("wsp-sku-add")?.addEventListener("click", () => wspNomenOpen());
+      document.getElementById("wsp-sku-clear")?.addEventListener("click", () => {
+        wspArts.clear();
+        wspRenderSkuChips();
+        wspSchedule(0);
+      });
+      document.getElementById("wsp-sku-chips")?.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-wsp-chip-del]");
+        if (!btn) return;
+        wspArts.delete(btn.getAttribute("data-wsp-chip-del"));
+        wspRenderSkuChips();
+        wspSchedule(300);
+      });
+      document.getElementById("wsp-nomen-close")?.addEventListener("click", () => wspNomenClose());
+      document.getElementById("wsp-nomen-modal")?.addEventListener("click", (e) => {
+        if (e.target === e.currentTarget) wspNomenClose();
+      });
+      document.getElementById("wsp-nomen-search")?.addEventListener("input", (e) => {
+        const value = e.target.value;
+        clearTimeout(wspNomenTimer);
+        wspNomenTimer = setTimeout(() => wspNomenSearch(value), 280);
+      });
+      document.getElementById("wsp-nomen-list")?.addEventListener("change", (e) => {
+        if (e.target.matches("input[data-wsp-pick]")) wspNomenUpdateButton();
+      });
+      document.getElementById("wsp-nomen-check-all")?.addEventListener("change", (e) => {
+        for (const box of document.querySelectorAll("#wsp-nomen-list input[data-wsp-pick]:not(:disabled)")) {
+          box.checked = Boolean(e.target.checked);
+        }
+        wspNomenUpdateButton();
+      });
+      document.getElementById("wsp-nomen-add-selected")?.addEventListener("click", () => wspNomenAddSelected());
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && document.getElementById("wsp-nomen-modal")?.classList.contains("is-open")) wspNomenClose();
+      });
+      document.getElementById("wsp-cat-body")?.addEventListener("change", (e) => {
+        const el = e.target.closest("[data-wsp-cat]");
+        if (!el) return;
+        const key = el.getAttribute("data-wsp-cat");
+        const { children } = wspCategoryTree();
+        const keys = [key, ...wspDescendants(key, children)];
+        for (const k of keys) {
+          if (el.checked) wspCats.add(k);
+          else wspCats.delete(k);
+        }
+        wspRenderCats();
+        wspSchedule(500);
+      });
+      document.getElementById("wsp-cat-body")?.addEventListener("click", (e) => {
+        if (e.target.id === "wsp-cat-clear") {
+          wspCats.clear();
+          wspRenderCats();
+          wspSchedule(0);
+        }
+      });
+      document.addEventListener("click", (e) => {
+        for (const id of ["wsp-cat-box"]) {
+          const box = document.getElementById(id);
+          if (box && box.open && !box.contains(e.target)) box.open = false;
+        }
+      });
+      const reportBox = document.getElementById("wsp-report");
+      reportBox?.addEventListener("click", (e) => {
+        if (e.target.closest(".wsp-detail")) return;
+        const tr = e.target.closest("tr.wsp-row");
+        if (!tr) return;
+        const a = tr.getAttribute("data-art");
+        if (wspExpanded.has(a)) wspExpanded.delete(a);
+        else wspExpanded.add(a);
+        wspRender();
+      });
+    }
+    wireWbSupply();
+
     let clientqualityLoaded = false;
     let clientqualityInflight = false;
 
@@ -7225,7 +8050,7 @@
       }
     }
 
-    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "ozonstocks", "wb", "wbfbs", "debtors", "mbalance", "clientpay", "purchaseforecast", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
+    const DEFAULT_TAB_ORDER = ["hours", "activity", "pnl", "pnlecotidy", "units", "plan", "budget", "bitrix", "bitrixfreq", "ozondrr", "ozonfbs", "ozonfbo", "ozonfbofilters", "ozonstocks", "wb", "wbfbs", "wbsupply", "debtors", "mbalance", "clientpay", "purchaseforecast", "clientquality", "clientqualitytv", "seo", "seoqueries", "seoproducts", "seopositions"];
     const TAB_LABELS = {
       hours: "Часы",
       activity: "Активность",
@@ -7243,6 +8068,7 @@
       ozonstocks: "Остатки по складам Озон",
       wb: "WB",
       wbfbs: "Поставки ФБС WB",
+      wbsupply: "Расчёт поставки ВБ",
       debtors: "Задолженность",
       mbalance: "Упр. баланс",
       clientpay: "Оплаты клиентов",
@@ -7521,6 +8347,10 @@
         await loadClientPayReport();
         return;
       }
+      if (name === "wbsupply") {
+        await refreshWbSupplyForSlide();
+        return;
+      }
       if (name === "purchaseforecast") {
         purchaseforecastLoaded = false;
         await initPurchaseForecastTab();
@@ -7645,6 +8475,7 @@
       document.getElementById("tab-debtors").hidden = name !== "debtors";
       document.getElementById("tab-mbalance").hidden = name !== "mbalance";
       document.getElementById("tab-clientpay").hidden = name !== "clientpay";
+      document.getElementById("tab-wbsupply").hidden = name !== "wbsupply";
       document.getElementById("tab-purchaseforecast").hidden = name !== "purchaseforecast";
       document.getElementById("tab-clientquality").hidden = name !== "clientquality";
       document.getElementById("tab-clientqualitytv").hidden = name !== "clientqualitytv";
@@ -7663,7 +8494,7 @@
       if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
       document.body.classList.toggle(
         "wide-report",
-        name === "plan" || name === "budget" || name === "ozondrr" || name === "ozonfbs" || name === "ozonfbo" || name === "ozonfbofilters" || name === "ozonstocks" || name === "units" || name === "wb" || name === "wbfbs" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "purchaseforecast" || name === "clientquality" || name === "clientqualitytv" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
+        name === "plan" || name === "budget" || name === "ozondrr" || name === "ozonfbs" || name === "ozonfbo" || name === "ozonfbofilters" || name === "ozonstocks" || name === "units" || name === "wb" || name === "wbfbs" || name === "wbsupply" || name === "debtors" || name === "mbalance" || name === "clientpay" || name === "purchaseforecast" || name === "clientquality" || name === "clientqualitytv" || name === "seo" || name === "seoqueries" || name === "seoproducts" || name === "seopositions"
       );
       document.body.classList.remove("wide-plan");
       if (name === "settings") loadSettingsTabOrder();
@@ -7675,6 +8506,7 @@
       }
       if (name === "wbfbs") loadWbFbsSupplies();
       if (name === "clientpay") loadClientPayBankDate();
+      if (name === "wbsupply") initWbSupplyTab();
       if (name === "purchaseforecast") initPurchaseForecastTab();
       if (name === "clientquality") loadClientQualityReport();
       if (name === "clientqualitytv") loadClientQualityTvReport();
@@ -7924,6 +8756,7 @@
         ["ozonstocks", "Остатки по складам Озон"],
         ["wb", "WB"],
         ["wbfbs", "Поставки ФБС WB"],
+        ["wbsupply", "Расчёт поставки ВБ"],
         ["debtors", "Задолженность"],
         ["mbalance", "Упр. баланс"],
         ["clientpay", "Оплаты клиентов"],
@@ -8522,6 +9355,7 @@
               debtors: document.getElementById("new-debtors").checked,
               mbalance: document.getElementById("new-mbalance").checked,
               clientpay: document.getElementById("new-clientpay").checked,
+              wbsupply: document.getElementById("new-wbsupply").checked,
               purchaseforecast: document.getElementById("new-purchaseforecast").checked,
               clientquality: document.getElementById("new-clientquality").checked,
               clientqualitytv: document.getElementById("new-clientqualitytv").checked,
@@ -9821,12 +10655,20 @@ ${body}
       }, 4000);
     }
 
-    function prepareExport(fromEl) {
+    function prepareExport(fromEl, kind) {
       const panel = currentExportPanel(fromEl);
       const name = (panel && panel.id || "").replace(/^tab-/, "");
       if (!panel || ["settings", "admin", "cache"].includes(name)) {
         exportFlash("С этой вкладки отчёт не выгружается.");
         return null;
+      }
+      if (name === "wbsupply") {
+        const own = wspExportSheets(kind);
+        if (!own.length) {
+          exportFlash("Сначала сформируйте отчёт на этой вкладке.");
+          return null;
+        }
+        return { panel, sheets: own, visual: false, title: "Расчёт поставки ВБ" };
       }
       const sheets = collectExportSheets(panel);
       const visual = panelHasInfographic(panel);
@@ -9838,7 +10680,7 @@ ${body}
     }
 
     function exportCurrentExcel(fromEl) {
-      const pack = prepareExport(fromEl);
+      const pack = prepareExport(fromEl, "excel");
       if (!pack) return;
       const filename = exportFileSlug(pack.title) + "_" + exportFileStamp() + ".xls";
       const xml = pack.visual
@@ -9849,7 +10691,7 @@ ${body}
     }
 
     function exportCurrentPdf(fromEl) {
-      const pack = prepareExport(fromEl);
+      const pack = prepareExport(fromEl, "pdf");
       if (!pack) return;
       const filename = exportFileSlug(pack.title) + "_" + exportFileStamp() + ".pdf";
       try {
